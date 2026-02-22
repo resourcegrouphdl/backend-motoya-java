@@ -1,0 +1,69 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: 210mm 297mm;
+            margin: 20mm 18mm 20mm 20mm;
+        }
+        body { font-family: Arial, sans-serif; font-size: 11pt; margin: 0; padding: 0; color: #000; line-height: 1.6; }
+        h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 6pt; text-transform: uppercase; }
+        p { text-align: justify; margin-bottom: 8pt; }
+        .right { text-align: right; }
+        .firma { margin-top: 60pt; }
+        .firma table { width: 100%; border-collapse: collapse; }
+        .firma td { border: none; text-align: center; padding-top: 40pt; vertical-align: bottom; }
+        .firma-line { border-top: 1px solid #000; width: 160pt; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <h1>PAGAR&#201;</h1>
+    <p class="right" th:text="'N&#176; ' + ${numeroContrato}"></p>
+
+    <p>
+        Por el presente pagar&#233;, yo <strong th:text="${cp.nombreTitular}"></strong>,
+        identificado(a) con <span th:text="${cp.tipoDeDocumento}"></span>
+        N&#176; <strong th:text="${cp.numeroDeDocumento}"></strong>,
+        domiciliado(a) en <span th:text="${cp.domicilioTitular}"></span>,
+        distrito de <span th:text="${cp.distritoTitular}"></span>, provincia y departamento de Lima,
+        me obligo a pagar incondicionalmente a la orden de MOTO YA DIGITAL S.A.C.,
+        la suma de <strong th:text="'S/ ' + ${#numbers.formatDecimal(financieros.montoFinanciado, 1, 2)}"></strong>
+        (monto financiado), en <strong th:text="${financieros.numeroCuotas}"></strong> cuotas quincenales
+        de <strong th:text="'S/ ' + ${#numbers.formatDecimal(financieros.cuotaMensual, 1, 2)}"></strong> cada una,
+        conforme al cronograma de pagos adjunto al contrato N&#176; <span th:text="${numeroContrato}"></span>.
+    </p>
+
+    <p>
+        En caso de incumplimiento de cualquiera de las cuotas pactadas, se dar&#225; por vencido el plazo total de la obligaci&#243;n,
+        siendo exigible el saldo &#237;ntegro pendiente de pago, m&#225;s los intereses moratorios correspondientes.
+    </p>
+
+    <p>
+        Asimismo, <strong th:text="${cp.nombreFiador}"></strong>,
+        identificado(a) con <span th:text="${cp.tipoDocumentoFiador}"></span>
+        N&#176; <strong th:text="${cp.numeroDocumentoFiador}"></strong>,
+        domiciliado(a) en <span th:text="${cp.domicilioFiador}"></span>,
+        distrito de <span th:text="${cp.distritoFiador}"></span>, provincia y departamento de Lima,
+        se constituye como fiador solidario de la presente obligaci&#243;n.
+    </p>
+
+    <div class="firma">
+        <table>
+            <tr>
+                <td style="width:50%;">
+                    <div class="firma-line">&#160;</div>
+                    <p th:text="${cp.nombreTitular}"></p>
+                    <p th:text="${cp.tipoDeDocumento} + ' ' + ${cp.numeroDeDocumento}"></p>
+                    <p>OBLIGADO PRINCIPAL</p>
+                </td>
+                <td style="width:50%;">
+                    <div class="firma-line">&#160;</div>
+                    <p th:text="${cp.nombreFiador}"></p>
+                    <p th:text="${cp.tipoDocumentoFiador} + ' ' + ${cp.numeroDocumentoFiador}"></p>
+                    <p>FIADOR SOLIDARIO</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

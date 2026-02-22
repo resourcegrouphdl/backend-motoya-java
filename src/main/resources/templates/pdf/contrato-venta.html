@@ -1,0 +1,308 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Contrato de Alquiler Vehicular</title>
+    <style>
+        @page {
+            size: 210mm 297mm;
+            margin: 18mm 15mm 18mm 20mm;
+        }
+        body { font-family: Arial, sans-serif; font-size: 9pt; line-height: 1.55; color: #000; margin: 0; padding: 0; }
+        h1 { text-align: center; font-size: 11pt; font-weight: bold; margin-bottom: 8pt; text-transform: uppercase; }
+        .center { text-align: center; }
+        .section { margin-bottom: 10pt; text-align: justify; }
+        .clausula-titulo { font-weight: bold; margin-top: 10pt; margin-bottom: 3pt; }
+        .bullet { margin-left: 15pt; margin-bottom: 5pt; }
+        .vehicle-table { border-collapse: collapse; margin: 8pt 0; }
+        .vehicle-table td { padding: 2pt 18pt 2pt 4pt; }
+        .vehicle-table .label { font-weight: bold; }
+        table.schedule { width: 100%; border-collapse: collapse; margin-top: 8pt; }
+        table.schedule th, table.schedule td { border: 1px solid #333; padding: 3pt 6pt; text-align: center; font-size: 8pt; }
+        table.schedule th { background-color: #d8d8d8; font-weight: bold; }
+        .firma-section { margin-top: 40pt; }
+        .firma-line { border-top: 1px solid #000; width: 160pt; margin: 0 auto; }
+        .page-break { page-break-before: always; }
+        .info-label { font-weight: bold; }
+        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 6pt; }
+        .header-table td { border: none; vertical-align: middle; }
+        .header-logo { text-align: right; }
+        .header-logo img { height: 42pt; }
+    </style>
+</head>
+<body>
+
+<!-- ENCABEZADO: título centrado + logo esquina superior derecha -->
+<table class="header-table">
+    <tr>
+        <td style="width: 15%; border: none;">&#160;</td>
+        <td style="width: 70%; border: none; text-align: center; vertical-align: middle;">
+            <h1 style="margin: 0; padding: 0;">CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA</h1>
+        </td>
+        <td class="header-logo" style="width: 15%; border: none;">
+            <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya"/>
+        </td>
+    </tr>
+</table>
+
+<div class="section">
+    <p>Conste con el presente documento el CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA, que celebran:</p>
+
+    <p class="bullet">&#8226;&#160;&#160;MOTO YA DIGITAL S.A.C identificada con RUC 20611539054, con direcci&#243;n fiscal en Av. Tom&#225;s Guzm&#225;n 977 Zona "D" distrito de San Juan de Miraflores provincia y departamento de Lima registrada con partida electr&#243;nica N&#176; 15399006 en el registro de personas jur&#237;dicas de Lima, debidamente representado por Juan Wilder Gonzales Condori identificado con DNI 71939176, quien en lo sucesivo se le denominara LA EMPRESA. Y de la otra parte.</p>
+
+    <p class="bullet">&#8226;&#160;&#160;&#160;&#160;&#160;Sr(a). <strong th:text="${cp.nombreTitular}"></strong> identificado con <span th:text="${cp.tipoDeDocumento}"></span> N&#176; <span th:text="${cp.numeroDeDocumento}"></span> con domicilio en <span th:text="${cp.domicilioTitular}"></span> distrito de <span th:text="${cp.distritoTitular}"></span> provincia y departamento de Lima, a quien en lo sucesivo se le denominara EL ARRENDATARIO. con la intervenci&#243;n a t&#237;tulo personal y por su propio derecho del Sr(a). <strong th:text="${cp.nombreFiador}"></strong> identificado(a) con <span th:text="${cp.tipoDocumentoFiador}"></span> N&#176; <span th:text="${cp.numeroDocumentoFiador}"></span>, domiciliado en <span th:text="${cp.domicilioFiador}"></span> distrito de <span th:text="${cp.distritoFiador}"></span> provincia y departamento de Lima, a quien en adelante se le denominar&#225; EL (LA) FIADOR</p>
+
+    <p>En concordancia con lo establecido en el Art&#237;culo 1529 y siguientes del C&#243;digo Civil. Convienen y realizan el presente Contrato de Compra venta Vehicular bajo los siguientes t&#233;rminos y condiciones.</p>
+</div>
+
+<!-- CLAUSULA 1 -->
+<div class="section">
+    <p class="clausula-titulo">1)&#160;&#160;&#160;CLAUSULA PRIMERA: ANTECEDENTES</p>
+    <p class="bullet">1.1&#160;&#160;&#160;&#8226; MOTO YA DIGITAL S.A.C., Es una persona Jur&#237;dica de derecho privado que nace el a&#241;o 2023, constituida bajo el r&#233;gimen de una sociedad an&#243;nima cerrada, y se encuentra facultada a efectuar las operaciones y servicios propios de tales empresas seg&#250;n la ley, en tal sentido, su principal actividad es la distribuci&#243;n y comercializaci&#243;n de motos de 2 y 3 ruedas, mantenimiento y reparaci&#243;n, otorgando ventas al contado, cr&#233;ditos directos, dentro de las condiciones m&#225;s favorables de acuerdo a su normatividad vigente. Mediante cr&#233;ditos accesibles, teniendo como garant&#237;a al mismo veh&#237;culo en favor a LA EMPRESA.</p>
+    <p class="center"><strong>VENTA, MANTENIMIENTO Y REPARACI&#211;N DE MOTOCICLETAS Y SUS PARTES, PIEZAS Y ACCESORIOS</strong></p>
+    <p class="bullet">1.2&#160;&#160;&#160;EL ARRENDATARIO, es persona natural, dedicado a la actividad de Transporte de Veh&#237;culos Menores (Motocicleta), acreditado a trav&#233;s de su documentaci&#243;n presentada, no teniendo inconvenientes para poder realizar un contrato, ni multas que le hayan otorgado una muerte civil ni cualquier otro impedimento para realizar un acto jur&#237;dico, establecido en el art&#237;culo 140&#176; del C&#243;digo Civil Peruano.</p>
+</div>
+
+<!-- CLAUSULA 2 -->
+<div class="section">
+    <p class="clausula-titulo">2)&#160;&#160;&#160;CLAUSULA SEGUNDA</p>
+    <p>EL ARRENDATARIO declara haber seleccionado libremente el bien materia del contrato, del stock ofrecido. En tal sentido, LA EMPRESA est&#225; eximido de cualquier repercusi&#243;n que dicha elecci&#243;n pueda ocasionar, dejando constancia que el bien a que se refiere se encuentra nuevo y a su vez en perfecto estado de conservaci&#243;n y funcionamiento. Por ello LA EMPRESA se obliga a entregar el veh&#237;culo en buenas condiciones, adquirida por EL PROVEEDOR <strong th:text="${cp.proveedor}"></strong> con R.U.C. ____________</p>
+
+    <table class="vehicle-table">
+        <tr><td class="label">MARCA</td><td th:text="${cp.marcaDeMoto}"></td></tr>
+        <tr><td class="label">MODELO</td><td th:text="${cp.modelo}"></td></tr>
+        <tr><td class="label">A&#209;O DE MODELO</td><td th:text="${cp.anioDelModelo}"></td></tr>
+        <tr><td class="label">PLACA</td><td th:text="${cp.placaDeRodaje}"></td></tr>
+        <tr><td class="label">COLOR</td><td th:text="${cp.colorDeMoto}"></td></tr>
+        <tr><td class="label">Nr&#186; DE SERIE</td><td th:text="${cp.numeroDeSerie}"></td></tr>
+        <tr><td class="label">Nr&#186; DE MOTOR</td><td th:text="${cp.numeroDeMotor}"></td></tr>
+    </table>
+</div>
+
+<!-- CLAUSULA 3 -->
+<div class="section">
+    <p class="clausula-titulo">3)&#160;&#160;&#160;CLAUSULA TERCERA. - OBJETO DEL CONTRATO:</p>
+    <p>Por el presente contrato, LA EMPRESA se obliga a adquirir el bien descrito en la cl&#225;usula segunda; oblig&#225;ndose posteriormente a ceder en uso y disfrute dicho bien en favor de EL ARRENDATARIO. En contraprestaci&#243;n, EL ARRENDATARIO se obliga a pagar una garant&#237;a; y en calidad de renta el monto precisado en la cl&#225;usula quinta, esto incluye (tarjeta de propiedad, placa de rodaje, SOAT PARTICULAR y la transferencia notarial al culminar las cuotas de manera puntual).</p>
+</div>
+
+<!-- CLAUSULA 4 -->
+<div class="section">
+    <p class="clausula-titulo">4)&#160;&#160;&#160;CL&#193;USULA CUARTA. - PLAZO DEL CONTRATO:</p>
+    <p>Bajo el amparo del art&#237;culo 1558 del C&#243;digo Civil, que especifica, que EL ARRENDATARIO est&#225; obligado a pagar el precio en el momento, de la manera y lugar pactados en el presente contrato, pactando como precio la suma de S/ <strong th:text="${cp.precioTotal}"></strong> (<span th:text="${cp.precioTotalLetras}"></span>).</p>
+</div>
+
+<!-- CLAUSULA 5 -->
+<div class="section">
+    <p class="clausula-titulo">5)&#160;&#160;&#160;QUINTA CL&#193;USULA. - RETRIBUCI&#211;N, FORMA Y OPORTUNIDAD DE PAGO:</p>
+    <p>Con el fin de transparencia Las partes acuerdan que, en calidad de contraprestaci&#243;n, EL COMPRADOR otorgar&#225; como garant&#237;a o inicial la suma de S/ <strong th:text="${cp.inicial}"></strong> (<span th:text="${cp.inicialLetras}"></span>), la cual se tomar&#225; como parte del valor total del veh&#237;culo y durante el plazo de duraci&#243;n del presente contrato, pagar&#225; AL GESTOR una renta de <span th:text="${cp.numeroDeQuincenas}"></span> quincenas ascendente a S/ <strong th:text="${cp.montoDeLaQuincena}"></strong> (<span th:text="${cp.montoDeLaQuincenaLetras}"></span>) cada una. Dicha renta deber&#225; pagarse &#237;ntegramente en cualquiera de las cuentas bancarias a nombre de MOTO YA DIGITAL S.A.C Para lo cual se le asignar&#225; un cronograma de pagos conveniente a EL ARRENDATARIO llegando a un acuerdo con LA EMPRESA.</p>
+</div>
+
+<!-- CLAUSULA 6 -->
+<div class="section">
+    <p class="clausula-titulo">6)&#160;&#160;&#160;SEXTA CLAUSULA: ENTREGA DEL BIEN</p>
+    <p class="bullet">6.1&#160;&#160;&#160;Todo lo concerniente a la entrega del bien materia del presente contrato se realizar&#225; previo pago total del monto estipulado como garant&#237;a o inicial as&#237; como indica en la cl&#225;usula Quinta, as&#237; mismo LA EMPRESA, se obliga a realizar la entrega del veh&#237;culo automotor descrito en el presente contrato, nuevo y en perfecto estado mec&#225;nico con sus accesorios y componentes, por otro lado, libre de multas, impuestos, pactos de reserva de dominio, asimismo la Moto lineal, estar&#225; a nombre de la Empresa MOTO YA DIGITAL S.A.C, hasta la cancelaci&#243;n del presente contrato.</p>
+    <p class="bullet">6.2&#160;&#160;&#160;Asimismo, al tratarse de un veh&#237;culo nuevo (0km) La tarjeta de propiedad ser&#225; tramitada por LA EMPRESA ante la superintendencia nacional de registros p&#250;blicos (SUNARP) y la placa de rodaje ante la Asociaci&#243;n Automotriz del Per&#250; (AAP) el cual tiene un plazo de 25 d&#237;as h&#225;biles. conforme a lo establecido en el Art&#237;culo 1551&#176; del C&#243;digo Civil. A su vez, queda convenido que el retraso en el tr&#225;mite de la tarjeta de propiedad, que pueda derivar por errores de la SUNARP, APP, ADUANAS &#243; del importador del veh&#237;culo menor (motocicleta), no ocasionar&#225; modificaci&#243;n en los montos ni en las fechas de pago de las rentas mensuales previstos en el calendario de vencimiento de pagos.</p>
+    <p class="bullet">6.3&#160;&#160;&#160;LA EMPRESA, se compromete a que el bien sea entregado en el lugar y al momento de celebrarse el contrato, firmando la recepci&#243;n el comprador de haber recibido el veh&#237;culo en &#243;ptimas condiciones antes descritas as&#237; mismo en su local donde realiza sus actividades, de conformidad con el art&#237;culo 1553&#176; del C&#243;digo Civil.</p>
+    <p class="bullet">6.4&#160;&#160;&#160;La posesi&#243;n y los futuros riesgos de da&#241;os causados por p&#233;rdida, aver&#237;a o todo tipo de infracciones de tr&#225;nsito o multas administrativas hacia el bien, materia del contrato quedar&#225;n asumidos por EL ARRENDATARIO desde el momento de la suscripci&#243;n del acta de entrega vehicular.</p>
+</div>
+
+<!-- CLAUSULA 7 -->
+<div class="section">
+    <p class="clausula-titulo">7)&#160;&#160;&#160;CL&#193;USULA S&#201;PTIMA. &#8211; OPCI&#211;N DE COMPRA-VALOR RESIDUAL:</p>
+    <p>MOTO YA DIGITAL S.A.C otorga a favor de EL ARRENDATARIO la opci&#243;n de compra del bien materia del presente contrato, el mismo que es equivalente a S/. <strong th:text="${cp.precioTotal}"></strong> (<span th:text="${cp.precioTotalLetras}"></span>). Se entiende que, para ejercitar esta opci&#243;n, EL ARRENDATARIO deber&#225; haber cancelado la garant&#237;a y todas las rentas quincenales estipuladas en el contrato y cualquier deuda generada directa o indirectamente por el presente contrato. Ser&#225; de cuenta de EL ARRENDATARIO.</p>
+    <p>LA EMPRESA verificar&#225; la transferencia de la propiedad del veh&#237;culo menor una vez que EL ARRENDATARIO haya cancelado todas las obligaciones que emanan del presente contrato y sin pagos pendientes por concepto de penalidades, papeletas de infracci&#243;n de tr&#225;nsito, compra de SOAT, as&#237; como la cancelaci&#243;n de cualquier obligaci&#243;n que dificulte el saneamiento administrativo del veh&#237;culo menor. LA EMPRESA asumir&#225; los costos para la realizaci&#243;n de la Transferencia Notarial a favor de EL ARRENDATARIO.</p>
+</div>
+
+<!-- CLAUSULA 8 -->
+<div class="section">
+    <p class="clausula-titulo">8)&#160;&#160;&#160;CLAUSULA OCTAVA. &#8211;</p>
+    <p class="bullet">8.1&#160;&#160;&#160;EL COMPRADOR se compromete a cumplir fielmente con la modalidad de pago establecida en la Cl&#225;usula Quinta, caso contrario LA EMPRESA en su calidad de propietario del bien puede ejecutar la resoluci&#243;n del contrato por falta de pago del saldo, as&#237; mismo EL ARRENDATARIO incurrir&#237;a en el supuesto de sanci&#243;n y as&#237; iniciarse el procedimiento de Cobranza Morosa teniendo como base legal, contemplado en el Art&#237;culo 1429&#176;, 1561&#176; del C&#243;digo Civil</p>
+    <p class="bullet">&#8226;&#160;&#160;DECRETO SUPREMO N&#176; 074/90-TR Texto &#218;nico Ordenado de la ley General de Cooperativas.</p>
+    <p class="bullet">&#8226;&#160;&#160;Ley N&#176; 30822, Ley que modifica la Ley 26702, Ley General del Sistema Financiero y del Sistema de Seguros y Org&#225;nica de la Superintendencia de Banca y Seguros, y Otras Normas Concordantes, Respecto de la Regulaci&#243;n y Supervisi&#243;n de las Cooperativas de Ahorro y Cr&#233;dito.</p>
+    <p class="bullet">&#8226;&#160;&#160;Ley 29571 C&#243;digo de Protecci&#243;n y Defensa del Consumidor.</p>
+    <p class="bullet">&#8226;&#160;&#160;Ley N&#176; 27287 Ley de T&#237;tulos Valores.</p>
+    <p class="bullet">&#8226;&#160;&#160;Decreto Legislativo N.&#186; 295, C&#243;digo Civil.</p>
+    <p class="bullet">&#8226;&#160;&#160;Resoluci&#243;n SBS N&#176; 11356-2008 Reglamento para la Evaluaci&#243;n y Clasificaci&#243;n del Deudor y la Exigencia de Provisiones y sus modificatorias.</p>
+</div>
+
+<!-- CLAUSULA 9 -->
+<div class="section">
+    <p class="clausula-titulo">9)&#160;&#160;&#160;CL&#193;USULA NOVENA. &#8211; GESTION DE COBRANZA.</p>
+    <p class="bullet">9.1&#160;&#160;&#160;antes del vencimiento de la cuota LA EMPRESA, en conjunto con su equipo de cobranza enviara, un recordatorio v&#237;a correo, WhatsApp o mensaje de texto, mediante un aviso indicando la proximidad de la fecha de pago.</p>
+    <p class="bullet">9.2&#160;&#160;&#160;llegado la fecha de pago y este no haya sido cancelado dentro de las 48 horas de haber vencido la cuota, Se le solicitar&#225; v&#237;a llamada telef&#243;nica, correo electr&#243;nico, WhatsApp o mensaje de texto el pago de la cuota vencida, si el ARRENDATARIO no cumpliera, este deber&#225; pagar 3.00 soles de penalidad por cada d&#237;a de impago lo cual ser&#225; acumulativo durante el tiempo que dure el contrato.</p>
+    <p class="bullet">9.3&#160;&#160;&#160;En caso EL ARRENDATARIO por alg&#250;n motivo no responda o se presuma que haya cambiado de n&#250;mero, este nos autoriza a usar como medio de contacto a sus referencias para que ellos puedan brindar la comunicaci&#243;n o brindarnos su nuevo n&#250;mero si es el caso.</p>
+    <p class="bullet">9.4&#160;&#160;&#160;si EL ARRENDATARIO incumpliera el pago de DOS (2) cuotas, LA EMPRESA solicitar&#225; la resoluci&#243;n del contrato, conforme a lo establecido en el Art&#237;culo 1429&#176; y 1561&#176; del C&#243;digo Civil Peruano. Y el ARRENDATARIO acepta devolver el veh&#237;culo entregado por la empresa en buenas condiciones como se le entreg&#243; caso contrario se aplicar&#225; el protocolo de cobranza y se realizar&#225; a trav&#233;s del equipo de Cobranza y Recuperaciones de LA EMPRESA.</p>
+    <p>LA EMPRESA, se eximen de cualquier responsabilidad civil, por cualquier hecho ocurrido que afecte AL ARRENDATARIO, desde la aplicaci&#243;n del inicio del procedimiento de cobranza en menci&#243;n</p>
+    <p class="bullet">9.5&#160;&#160;&#160;En caso de que EL ARRENDATARIO se rehusara a la entrega de la Moto Lineal conforme lo establece el procedimiento de Cobranza, inmediatamente LA EMPRESA, iniciar&#225; el procedimiento judicial y Penal respectivo e interpondr&#225; la denuncia, seg&#250;n se diera el caso aceptando el ARRENDATARIO los costos y costas del proceso que llevar&#225; su proceso la Empresa.</p>
+    <p class="bullet">9.6&#160;&#160;&#160;EL ARRENDATARIO perder&#225; todo derecho a recuperar el veh&#237;culo y de alg&#250;n abono que este haya dado (inicial y cuotas) siempre que este no cumpla con el abono de las cuotas impagas, este ser&#225; esperado por un plazo m&#225;ximo de 15 d&#237;as, pasado el plazo el veh&#237;culo formara parte del stock de motos recuperadas y pasar&#225; a la recolocaci&#243;n donde la decisi&#243;n lo tomar&#225; LA EMPRESA.</p>
+    <p>EL ARRENDATARIO solo podr&#225; recuperar el veh&#237;culo siempre que este cumpla con el abono total de las cuotas impagas y los gastos extras que este se haya generado por captura, carta notarial, notificaciones y d&#237;as de mora.</p>
+</div>
+
+<!-- CLAUSULA 10 -->
+<div class="section">
+    <p class="clausula-titulo">10)&#160;&#160;&#160;CLAUSULA DECIMA: RESOLUCION DE CONTRATO.</p>
+    <p class="bullet">10.1&#160;&#160;&#160;A efectos de realizarse la Resoluci&#243;n del Contrato, se aplicar&#225; lo establecido en el art&#237;culo 1429&#176; del C&#243;digo Civil, en tal sentido se requerir&#225; el cumplimiento de lo adeudado v&#237;a carta notarial, otorg&#225;ndose un plazo de 15 d&#237;as calendario. Vencido el plazo, si la prestaci&#243;n no se hubiera honrado, el contrato se resuelve de pleno derecho, quedando a cargo de EL ARRENDATARIO la indemnizaci&#243;n por da&#241;os y perjuicios ocasionados a LA EMPRESA.</p>
+    <p class="bullet">10.2&#160;&#160;&#160;EL ARRENDATARIO acepta libre y voluntariamente entregar el veh&#237;culo a LA EMPRESA por falta de pago quien tendr&#225; la facultad de asumir el saldo deudor y adjudicarse el bien.</p>
+    <p class="bullet">10.3&#160;&#160;&#160;Resuelto el contrato, EL ARRENDATARIO en aplicaci&#243;n del art&#237;culo 1265 del C&#243;digo Civil, entregar&#225; la Moto Lineal, objeto de la presente compraventa en calidad de Daci&#243;n en Pago, a efectos de cumplir con el pago de las armadas impagas y de indemnizar a LA EMPRESA por los da&#241;os y perjuicios que se hubiesen generado, Adem&#225;s de eso se perder&#225; la cuota inicial y las cuotas efectuadas hasta dicho atraso, sin ning&#250;n tipo de reclamo.</p>
+    <p class="bullet">10.4&#160;&#160;&#160;Que, de existir controversia alg&#250;n sobre la ejecuci&#243;n del presente contrato, as&#237; como el c&#225;lculo y liquidaci&#243;n de los da&#241;os y perjuicios ocasionados a EL GESTOR, ambas partes contratantes se comprometen a recurrir previamente a la v&#237;a de la conciliaci&#243;n Extrajudicial a efectos de llevar de la mejor manera el CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA.</p>
+    <p class="bullet">10.5&#160;&#160;&#160;El pago de las cuotas se realizar&#225; v&#237;a transferencia, dep&#243;sito bancario a Los diferentes n&#250;meros de cuentas que ofrece LA EMPRESA de acuerdo con el cronograma de pagos adjuntado como anexo 2 dentro de este contrato.</p>
+</div>
+
+<!-- CLAUSULA 11 -->
+<div class="section">
+    <p class="clausula-titulo">11.- CLAUSULA ONCE, DE LA RESERVA DE DOMINIO:</p>
+    <p>LA EMPRESA guardar&#225; reserva del veh&#237;culo descrito en la segunda cl&#225;usula de este contrato, dicha reserva ser&#225; hasta que EL ARRENDATARIO cancele el precio total pactado, mientras se realizar&#225; la inscripci&#243;n de la tarjeta de Propiedad Vehicular a nombre de LA EMPRESA.</p>
+    <p>Que, el art&#237;culo 1583&#176; del C&#243;digo Civil En la compraventa puede pactarse que el vendedor se reserva la propiedad del bien hasta que se haya pagado todo el precio o una parte determinada de &#233;l, aunque el bien haya sido entregado al comprador, quien asume el riesgo de su p&#233;rdida o deterioro desde el momento de la entrega.</p>
+    <p>EL ARRENDATARIO adquiere autom&#225;ticamente el derecho a la propiedad del bien con el pago del importe del precio convenido.</p>
+</div>
+
+<!-- CLAUSULA 12 -->
+<div class="section">
+    <p class="clausula-titulo">12.- CLAUSULA DOCE, DE LAS CAUSALES DE RESOLUCION DEL PRESENTE CONTRATO:</p>
+    <p class="bullet">12.1&#160;&#160;&#160;LA EMPRESA tendr&#225; su derecho a dar por resuelto el presente contrato POR FALTA DE PAGO sin necesidad de declaraci&#243;n judicial, solo mediante carta notarial indicando las causales en que haya incurrido, as&#237; como los conceptos y montos exigibles, esta resoluci&#243;n operar&#225; de forma autom&#225;tica y en pleno derecho desde el momento de la entrega de la referida comunicaci&#243;n en el domicilio contractual del ARRENDATARIO.</p>
+    <p>Tambi&#233;n en cualquier de los siguientes casos:</p>
+    <p class="bullet">&#8226;&#160;&#160;El traslado del Veh&#237;culo automotor menor fuera de la jurisdicci&#243;n de Lima-Metropolitana. Todo gasto que ocasiones tal incumplimiento ser&#225; de entera responsabilidad de EL ARRENDATARIO.</p>
+    <p class="bullet">&#176;&#160;&#160;&#160;&#160;&#160;&#160;El incumplimiento de parte de EL ARRENDATARIO de una o m&#225;s cuotas consecutivas conforme en lo dispuesto en clausula cuarta, de conformidad al cronograma de pago.</p>
+    <p class="bullet">&#176;&#160;&#160;&#160;El traspaso, transferencia o subarriendo del veh&#237;culo a terceras personas, sin autorizaci&#243;n previa o por escrito a LA EMPRESA</p>
+    <p class="bullet">&#176;&#160;&#160;Que el veh&#237;culo menor en menci&#243;n lo est&#233;n utilizando para realizar actividades il&#237;citas (Robo, Violaciones y otros).</p>
+    <p class="bullet">&#8226;&#160;&#160;Si ambas partes se pusieran de acuerdo para tal efecto se&#241;alando de com&#250;n de acuerdo la fecha de terminaci&#243;n mediante un compromiso, dando terminaci&#243;n a la vigencia contractual.</p>
+    <p class="bullet">&#176; La resoluci&#243;n del contrato por parte de LA EMPRESA no dar&#225; lugar a la devoluci&#243;n de la cuota inicial y de las letras canceladas a fecha de la resoluci&#243;n, las que se tomar&#225;n como penalidad.</p>
+    <p class="bullet">&#176;&#160;&#160;&#160;SI EL ARRENDATARIO cometiera infracciones y esta a su vez afectara a la E m p r e s a</p>
+    <p class="bullet">12.2&#160;&#160;&#160;LA EMPRESA puede solicitar resoluci&#243;n de contrato por incumplimiento injustificado de pago u otras obligaciones especificadas en este CONTRATO.</p>
+    <p class="bullet">12.3&#160;&#160;&#160;Por otro lado, EL ARRENDATARIO deber&#225; devolver el veh&#237;culo automotor menor en las mismas condiciones de uso y conservaci&#243;n en que lo recibi&#243; en el momento de la entrega. LA EMPRESA podr&#225; dar por vencidas las cuotas pendientes de pago o reclamar el pago &#237;ntegro sin perjuicio de los intereses compensatoria y moratorios a partir de la resoluci&#243;n del presente contrato.</p>
+    <p class="bullet">12.4&#160;&#160;&#160;LA EMPRESA est&#225; facultado a transferir las letras y/o cederlas en descuento en alguna Entidad Financiera y/o Bancaria, as&#237; como realizar cualquier transacci&#243;n permitido por la ley.</p>
+</div>
+
+<!-- CLAUSULA 13 -->
+<div class="section">
+    <p class="clausula-titulo">13)&#160;&#160;&#160;CLAUSULA TRECE, DEL MANTENIMIENTO Y REPARACION.</p>
+    <p>EL ARRENDATARIO bajo su responsabilidad mantendr&#225; el bien objeto del presente contrato en perfectas condiciones, siendo el &#250;nico responsable de lo que ocurra con el veh&#237;culo una vez se le haya entregado y este haya firmado su acta de entrega, cualquier modificaci&#243;n externa que afecte el buen funcionamiento del veh&#237;culo, podr&#237;a perder su garant&#237;a</p>
+</div>
+
+<!-- CLAUSULA 14 -->
+<div class="section">
+    <p class="clausula-titulo">14)&#160;&#160;&#160;CLAUSULA CATORCE, DE LA GARANTIA DEL VEHICULO:</p>
+    <p>LA GARANTIA Y MANTENIMIENTOS del veh&#237;culo ser&#225; cubierta por el PROVEEDOR <strong th:text="${cp.proveedor}"></strong>, bajo los t&#233;rminos y condiciones que este indique al cliente.</p>
+</div>
+
+<!-- CLAUSULA 15 -->
+<div class="section">
+    <p class="clausula-titulo">15)&#160;&#160;&#160;RESPONSABILIDAD CIVIL Y PENAL FRENTE A TERCEROS.</p>
+    <p>Quedar&#225; a cargo exclusivo del ARRENDATARIO todos los riesgos, perdidas, da&#241;os, robo o destrucci&#243;n que sufra el veh&#237;culo; de igual modo se deja expresa constancia que LA EMPRESA, atendiendo a la naturaleza del presente contrato, asumir&#225; todo responsabilidad extracontractual, cualquiera sea su naturaleza frente a terceros derivada de cualquier siniestro o da&#241;o causado con el veh&#237;culo, liberando a LA EMPRESA de cualquier responsabilidad por dicho concepto y oblig&#225;ndose a simple requerimiento de LA EMPRESA a reembolsarle de inmediato todo importe que esta se vea obligada a pagar por concepto de indemnizaci&#243;n por da&#241;os y perjuicios.</p>
+</div>
+
+<!-- CLAUSULA 16 -->
+<div class="section">
+    <p class="clausula-titulo">16)&#160;&#160;&#160;CLAUSULA DIESISEIS, DE LOS GASTOS ADMINISTRATIVOS DE INSCRIPCION VEHICULAR Y TRANSFERENCIA.</p>
+    <p>La primera inscripci&#243;n al Registro de Propiedad Vehicular, as&#237; como los gastos que origine la compra - venta, de producirse ser&#225;n asumidos los costos por LA EMPRESA Los gastos que demande la transferencia a la cancelaci&#243;n total del veh&#237;culo ser&#225;n por exclusividad cuenta de LA EMPRESA.</p>
+    <p>El Presente CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA, est&#225; enmarcado por las normas contenidas en el C&#243;digo Civil en los art&#237;culos 1666&#176; al 1712&#176; y las normas vigentes estipuladas sobre la presente materia por el C&#243;digo Procesal Civil.</p>
+    <p>En caso de presentarse cualquier asunto dudoso o litigioso derivado de la interpretaci&#243;n, aplicaci&#243;n o ejecuci&#243;n del presente contrato, las partes renuncian expresamente al fuero de sus domicilios y se someten a la jurisdicci&#243;n de los jueces y tribunales del Distrito Judicial de Lima, se&#241;alando para tal efecto las direcciones indicadas en la parte introductoria del presente contrato, en el supuesto de producirse alguna variaci&#243;n del domicilio solo dentro de la ciudad de Lima, debiendo comunicarse de manera expresa siete d&#237;as antes de producirse la variaci&#243;n domiciliaria, a fin que tenga calidez dicha comunicaci&#243;n.</p>
+</div>
+
+<!-- CLAUSULA 17 -->
+<div class="section">
+    <p class="clausula-titulo">17)&#160;&#160;&#160;CLAUSULA DIECISIETE, DEL ACUERDO ENTRE LAS PARTES Y VIGENCIA DEL CONTRATO.</p>
+    <p>El presente contrato entrar&#225; en vigencia desde la entrega f&#237;sica del veh&#237;culo hasta la finalizaci&#243;n del pago de las cuotas de financiamiento del cr&#233;dito de la Moto Lineal, otorgado por LA EMPRESA, que ser&#225; de <span th:text="${cp.numeroDeMeses}"></span> meses (<span th:text="${cp.numeroDeQuincenas}"></span> quincenas) acordados entre LA EMPRESA y EL ARRENDATARIO.</p>
+    <p>EL ARRENDATARIO declara, reconoce y acepta la firma electr&#243;nica de LA EMPRESA impresa en el presente formulario contractual incluido sus anexos, para todos los fines de este convenio, tendr&#225; la misma validez que la firma grafica o manuscrita, conforme lo establece el Art 141 y 141-A del c&#243;digo civil</p>
+    <p>EL ARRENDATARIO, firma e imprime su huella digital del dedo &#237;ndice derecho en aceptaci&#243;n de conformidad del presente contrato</p>
+    <p>EL ARRENDATARIO, declara haber recibido una copia digital del presente contrato.</p>
+    <p>Suscrito en la ciudad de Lima a los <strong th:text="${dia}"></strong> DIAS DE MES DE <strong th:text="${mes}"></strong> DEL <strong th:text="${anio}"></strong>, en se&#241;al de conformidad, ambas partes suscriben sus firmas y huellas en cada hoja del presente contrato.</p>
+</div>
+
+<!-- FIRMAS -->
+<div class="firma-section">
+    <table style="width: 100%; border: none;">
+        <tr>
+            <td style="width: 50%; text-align: center; border: none; padding-top: 40px; vertical-align: bottom;">
+                <div class="firma-line">&#160;</div>
+                <p>LA EMPRESA</p>
+            </td>
+            <td style="width: 50%; text-align: center; border: none; padding-top: 40px; vertical-align: bottom;">
+                <div class="firma-line">&#160;</div>
+                <p>EL ARRENDATARIO</p>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" style="text-align: center; border: none; padding-top: 40px; vertical-align: bottom;">
+                <div style="width: 180px; border-top: 1px solid #000; margin: 0 auto;">&#160;</div>
+                <p>EL FIADOR</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<!-- CRONOGRAMA DE PAGOS -->
+<div class="page-break">
+    <h1>CRONOGRAMA DE PAGOS</h1>
+    <p><span class="info-label">CLIENTE:</span> <span th:text="${cp.nombreTitular}"></span></p>
+    <p><span class="info-label">FIADOR:</span> <span th:text="${cp.nombreFiador}"></span></p>
+    <p><span class="info-label">CODIGO DE CLIENTE:</span> <span th:text="${cp.numeroDeDocumento}"></span></p>
+    <p><span class="info-label">MONTO DE LA RENTA:</span> S/ <span th:text="${cp.montoDeLaQuincena}"></span></p>
+    <p><span class="info-label">NUMERO DE CUOTAS:</span> <span th:text="${cp.numeroDeQuincenas}"></span> CUOTAS QUINCENALES</p>
+    <p><span class="info-label">PENALIDAD 3 SOLES POR DIA</span></p>
+
+    <table class="schedule">
+        <thead>
+            <tr>
+                <th>N&#176; CUOTA</th>
+                <th>FECHA VENCIMIENTO</th>
+                <th>MONTO (S/)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="cuota : ${cuotas}">
+                <td th:text="${cuota.numero}"></td>
+                <td th:text="${cuota.fecha}"></td>
+                <td th:text="${cuota.montoCuota}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <br/>
+    <p><strong>PASO 1:</strong> REALIZAR EL PAGO POR BANCO, TRANSFERENCIA O AGENTE.</p>
+    <p><strong>PASO 2:</strong> ENVIAR FOTO &#211; CAPTURA DEL VOUCHER DE PAGO AL WHATSAPP: 996185956 AL CORREO CREDITOSYCOBRANZAS@MOTOYA.COM.PE</p>
+    <p><strong>PASO 3:</strong> LA OFICINA RESPONDER&#193; CON LA BOLETA O FACTURA A NOMBRE DEL CLIENTE. LA EMPRESA REMITIR&#193; LA FACTURA O BOLETA DE VENTA ELECTR&#211;NICA POR EL MISMO MEDIO QUE SE PRESENTE EL VOUCHER.</p>
+</div>
+
+<!-- INFORMACION LETRAS DE CAMBIO -->
+<div class="section" style="margin-top: 30px;">
+    <h1>INFORMACION SOBRE LAS LETRAS DE CAMBIO</h1>
+    <p>Yo, <strong th:text="${cp.nombreTitular}"></strong> identificado con <span th:text="${cp.tipoDeDocumento}"></span> N&#176; <span th:text="${cp.numeroDeDocumento}"></span> con t&#237;tulo de CLIENTE y la Sr(a). <strong th:text="${cp.nombreFiador}"></strong> identificado(a) con <span th:text="${cp.tipoDocumentoFiador}"></span> N&#176; <span th:text="${cp.numeroDocumentoFiador}"></span> con t&#237;tulo de FIADOR, declaro que la empresa MOTO YA DIGITAL S.A.C. me est&#225; haciendo firmar dos letras de cambio en blanco, hasta la culminaci&#243;n del cr&#233;dito, en caso de cumplir con todas las cl&#225;usulas del contrato, la empresa me entregar&#225; las letras en su oficina AV. TOMAS GUZMAN 977, SAN JUAN DE MIRAFLORES, o a su vez me la enviar&#225;n por WhatsApp ANULADAS.</p>
+
+    <table style="width: 100%; border: none; margin-top: 40px;">
+        <tr>
+            <td style="width: 33%; text-align: center; border: none; padding-top: 40px; vertical-align: bottom;">
+                <div class="firma-line">&#160;</div>
+                <p>MOTO YA DIGITAL SAC</p>
+            </td>
+            <td style="width: 33%; text-align: center; border: none; padding-top: 40px; vertical-align: bottom;">
+                <div class="firma-line">&#160;</div>
+                <p>CLIENTE</p>
+            </td>
+            <td style="width: 33%; text-align: center; border: none; padding-top: 40px; vertical-align: bottom;">
+                <div class="firma-line">&#160;</div>
+                <p>FIADOR</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<!-- DECLARACION JURADA DE DOMICILIO -->
+<div class="section" style="margin-top: 30px;">
+    <h1>DECLARACI&#211;N JURADA DE DOMICILIO</h1>
+    <p><strong th:text="${cp.nombreTitular}"></strong> identificado con <span th:text="${cp.tipoDeDocumento}"></span> N&#176; <span th:text="${cp.numeroDeDocumento}"></span> en pleno ejercicio de mis derechos ciudadanos y de conformidad con lo dispuesto en la Ley N&#176; 28882 de Simplificaci&#243;n de la Certificaci&#243;n Domiciliaria, declaro bajo juramento que mi domicilio actual se encuentra ubicado en <span th:text="${cp.domicilioTitular}"></span> distrito de <span th:text="${cp.distritoTitular}"></span> provincia y departamento de LIMA.</p>
+    <p>En caso de que la informaci&#243;n que proporciono resulte ser falsa, declaro haber incurrido en los delitos de falsa declaraci&#243;n en proceso administrativo (Art. 411&#176; del C&#243;digo Penal), falsedad ideol&#243;gica o falsedad gen&#233;rica (Arts. 428&#176; y 438&#176; del C&#243;digo Penal) en concordancia con el Art. IV, 1.7 del T&#237;tulo Preliminar de la Ley N&#186; 27444 del Procedimiento Administrativo General (Principio de presunci&#243;n de veracidad).</p>
+    <p>En se&#241;al de conformidad firmo el presente documento</p>
+    <p>Lima, a los <strong th:text="${dia}"></strong> d&#237;as del mes de <strong th:text="${mes}"></strong> del a&#241;o <strong th:text="${anio}"></strong></p>
+
+    <table style="width: 60%; border: none; margin-top: 40px;">
+        <tr>
+            <td style="text-align: center; border: none; padding-top: 40px; vertical-align: bottom;">
+                <div style="border-top: 1px solid #000; width: 200px; margin: 0 auto;">&#160;</div>
+                <p>FIRMA&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Huella Digital</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>

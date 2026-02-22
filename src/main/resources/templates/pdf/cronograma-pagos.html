@@ -1,0 +1,62 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: 210mm 297mm;
+            margin: 18mm 15mm 18mm 20mm;
+        }
+        body { font-family: Arial, sans-serif; font-size: 11pt; margin: 0; padding: 0; color: #000; }
+        h1 { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; }
+        h3 { text-align: center; font-size: 11pt; color: #333; margin-bottom: 14pt; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 14pt; }
+        td, th { border: 1px solid #999; padding: 5pt 9pt; text-align: right; }
+        th { background-color: #d0d0d0; text-align: center; font-size: 10pt; font-weight: bold; }
+        .info-row td { border: none; padding: 3pt 4pt; text-align: left; font-size: 11pt; }
+        .info-row td strong { font-size: 11pt; }
+        .num { text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>CRONOGRAMA DE PAGOS</h1>
+    <h3 th:text="'Contrato N&#176; ' + ${numeroContrato}"></h3>
+
+    <table class="info-row">
+        <tr>
+            <td style="width:40%;"><strong>Titular:</strong></td>
+            <td th:text="${cp.nombreTitular}"></td>
+        </tr>
+        <tr>
+            <td><strong>Documento:</strong></td>
+            <td th:text="${cp.tipoDeDocumento} + ' ' + ${cp.numeroDeDocumento}"></td>
+        </tr>
+        <tr>
+            <td><strong>Cuota quincenal:</strong></td>
+            <td th:text="'S/ ' + ${cp.montoDeLaQuincena}"></td>
+        </tr>
+        <tr>
+            <td><strong>N&#176; de cuotas:</strong></td>
+            <td th:text="${cp.numeroDeQuincenas} + ' cuotas quincenales'"></td>
+        </tr>
+    </table>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width:8%;">N&#176;</th>
+                <th style="width:30%;">Fecha Vencimiento</th>
+                <th style="width:31%;">Cuota (S/)</th>
+                <th style="width:31%;">Saldo (S/)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="cuota : ${cuotas}">
+                <td class="num" th:text="${cuota.numero}"></td>
+                <td class="num" th:text="${cuota.fecha}"></td>
+                <td th:text="${cuota.montoCuota}"></td>
+                <td th:text="${cuota.saldo}"></td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

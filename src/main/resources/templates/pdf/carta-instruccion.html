@@ -1,0 +1,72 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: 210mm 297mm;
+            margin: 20mm 18mm 20mm 20mm;
+        }
+        body { font-family: Arial, sans-serif; font-size: 11pt; margin: 0; padding: 0; color: #000; line-height: 1.6; }
+        h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 6pt; text-transform: uppercase; }
+        p { text-align: justify; margin-bottom: 8pt; }
+        .right { text-align: right; }
+        .firma { margin-top: 60pt; }
+        .firma table { width: 100%; border-collapse: collapse; }
+        .firma td { border: none; text-align: center; padding-top: 40pt; vertical-align: bottom; }
+        .firma-line { border-top: 1px solid #000; width: 160pt; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <h1>CARTA DE INSTRUCCI&#211;N</h1>
+
+    <p class="right" th:text="'Lima, ' + ${fechaEmision}"></p>
+
+    <p>Se&#241;ores</p>
+    <p><strong>MOTO YA DIGITAL S.A.C.</strong></p>
+    <p>Presente.-</p>
+
+    <p>
+        Por medio de la presente, yo <strong th:text="${cp.nombreTitular}"></strong>,
+        identificado(a) con <span th:text="${cp.tipoDeDocumento}"></span>
+        N&#176; <strong th:text="${cp.numeroDeDocumento}"></strong>,
+        domiciliado(a) en <span th:text="${cp.domicilioTitular}"></span>,
+        distrito de <span th:text="${cp.distritoTitular}"></span>, provincia y departamento de Lima,
+        autorizo de manera expresa e irrevocable a MOTO YA DIGITAL S.A.C. para que, en caso de incumplimiento
+        en el pago de las cuotas del contrato de alquiler vehicular con promesa de venta
+        N&#176; <strong th:text="${numeroContrato}"></strong>, proceda con las acciones de cobranza
+        correspondientes conforme a lo establecido en el contrato y las leyes vigentes.
+    </p>
+
+    <p>
+        Asimismo, autorizo el uso de mis datos personales para fines relacionados con la
+        gesti&#243;n de cobranza y la ejecuci&#243;n de las garant&#237;as pactadas en el contrato referido.
+    </p>
+
+    <p>
+        El veh&#237;culo objeto del contrato es:
+        <strong th:text="${cp.marcaDeMoto} + ' ' + ${cp.modelo}"></strong>,
+        a&#241;o <span th:text="${cp.anioDelModelo}"></span>,
+        N&#176; de motor <span th:text="${cp.numeroDeMotor}"></span>,
+        N&#176; de serie/chasis <span th:text="${cp.numeroDeSerie}"></span>.
+    </p>
+
+    <div class="firma">
+        <table>
+            <tr>
+                <td style="width:50%;">
+                    <div class="firma-line">&#160;</div>
+                    <p th:text="${cp.nombreTitular}"></p>
+                    <p th:text="${cp.tipoDeDocumento} + ' ' + ${cp.numeroDeDocumento}"></p>
+                    <p>CLIENTE</p>
+                </td>
+                <td style="width:50%;">
+                    <div class="firma-line">&#160;</div>
+                    <p th:text="${cp.nombreFiador}"></p>
+                    <p th:text="${cp.tipoDocumentoFiador} + ' ' + ${cp.numeroDocumentoFiador}"></p>
+                    <p>FIADOR</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

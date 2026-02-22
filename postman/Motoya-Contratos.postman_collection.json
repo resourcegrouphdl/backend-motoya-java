@@ -1,0 +1,379 @@
+{
+	"info": {
+		"_postman_id": "c1a2b3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "Motoya v2 - Contratos",
+		"description": "Colección para probar el módulo de contratos de Motoya v2.\n\n**Flujo completo:**\n1. Crear contrato (POST /contract)\n2. Validar boucher (PUT /documento/BOUCHER/validar)\n3. Validar factura (PUT /documento/FACTURA/validar)\n4. Aprobar contrato (PUT /aprobar) — genera PDFs\n5. O rechazar contrato (PUT /rechazar)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "TU_FIREBASE_TOKEN_AQUI",
+			"type": "string"
+		},
+		{
+			"key": "contratoId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "1. Crear Contrato Manual",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 201) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.collectionVariables.set('contratoId', jsonData.id);",
+							"    console.log('Contrato creado con ID: ' + jsonData.id);",
+							"    console.log('Numero: ' + jsonData.numeroContrato);",
+							"",
+							"    pm.test('Estado es PENDIENTE_DOCUMENTOS', function () {",
+							"        pm.expect(jsonData.estado).to.eql('PENDIENTE_DOCUMENTOS');",
+							"    });",
+							"    pm.test('Tiene numero de contrato', function () {",
+							"        pm.expect(jsonData.numeroContrato).to.match(/^CTR-/);",
+							"    });",
+							"    pm.test('Boucher pendiente', function () {",
+							"        pm.expect(jsonData.boucherPagoInicial.estadoValidacion).to.eql('PENDIENTE');",
+							"    });",
+							"    pm.test('Factura pendiente', function () {",
+							"        pm.expect(jsonData.facturaVehiculo.estadoValidacion).to.eql('PENDIENTE');",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"titular\": {\n        \"nombres\": \"Juan Carlos\",\n        \"apellidos\": \"Pérez García\",\n        \"tipoDocumento\": \"DNI\",\n        \"numeroDocumento\": \"72345678\",\n        \"telefono\": \"987654321\",\n        \"email\": \"juan.perez@email.com\",\n        \"direccion\": \"Av. Los Olivos 456\",\n        \"distrito\": \"San Juan de Lurigancho\",\n        \"provincia\": \"Lima\",\n        \"departamento\": \"Lima\"\n    },\n    \"fiador\": {\n        \"nombres\": \"María Elena\",\n        \"apellidos\": \"García López\",\n        \"tipoDocumento\": \"DNI\",\n        \"numeroDocumento\": \"45678912\",\n        \"telefono\": \"912345678\",\n        \"email\": \"maria.garcia@email.com\",\n        \"direccion\": \"Jr. Las Flores 123\",\n        \"distrito\": \"Comas\",\n        \"provincia\": \"Lima\",\n        \"departamento\": \"Lima\",\n        \"parentesco\": \"Madre\"\n    },\n    \"tienda\": {\n        \"tiendaId\": \"tienda-001\",\n        \"nombreTienda\": \"Motoya San Juan\",\n        \"direccion\": \"Av. Próceres 1234\",\n        \"ciudad\": \"Lima\"\n    },\n    \"datosFinancieros\": {\n        \"precioVehiculo\": 8500.00,\n        \"cuotaInicial\": 2500.00,\n        \"montoFinanciado\": 6000.00,\n        \"tasaInteresAnual\": 24.00,\n        \"numeroCuotas\": 12,\n        \"cuotaMensual\": 568.42,\n        \"marcaVehiculo\": \"Honda\",\n        \"modeloVehiculo\": \"CB 125F\",\n        \"anioVehiculo\": \"2025\",\n        \"colorVehiculo\": \"Negro\",\n        \"numeroMotor\": \"HC125E-1234567\",\n        \"numeroChasis\": \"LHJTCJLC1P1234567\",\n        \"placa\": \"ABC-123\"\n    },\n    \"evaluacionId\": \"eval-test-001\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contract",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contract"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Listar Contratos",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.test('Respuesta es array', function () {",
+							"        pm.expect(jsonData).to.be.an('array');",
+							"    });",
+							"    pm.test('Al menos un contrato', function () {",
+							"        pm.expect(jsonData.length).to.be.greaterThan(0);",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contratos/lista",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contratos", "lista"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Obtener Contrato por ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.test('ID coincide', function () {",
+							"        pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('contratoId'));",
+							"    });",
+							"    pm.test('Tiene titular', function () {",
+							"        pm.expect(jsonData.titular).to.not.be.null;",
+							"        pm.expect(jsonData.titular.nombres).to.eql('Juan Carlos');",
+							"    });",
+							"    pm.test('Tiene datos financieros', function () {",
+							"        pm.expect(jsonData.datosFinancieros.precioVehiculo).to.eql(8500.0);",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contratos/{{contratoId}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contratos", "{{contratoId}}"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4a. Validar Boucher - Aprobar",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.test('Boucher aprobado', function () {",
+							"        pm.expect(jsonData.boucherPagoInicial.estadoValidacion).to.eql('APROBADO');",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"estadoValidacion\": \"APROBADO\",\n    \"observacion\": \"Boucher verificado correctamente, monto coincide con cuota inicial\",\n    \"validadoPor\": \"admin-user-001\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contratos/{{contratoId}}/documento/BOUCHER/validar",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contratos", "{{contratoId}}", "documento", "BOUCHER", "validar"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4b. Validar Factura - Aprobar",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.test('Factura aprobada', function () {",
+							"        pm.expect(jsonData.facturaVehiculo.estadoValidacion).to.eql('APROBADO');",
+							"    });",
+							"    pm.test('Estado cambió a EN_VALIDACION', function () {",
+							"        pm.expect(jsonData.estado).to.eql('EN_VALIDACION');",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"estadoValidacion\": \"APROBADO\",\n    \"observacion\": \"Factura del vehículo verificada, datos del vehículo coinciden\",\n    \"validadoPor\": \"admin-user-001\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contratos/{{contratoId}}/documento/FACTURA/validar",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contratos", "{{contratoId}}", "documento", "FACTURA", "validar"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5a. Aprobar Contrato (genera PDFs)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.test('Estado es CONTRATO_GENERADO', function () {",
+							"        pm.expect(jsonData.estado).to.eql('CONTRATO_GENERADO');",
+							"    });",
+							"    pm.test('Tiene 4 documentos generados', function () {",
+							"        pm.expect(jsonData.documentosGenerados.length).to.eql(4);",
+							"    });",
+							"    pm.test('Tiene cuotas calculadas', function () {",
+							"        pm.expect(jsonData.cuotas.length).to.eql(12);",
+							"    });",
+							"    pm.test('Documentos tienen URLs', function () {",
+							"        jsonData.documentosGenerados.forEach(function(doc) {",
+							"            pm.expect(doc.url).to.include('gs://');",
+							"        });",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contratos/{{contratoId}}/aprobar",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contratos", "{{contratoId}}", "aprobar"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5b. Rechazar Contrato (alternativa)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.test('Estado es RECHAZADO', function () {",
+							"        pm.expect(jsonData.estado).to.eql('RECHAZADO');",
+							"    });",
+							"    pm.test('Tiene motivo de rechazo', function () {",
+							"        pm.expect(jsonData.motivoRechazo).to.not.be.null;",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"motivo\": \"Documentos presentados no coinciden con la información proporcionada por el solicitante. Se requiere nueva solicitud.\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contratos/{{contratoId}}/rechazar",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contratos", "{{contratoId}}", "rechazar"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Crear Contrato - Sin Fiador",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 201) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.test('Contrato creado sin fiador', function () {",
+							"        pm.expect(jsonData.fiador).to.be.null;",
+							"    });",
+							"    pm.test('Estado es PENDIENTE_DOCUMENTOS', function () {",
+							"        pm.expect(jsonData.estado).to.eql('PENDIENTE_DOCUMENTOS');",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"titular\": {\n        \"nombres\": \"Pedro\",\n        \"apellidos\": \"Quispe Mamani\",\n        \"tipoDocumento\": \"DNI\",\n        \"numeroDocumento\": \"87654321\",\n        \"telefono\": \"956789123\",\n        \"email\": \"pedro.quispe@email.com\",\n        \"direccion\": \"Calle Tacna 789\",\n        \"distrito\": \"Juliaca\",\n        \"provincia\": \"San Román\",\n        \"departamento\": \"Puno\"\n    },\n    \"tienda\": {\n        \"tiendaId\": \"tienda-002\",\n        \"nombreTienda\": \"Motoya Juliaca\",\n        \"direccion\": \"Av. Circunvalación 567\",\n        \"ciudad\": \"Juliaca\"\n    },\n    \"datosFinancieros\": {\n        \"precioVehiculo\": 5500.00,\n        \"cuotaInicial\": 1500.00,\n        \"montoFinanciado\": 4000.00,\n        \"tasaInteresAnual\": 28.00,\n        \"numeroCuotas\": 18,\n        \"cuotaMensual\": 266.89,\n        \"marcaVehiculo\": \"Bajaj\",\n        \"modeloVehiculo\": \"Pulsar NS 125\",\n        \"anioVehiculo\": \"2025\",\n        \"colorVehiculo\": \"Rojo\",\n        \"numeroMotor\": \"DTSIE1234567\",\n        \"numeroChasis\": \"MD2A11CZ1P1234567\",\n        \"placa\": \"\"\n    }\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contract",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contract"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Validar Documento - Rechazar Boucher",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"estadoValidacion\": \"RECHAZADO\",\n    \"observacion\": \"El boucher está borroso y no se puede leer el monto del depósito\",\n    \"validadoPor\": \"admin-user-001\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/contratos/{{contratoId}}/documento/BOUCHER/validar",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "v1", "contratos", "{{contratoId}}", "documento", "BOUCHER", "validar"]
+				}
+			},
+			"response": []
+		}
+	]
+}
