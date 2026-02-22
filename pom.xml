@@ -92,10 +92,11 @@
 			<version>9.3.0</version>
 		</dependency>
 		<!-- OGNL is optional in Thymeleaf 3.1.x POM but required by StandardDialect at runtime -->
+		<!-- Must stay on 3.3.x — Thymeleaf 3.1.x uses OgnlContext constructor removed in 3.4.x -->
 		<dependency>
 			<groupId>ognl</groupId>
 			<artifactId>ognl</artifactId>
-			<version>3.4.3</version>
+			<version>3.3.4</version>
 		</dependency>
 
 		<dependency>
