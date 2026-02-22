@@ -91,6 +91,12 @@
 			<artifactId>flying-saucer-pdf-openpdf</artifactId>
 			<version>9.3.0</version>
 		</dependency>
+		<!-- OGNL is optional in Thymeleaf 3.1.x POM but required by StandardDialect at runtime -->
+		<dependency>
+			<groupId>ognl</groupId>
+			<artifactId>ognl</artifactId>
+			<version>3.4.3</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

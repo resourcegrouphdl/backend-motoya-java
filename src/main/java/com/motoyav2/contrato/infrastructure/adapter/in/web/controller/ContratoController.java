@@ -83,7 +83,7 @@ public class ContratoController {
         FacturaVehiculo factura = FacturaVehiculo.builder()
             .marcaVehiculo(request.datosFinancieros().marcaVehiculo())
             .modeloVehiculo(request.datosFinancieros().modeloVehiculo())
-            .anioVehiculo(Integer.valueOf(request.datosFinancieros().anioVehiculo()))
+            .anioVehiculo(request.datosFinancieros().anioVehiculo() != null ? Integer.valueOf(request.datosFinancieros().anioVehiculo()) : null)
             .colorVehiculo(request.datosFinancieros().colorVehiculo())
             .estadoValidacion(EstadoValidacion.PENDIENTE)
             .build();

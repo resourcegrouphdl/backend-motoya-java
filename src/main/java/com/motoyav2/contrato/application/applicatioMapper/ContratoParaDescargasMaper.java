@@ -21,26 +21,37 @@ public class ContratoParaDescargasMaper {
 
     String codigo = generadorCodigoDeContrato.generarCodigoContrato();
 
+    String tipoDocTitular = co.titular().tipoDocumento() != null
+        ? co.titular().tipoDocumento().toUpperCase() : "";
+    String nombreFiador = co.fiador() != null ? co.fiador().nombreCompleto() : "";
+    String tipoDocFiador = (co.fiador() != null && co.fiador().tipoDocumento() != null)
+        ? co.fiador().tipoDocumento().toUpperCase() : "";
+    String numDocFiador = co.fiador() != null ? co.fiador().numeroDocumento() : "";
+    String domFiador = co.fiador() != null ? co.fiador().direccion() : "";
+    String distFiador = co.fiador() != null ? co.fiador().distrito() : "";
+    String anioMoto = (co.facturaVehiculo() != null && co.facturaVehiculo().anioVehiculo() != null)
+        ? co.facturaVehiculo().anioVehiculo().toString() : "";
+
     return ContratoParaImprimir.builder()
         .codigo(codigo)
         .nombreTitular(co.titular().nombreCompleto())
-        .tipoDeDocumento(co.titular().tipoDocumento().toUpperCase())
+        .tipoDeDocumento(tipoDocTitular)
         .numeroDeDocumento(co.titular().numeroDocumento())
         .domicilioTitular(co.titular().direccion())
         .distritoTitular(co.titular().distrito())
-        .nombreFiador(co.fiador().nombreCompleto())
-        .tipoDocumentoFiador(co.fiador().tipoDocumento().toUpperCase())
-        .numeroDocumentoFiador(co.fiador().numeroDocumento())
-        .domicilioFiador(co.fiador().direccion())
-        .distritoFiador(co.fiador().distrito())
+        .nombreFiador(nombreFiador)
+        .tipoDocumentoFiador(tipoDocFiador)
+        .numeroDocumentoFiador(numDocFiador)
+        .domicilioFiador(domFiador)
+        .distritoFiador(distFiador)
 
-        .marcaDeMoto(co.facturaVehiculo().marcaVehiculo())
-        .modelo(co.facturaVehiculo().modeloVehiculo())
-        .anioDelModelo(co.facturaVehiculo().anioVehiculo().toString())
+        .marcaDeMoto(co.facturaVehiculo() != null ? co.facturaVehiculo().marcaVehiculo() : "")
+        .modelo(co.facturaVehiculo() != null ? co.facturaVehiculo().modeloVehiculo() : "")
+        .anioDelModelo(anioMoto)
         .placaDeRodaje("")
-        .colorDeMoto(co.facturaVehiculo().colorVehiculo())
-        .numeroDeSerie(co.facturaVehiculo().serieChasis())
-        .numeroDeMotor(co.facturaVehiculo().serieMotor())
+        .colorDeMoto(co.facturaVehiculo() != null ? co.facturaVehiculo().colorVehiculo() : "")
+        .numeroDeSerie(co.facturaVehiculo() != null ? co.facturaVehiculo().serieChasis() : "")
+        .numeroDeMotor(co.facturaVehiculo() != null ? co.facturaVehiculo().serieMotor() : "")
 
         .precioTotal(s2(co.datosFinancieros().precioVehiculo()))
         .precioTotalLetras(convertirNumerosALetra.convertir(co.datosFinancieros().precioVehiculo()))
