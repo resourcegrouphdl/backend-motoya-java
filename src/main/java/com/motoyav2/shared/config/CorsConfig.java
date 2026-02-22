@@ -20,6 +20,7 @@ public class CorsConfig {
         "http://localhost:4200",
         "http://localhost:60252",
         "https://motoya-form-bf869.web.app",
+        "https://motoya-form.web.app",
         "https://motoya-admin-nube.firebaseapp.com"
     ));
 
