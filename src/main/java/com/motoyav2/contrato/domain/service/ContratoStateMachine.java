@@ -18,7 +18,7 @@ public final class ContratoStateMachine {
             EstadoContrato.CONTRATO_GENERADO, Set.of(EstadoContrato.DESCARGA_CONTRATO, EstadoContrato.FIRMA_PENDIENTE),
             EstadoContrato.DESCARGA_CONTRATO, Set.of(EstadoContrato.FIRMA_PENDIENTE),
             EstadoContrato.FIRMA_PENDIENTE, Set.of(EstadoContrato.FIRMADO, EstadoContrato.CANCELADO),
-            EstadoContrato.FIRMADO, Set.of(EstadoContrato.ACTIVO)
+            EstadoContrato.FIRMADO, Set.of(EstadoContrato.ACTIVO, EstadoContrato.COMPLETADO)
     );
 
     public static boolean canTransition(EstadoContrato from, EstadoContrato to) {

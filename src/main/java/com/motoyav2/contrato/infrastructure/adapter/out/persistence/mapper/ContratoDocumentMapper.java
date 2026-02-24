@@ -35,7 +35,12 @@ public final class ContratoDocumentMapper {
                 doc.getMotivoRechazo(),
                 toInstant(doc.getFechaCreacion()),
                 toInstant(doc.getFechaActualizacion()),
-                mapContratoParaImprimirToDomain(doc.getContratoParaImprimir())
+                mapContratoParaImprimirToDomain(doc.getContratoParaImprimir()),
+                doc.getNumeroDeTitulo(),
+                toInstant(doc.getFechaRegistroTitulo()),
+                mapEvidenciaDocumentoToDomain(doc.getTive()),
+                mapEvidenciaDocumentoToDomain(doc.getEvidenciaSOAT()),
+                mapEvidenciaDocumentoToDomain(doc.getEvidenciaPlacaRodaje())
         );
     }
 
@@ -61,6 +66,11 @@ public final class ContratoDocumentMapper {
         doc.setFechaCreacion(toTimestamp(contrato.fechaCreacion()));
         doc.setFechaActualizacion(toTimestamp(contrato.fechaActualizacion()));
         doc.setContratoParaImprimir(mapContratoParaImprimirToDoc(contrato.contratoParaImprimir()));
+        doc.setNumeroDeTitulo(contrato.numeroDeTitulo());
+        doc.setFechaRegistroTitulo(toTimestamp(contrato.fechaRegistroTitulo()));
+        doc.setTive(mapEvidenciaDocumentoToDoc(contrato.tive()));
+        doc.setEvidenciaSOAT(mapEvidenciaDocumentoToDoc(contrato.evidenciaSOAT()));
+        doc.setEvidenciaPlacaRodaje(mapEvidenciaDocumentoToDoc(contrato.evidenciaPlacaRodaje()));
         return doc;
     }
 
@@ -343,6 +353,10 @@ public final class ContratoDocumentMapper {
                 .fechaSubida(toInstant(e.getFechaSubida()))
                 .subidoPor(e.getSubidoPor())
                 .descripcion(e.getDescripcion())
+                .estadoValidacion(e.getEstadoValidacion() != null ? EstadoValidacion.valueOf(e.getEstadoValidacion()) : null)
+                .observacionesValidacion(e.getObservacionesValidacion())
+                .validadoPor(e.getValidadoPor())
+                .fechaValidacion(toInstant(e.getFechaValidacion()))
                 .build()
         ).toList();
     }
@@ -360,6 +374,10 @@ public final class ContratoDocumentMapper {
             e.setFechaSubida(toTimestamp(ev.fechaSubida()));
             e.setSubidoPor(ev.subidoPor());
             e.setDescripcion(ev.descripcion());
+            e.setEstadoValidacion(ev.estadoValidacion() != null ? ev.estadoValidacion().name() : null);
+            e.setObservacionesValidacion(ev.observacionesValidacion());
+            e.setValidadoPor(ev.validadoPor());
+            e.setFechaValidacion(toTimestamp(ev.fechaValidacion()));
             return e;
         }).toList();
     }
@@ -449,6 +467,43 @@ public final class ContratoDocumentMapper {
         e.setMontoDeLaQuincena(toDouble(cp.getMontoDeLaQuincena()));
         e.setMontoDeLaQuincenaLetras(cp.getMontoDeLaQuincenaLetras());
         e.setProveedor(cp.getProveedor());
+        return e;
+    }
+
+    // --- EvidenciaDocumento (post-firma) ---
+    private static EvidenciaDocumento mapEvidenciaDocumentoToDomain(EvidenciaDocumentoEmbedded e) {
+        if (e == null) return null;
+        return EvidenciaDocumento.builder()
+                .id(e.getId())
+                .tipoEvidencia(e.getTipoEvidencia())
+                .urlEvidencia(e.getUrlEvidencia())
+                .nombreArchivo(e.getNombreArchivo())
+                .tipoArchivo(e.getTipoArchivo())
+                .tamanioBytes(e.getTamanioBytes())
+                .fechaSubida(toInstant(e.getFechaSubida()))
+                .descripcion(e.getDescripcion())
+                .estadoValidacion(e.getEstadoValidacion() != null ? EstadoValidacion.valueOf(e.getEstadoValidacion()) : null)
+                .validadoPor(e.getValidadoPor())
+                .fechaValidacion(toInstant(e.getFechaValidacion()))
+                .observacionesValidacion(e.getObservacionesValidacion())
+                .build();
+    }
+
+    private static EvidenciaDocumentoEmbedded mapEvidenciaDocumentoToDoc(EvidenciaDocumento ev) {
+        if (ev == null) return null;
+        EvidenciaDocumentoEmbedded e = new EvidenciaDocumentoEmbedded();
+        e.setId(ev.id());
+        e.setTipoEvidencia(ev.tipoEvidencia());
+        e.setUrlEvidencia(ev.urlEvidencia());
+        e.setNombreArchivo(ev.nombreArchivo());
+        e.setTipoArchivo(ev.tipoArchivo());
+        e.setTamanioBytes(ev.tamanioBytes());
+        e.setFechaSubida(toTimestamp(ev.fechaSubida()));
+        e.setDescripcion(ev.descripcion());
+        e.setEstadoValidacion(ev.estadoValidacion() != null ? ev.estadoValidacion().name() : null);
+        e.setValidadoPor(ev.validadoPor());
+        e.setFechaValidacion(toTimestamp(ev.fechaValidacion()));
+        e.setObservacionesValidacion(ev.observacionesValidacion());
         return e;
     }
 

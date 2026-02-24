@@ -37,6 +37,8 @@ public class SecurityConfig {
                             .pathMatchers("/actuator/health").permitAll()
                             .pathMatchers("/api-docs/**", "/v3/api-docs/**").permitAll()
                             .pathMatchers("/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
+                            .pathMatchers("/api/cobranzas-provisional/whatsapp/webhook").permitAll()
+                            .pathMatchers("/webhooks/**").permitAll()
                             .anyExchange().authenticated()
                     )
                     .addFilterAt(firebaseAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);

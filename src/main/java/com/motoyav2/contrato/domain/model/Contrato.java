@@ -28,7 +28,13 @@ public record Contrato(
         String motivoRechazo,
         Instant fechaCreacion,
         Instant fechaActualizacion,
-        ContratoParaImprimir contratoParaImprimir
+        ContratoParaImprimir contratoParaImprimir,
+        // Campos post-firma
+        String numeroDeTitulo,
+        Instant fechaRegistroTitulo,
+        EvidenciaDocumento tive,
+        EvidenciaDocumento evidenciaSOAT,
+        EvidenciaDocumento evidenciaPlacaRodaje
 ) {
 
 

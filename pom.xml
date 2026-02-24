@@ -32,6 +32,7 @@
 		<spring-cloud.version>2025.0.1</spring-cloud.version>
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
 		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
+		<resilience4j.version>2.2.0</resilience4j.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -125,6 +126,64 @@
 			<artifactId>reactor-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Twilio SDK -->
+		<dependency>
+			<groupId>com.twilio.sdk</groupId>
+			<artifactId>twilio</artifactId>
+			<version>9.14.1</version>
+		</dependency>
+
+		<!-- google-auth-library (ya traída transitivamente por spring-cloud-gcp,
+		     declarada explícita para asegurar disponibilidad de GoogleCredentials) -->
+		<dependency>
+			<groupId>com.google.auth</groupId>
+			<artifactId>google-auth-library-oauth2-http</artifactId>
+		</dependency>
+
+		<!-- ===== RESILIENCIA ===== -->
+
+		<!-- AOP: requerido para las anotaciones @CircuitBreaker, @Retry, @Bulkhead, @TimeLimiter -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
+		<!-- Actuator: health indicators de Resilience4j + métricas vía Micrometer -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<!-- Resilience4j Spring Boot 3: autoconfiguration de CircuitBreaker, Retry, Bulkhead, TimeLimiter -->
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-spring-boot3</artifactId>
+		</dependency>
+
+		<!-- Resilience4j Reactor: operadores reactivos para Mono/Flux (WebFlux) -->
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-reactor</artifactId>
+		</dependency>
+
+		<!-- Spring Cloud Circuit Breaker reactivo: ReactiveCircuitBreakerFactory sobre Resilience4j -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
+		</dependency>
+
+		<!-- Google Calendar API -->
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-calendar</artifactId>
+			<version>v3-rev20250115-2.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.http-client</groupId>
+			<artifactId>google-http-client-gson</artifactId>
+			<version>1.44.1</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
@@ -132,6 +191,14 @@
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-dependencies</artifactId>
 				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!-- Resilience4j BOM: gestiona versiones de todos los módulos resilience4j -->
+			<dependency>
+				<groupId>io.github.resilience4j</groupId>
+				<artifactId>resilience4j-bom</artifactId>
+				<version>${resilience4j.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>

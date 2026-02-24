@@ -26,6 +26,12 @@ public record ContratoDetalleAPIDto (
     EvidenciaFirmaAPIDto evidenciaFirma,
 
     // Documentos generados por el sistema
-    List<DocumentoGeneradoAPIDto> documentosGenerados
+    List<DocumentoGeneradoAPIDto> documentosGenerados,
+
+    // Campos post-firma
+    NumeroDeTituloResponse numeroDeTitulo,
+    EvidenciaDocumentoResponse tive,
+    EvidenciaDocumentoResponse evidenciaSOAT,
+    EvidenciaDocumentoResponse evidenciaPlacaRodaje
 ) {
 }

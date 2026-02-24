@@ -91,7 +91,9 @@ public class ValidarDocumentoService implements ValidarDocumentoUseCase {
                             boucher, factura,
                             contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
-                            contrato.motivoRechazo(), contrato.fechaCreacion(), now, ContratoParaImprimir.builder().build()
+                            contrato.motivoRechazo(), contrato.fechaCreacion(), now, contrato.contratoParaImprimir(),
+                            contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
+                            contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje()
                     );
 
                     return contratoRepository.save(actualizado);

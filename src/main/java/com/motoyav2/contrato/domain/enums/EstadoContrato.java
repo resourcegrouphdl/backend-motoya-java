@@ -10,6 +10,7 @@ public enum EstadoContrato {
     FIRMA_PENDIENTE,
     FIRMADO,
     ACTIVO,
+    COMPLETADO,
     CANCELADO,
     RECHAZADO
 }

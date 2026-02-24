@@ -30,7 +30,11 @@ public final class ContratoResponseMapper {
                 mapEvidencias(c.evidenciasFirma()),
                 mapNotificaciones(c.notificaciones()),
                 c.creadoPor(), c.evaluacionId(), c.motivoRechazo(),
-                c.fechaCreacion(), c.fechaActualizacion()
+                c.fechaCreacion(), c.fechaActualizacion(),
+                c.numeroDeTitulo(), c.fechaRegistroTitulo(),
+                mapEvidenciaDocumento(c.tive()),
+                mapEvidenciaDocumento(c.evidenciaSOAT()),
+                mapEvidenciaDocumento(c.evidenciaPlacaRodaje())
         );
     }
 
@@ -119,7 +123,9 @@ public final class ContratoResponseMapper {
         return list.stream().map(e -> new EvidenciaFirmaDto(
                 e.id(), e.tipoEvidencia() != null ? e.tipoEvidencia().name() : null,
                 e.urlEvidencia(), e.nombreArchivo(), e.tipoArchivo(),
-                e.tamanioBytes(), e.fechaSubida(), e.subidoPor(), e.descripcion()
+                e.tamanioBytes(), e.fechaSubida(), e.subidoPor(), e.descripcion(),
+                e.estadoValidacion() != null ? e.estadoValidacion().name() : null,
+                e.observacionesValidacion(), e.validadoPor(), e.fechaValidacion()
         )).toList();
     }
 
@@ -128,5 +134,15 @@ public final class ContratoResponseMapper {
         return list.stream().map(n -> new NotificacionDto(
                 n.tipo(), n.mensaje(), n.destinatario(), n.fecha(), n.exitoso()
         )).toList();
+    }
+
+    private static EvidenciaDocumentoDto mapEvidenciaDocumento(EvidenciaDocumento ev) {
+        if (ev == null) return null;
+        return new EvidenciaDocumentoDto(
+                ev.id(), ev.tipoEvidencia(), ev.urlEvidencia(), ev.nombreArchivo(),
+                ev.tipoArchivo(), ev.tamanioBytes(), ev.fechaSubida(), ev.descripcion(),
+                ev.estadoValidacion() != null ? ev.estadoValidacion().name() : null,
+                ev.validadoPor(), ev.fechaValidacion(), ev.observacionesValidacion()
+        );
     }
 }

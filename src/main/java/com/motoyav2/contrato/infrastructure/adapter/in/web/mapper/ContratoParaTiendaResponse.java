@@ -1,10 +1,6 @@
 package com.motoyav2.contrato.infrastructure.adapter.in.web.mapper;
 
-import com.motoyav2.contrato.domain.model.BoucherPagoInicial;
-import com.motoyav2.contrato.domain.model.Contrato;
-import com.motoyav2.contrato.domain.model.DocumentoGenerado;
-import com.motoyav2.contrato.domain.model.EvidenciaFirma;
-import com.motoyav2.contrato.domain.model.FacturaVehiculo;
+import com.motoyav2.contrato.domain.model.*;
 import com.motoyav2.contrato.infrastructure.adapter.in.web.dto.*;
 
 import java.util.List;
@@ -35,6 +31,10 @@ public final class ContratoParaTiendaResponse {
                 .factura(mapFactura(c.facturaVehiculo()))
                 .evidenciaFirma(mapEvidencia(c.evidenciasFirma()))
                 .documentosGenerados(mapDocumentosGenerados(c.documentosGenerados()))
+                .numeroDeTitulo(mapNumeroDeTitulo(c))
+                .tive(mapEvidenciaDocumento(c.tive()))
+                .evidenciaSOAT(mapEvidenciaDocumento(c.evidenciaSOAT()))
+                .evidenciaPlacaRodaje(mapEvidenciaDocumento(c.evidenciaPlacaRodaje()))
                 .build();
     }
 
@@ -91,7 +91,10 @@ public final class ContratoParaTiendaResponse {
                 e.fechaSubida() != null ? e.fechaSubida().toString() : null,
                 e.subidoPor(),
                 e.descripcion(),
-                null, null, null, null
+                e.estadoValidacion(),
+                e.validadoPor(),
+                e.fechaValidacion() != null ? e.fechaValidacion().toString() : null,
+                e.observacionesValidacion()
         );
     }
 
@@ -101,5 +104,31 @@ public final class ContratoParaTiendaResponse {
                 d.tipo() != null ? d.tipo().name() : null,
                 d.urlDocumento()
         )).toList();
+    }
+
+    private static NumeroDeTituloResponse mapNumeroDeTitulo(Contrato c) {
+        if (c.numeroDeTitulo() == null) return null;
+        return new NumeroDeTituloResponse(
+                c.numeroDeTitulo(),
+                c.fechaRegistroTitulo() != null ? c.fechaRegistroTitulo().toString() : null
+        );
+    }
+
+    private static EvidenciaDocumentoResponse mapEvidenciaDocumento(EvidenciaDocumento ev) {
+        if (ev == null) return null;
+        return new EvidenciaDocumentoResponse(
+                ev.id(),
+                ev.tipoEvidencia(),
+                ev.urlEvidencia(),
+                ev.nombreArchivo(),
+                ev.tipoArchivo(),
+                ev.tamanioBytes(),
+                ev.fechaSubida() != null ? ev.fechaSubida().toString() : null,
+                ev.descripcion(),
+                ev.estadoValidacion() != null ? ev.estadoValidacion().name() : null,
+                ev.validadoPor(),
+                ev.fechaValidacion() != null ? ev.fechaValidacion().toString() : null,
+                ev.observacionesValidacion()
+        );
     }
 }

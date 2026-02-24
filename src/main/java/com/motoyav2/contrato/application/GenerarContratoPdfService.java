@@ -45,7 +45,9 @@ public class GenerarContratoPdfService implements GenerarContratoPdfUseCase {
                 contrato.evidenciasFirma(), contrato.notificaciones(),
                 contrato.creadoPor(), contrato.evaluacionId(),
                 contrato.motivoRechazo(), contrato.fechaCreacion(),
-                Instant.now(), contrato.contratoParaImprimir()
+                Instant.now(), contrato.contratoParaImprimir(),
+                contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
+                contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje()
         );
         return contratoRepository.save(actualizado).thenReturn(docs);
     }

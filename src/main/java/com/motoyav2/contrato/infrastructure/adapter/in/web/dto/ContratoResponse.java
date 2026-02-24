@@ -23,7 +23,13 @@ public record ContratoResponse(
         String evaluacionId,
         String motivoRechazo,
         Instant fechaCreacion,
-        Instant fechaActualizacion
+        Instant fechaActualizacion,
+        // Campos post-firma
+        String numeroDeTitulo,
+        Instant fechaRegistroTitulo,
+        EvidenciaDocumentoDto tive,
+        EvidenciaDocumentoDto evidenciaSOAT,
+        EvidenciaDocumentoDto evidenciaPlacaRodaje
 ) {
     public record DatosTitularDto(
             String nombres, String apellidos, String tipoDocumento, String numeroDocumento,
@@ -75,10 +81,19 @@ public record ContratoResponse(
     public record EvidenciaFirmaDto(
             String id, String tipoEvidencia, String urlEvidencia, String nombreArchivo,
             String tipoArchivo, Integer tamanioBytes, Instant fechaSubida,
-            String subidoPor, String descripcion
+            String subidoPor, String descripcion,
+            String estadoValidacion, String observacionesValidacion,
+            String validadoPor, Instant fechaValidacion
     ) {}
 
     public record NotificacionDto(
             String tipo, String mensaje, String destinatario, Instant fecha, Boolean exitoso
+    ) {}
+
+    public record EvidenciaDocumentoDto(
+            String id, String tipoEvidencia, String urlEvidencia, String nombreArchivo,
+            String tipoArchivo, Long tamanioBytes, Instant fechaSubida, String descripcion,
+            String estadoValidacion, String validadoPor, Instant fechaValidacion,
+            String observacionesValidacion
     ) {}
 }

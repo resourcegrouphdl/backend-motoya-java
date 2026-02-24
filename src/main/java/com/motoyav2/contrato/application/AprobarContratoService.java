@@ -58,7 +58,9 @@ public class AprobarContratoService implements AprobarContratoUseCase {
               contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
               contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
               contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(),
-              contrato.contratoParaImprimir()
+              contrato.contratoParaImprimir(),
+              contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
+              contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje()
           );
 
           return contratoRepository.save(enGeneracion)
@@ -79,7 +81,9 @@ public class AprobarContratoService implements AprobarContratoUseCase {
                     cuotas, List.of(), saved.evidenciasFirma(),
                     saved.notificaciones(), saved.creadoPor(), saved.evaluacionId(),
                     saved.motivoRechazo(), saved.fechaCreacion(), Instant.now(),
-                    contratoParaImprimir
+                    contratoParaImprimir,
+                    saved.numeroDeTitulo(), saved.fechaRegistroTitulo(),
+                    saved.tive(), saved.evidenciaSOAT(), saved.evidenciaPlacaRodaje()
                 );
                 return contratoRepository.save(contratoGenereado);
               });

@@ -57,7 +57,8 @@ public class CrearContratoService implements CrearContratoUseCase {
                             null,
                             now,
                             now,
-                            ContratoParaImprimir.builder().build()
+                            ContratoParaImprimir.builder().build(),
+                            null, null, null, null, null
                     );
                     return contratoRepository.save(contrato);
                 });

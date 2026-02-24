@@ -40,7 +40,9 @@ public class RechazarContratoService implements RechazarContratoUseCase {
                             contrato.boucherPagoInicial(), contrato.facturaVehiculo(),
                             contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
-                            motivo, contrato.fechaCreacion(), Instant.now(), ContratoParaImprimir.builder().build()
+                            motivo, contrato.fechaCreacion(), Instant.now(), contrato.contratoParaImprimir(),
+                            contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
+                            contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje()
                     );
 
                     return contratoRepository.save(rechazado);

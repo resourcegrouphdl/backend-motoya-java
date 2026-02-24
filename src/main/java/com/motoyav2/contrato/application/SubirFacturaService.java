@@ -51,7 +51,9 @@ public class SubirFacturaService implements SubirFacturaUseCase {
                             contrato.boucherPagoInicial(), nuevaFactura,
                             contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
-                            contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(), ContratoParaImprimir.builder().build()
+                            contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(), contrato.contratoParaImprimir(),
+                            contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
+                            contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje()
                     );
 
                     return contratoRepository.save(actualizado)

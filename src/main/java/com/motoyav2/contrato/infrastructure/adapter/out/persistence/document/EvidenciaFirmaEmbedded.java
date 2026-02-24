@@ -14,4 +14,8 @@ public class EvidenciaFirmaEmbedded {
     private Timestamp fechaSubida;
     private String subidoPor;
     private String descripcion;
+    private String estadoValidacion;
+    private String observacionesValidacion;
+    private String validadoPor;
+    private Timestamp fechaValidacion;
 }

@@ -29,6 +29,10 @@ public class ContratoController {
     private final ValidarDocumentoUseCase validarDocumentoUseCase;
     private final AprobarContratoUseCase aprobarContratoUseCase;
     private final RechazarContratoUseCase rechazarContratoUseCase;
+    private final ValidarEvidenciaDocumentoUseCase validarEvidenciaDocumentoUseCase;
+    private final ValidarEvidenciaFirmaUseCase validarEvidenciaFirmaUseCase;
+    private final ConfirmarFirmaUseCase confirmarFirmaUseCase;
+    private final CompletarContratoUseCase completarContratoUseCase;
 
     @GetMapping("/contratos/lista")
     public Flux<ContratoListItemDto> listar() {
@@ -126,6 +130,81 @@ public class ContratoController {
             @AuthenticationPrincipal FirebaseUserDetails principal
     ) {
         return rechazarContratoUseCase.rechazar(id, request.motivo(), principal.uid())
+                .map(ContratoResponseMapper::toResponse);
+    }
+
+    // ── Firma ─────────────────────────────────────────────────────────────────
+
+    @PutMapping("/contratos/{id}/evidencia-firma/{evidenciaId}/validar")
+    public Mono<ContratoResponse> validarEvidenciaFirma(
+            @PathVariable String id,
+            @PathVariable String evidenciaId,
+            @Valid @RequestBody ValidarDocumentoRequest request,
+            @AuthenticationPrincipal FirebaseUserDetails principal
+    ) {
+        EstadoValidacion estado = Boolean.TRUE.equals(request.aprobado())
+                ? EstadoValidacion.APROBADO : EstadoValidacion.RECHAZADO;
+        String obs = request.observaciones() != null ? request.observaciones() : "";
+        return validarEvidenciaFirmaUseCase.validar(id, evidenciaId, estado, obs, principal.uid())
+                .map(ContratoResponseMapper::toResponse);
+    }
+
+    @PutMapping("/contratos/{id}/confirmar-firma")
+    public Mono<ContratoResponse> confirmarFirma(
+            @PathVariable String id,
+            @AuthenticationPrincipal FirebaseUserDetails principal
+    ) {
+        return confirmarFirmaUseCase.confirmar(id, principal.uid())
+                .map(ContratoResponseMapper::toResponse);
+    }
+
+    // ── Documentos post-firma ─────────────────────────────────────────────────
+
+    @PutMapping("/contratos/{id}/tive/validar")
+    public Mono<ContratoResponse> validarTive(
+            @PathVariable String id,
+            @Valid @RequestBody ValidarDocumentoRequest request,
+            @AuthenticationPrincipal FirebaseUserDetails principal
+    ) {
+        EstadoValidacion estado = Boolean.TRUE.equals(request.aprobado())
+                ? EstadoValidacion.APROBADO : EstadoValidacion.RECHAZADO;
+        String obs = request.observaciones() != null ? request.observaciones() : "";
+        return validarEvidenciaDocumentoUseCase.validar(id, "TIVE", estado, obs, principal.uid())
+                .map(ContratoResponseMapper::toResponse);
+    }
+
+    @PutMapping("/contratos/{id}/evidencia-soat/validar")
+    public Mono<ContratoResponse> validarSOAT(
+            @PathVariable String id,
+            @Valid @RequestBody ValidarDocumentoRequest request,
+            @AuthenticationPrincipal FirebaseUserDetails principal
+    ) {
+        EstadoValidacion estado = Boolean.TRUE.equals(request.aprobado())
+                ? EstadoValidacion.APROBADO : EstadoValidacion.RECHAZADO;
+        String obs = request.observaciones() != null ? request.observaciones() : "";
+        return validarEvidenciaDocumentoUseCase.validar(id, "SOAT", estado, obs, principal.uid())
+                .map(ContratoResponseMapper::toResponse);
+    }
+
+    @PutMapping("/contratos/{id}/evidencia-placa-rodaje/validar")
+    public Mono<ContratoResponse> validarPlacaRodaje(
+            @PathVariable String id,
+            @Valid @RequestBody ValidarDocumentoRequest request,
+            @AuthenticationPrincipal FirebaseUserDetails principal
+    ) {
+        EstadoValidacion estado = Boolean.TRUE.equals(request.aprobado())
+                ? EstadoValidacion.APROBADO : EstadoValidacion.RECHAZADO;
+        String obs = request.observaciones() != null ? request.observaciones() : "";
+        return validarEvidenciaDocumentoUseCase.validar(id, "PLACA_RODAJE", estado, obs, principal.uid())
+                .map(ContratoResponseMapper::toResponse);
+    }
+
+    @PutMapping("/contratos/{id}/completar")
+    public Mono<ContratoResponse> completarContrato(
+            @PathVariable String id,
+            @AuthenticationPrincipal FirebaseUserDetails principal
+    ) {
+        return completarContratoUseCase.completar(id, principal.uid())
                 .map(ContratoResponseMapper::toResponse);
     }
 }

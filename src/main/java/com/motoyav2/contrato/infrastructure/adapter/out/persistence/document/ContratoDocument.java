@@ -31,4 +31,10 @@ public class ContratoDocument {
     private Timestamp fechaCreacion;
     private Timestamp fechaActualizacion;
     private ContratoParaImprimirEmbedded contratoParaImprimir;
+    // Campos post-firma
+    private String numeroDeTitulo;
+    private Timestamp fechaRegistroTitulo;
+    private EvidenciaDocumentoEmbedded tive;
+    private EvidenciaDocumentoEmbedded evidenciaSOAT;
+    private EvidenciaDocumentoEmbedded evidenciaPlacaRodaje;
 }
