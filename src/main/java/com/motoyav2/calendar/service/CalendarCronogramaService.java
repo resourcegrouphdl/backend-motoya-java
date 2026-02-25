@@ -13,6 +13,7 @@ import com.motoyav2.calendar.firestore.CalendarCronogramaDocument;
 import com.motoyav2.calendar.firestore.CalendarCronogramaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -33,6 +34,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnExpression("'${google.calendar.client-email:}' != ''")
 public class CalendarCronogramaService {
 
     // Único bean Calendar en el contexto (definido en GoogleCalendarConfig)

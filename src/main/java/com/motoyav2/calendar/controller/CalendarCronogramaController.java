@@ -7,6 +7,7 @@ import com.motoyav2.shared.security.FirebaseUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +28,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/calendar")
 @RequiredArgsConstructor
+@ConditionalOnExpression("'${google.calendar.client-email:}' != ''")
 public class CalendarCronogramaController {
 
     private final CalendarCronogramaService service;

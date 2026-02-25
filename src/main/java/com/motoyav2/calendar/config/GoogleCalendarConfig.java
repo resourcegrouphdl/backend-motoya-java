@@ -5,23 +5,22 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.auth.http.HttpCredentialsAdapter;
-import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
 import java.util.Collections;
 
 /**
- * Configura el cliente de Google Calendar API usando credenciales de service account
- * definidas en application.properties (prefijo google.calendar.*).
- *
- * El bean es @Lazy: no se instancia al arrancar la app sino en el primer uso,
- * lo que permite iniciar la aplicación aunque las credenciales no estén configuradas.
+ * Configura el cliente de Google Calendar API.
+ * Solo se activa si google.calendar.client-email está configurado.
  *
  * MÓDULO PROVISIONAL — eliminar junto con el package com.motoyav2.calendar/
  */
@@ -33,19 +32,15 @@ public class GoogleCalendarConfig {
     private final GoogleCalendarProperties props;
 
     /**
-     * Bean @Lazy para evitar fallo en startup cuando las credenciales no están configuradas.
-     * Falla en el primer request al endpoint /api/calendar/cronograma si faltan credenciales.
+     * Solo se crea si la propiedad google.calendar.client-email no está vacía.
+     * Evita fallo en startup cuando las credenciales no están configuradas.
      */
-    @Lazy
     @Bean("provisionalCalendarApi")
+    @ConditionalOnExpression("'${google.calendar.client-email:}' != ''")
     public Calendar provisionalCalendarApi() throws Exception {
         log.info("[Calendar Provisional] Inicializando Google Calendar API — SA: {}", props.getClientEmail());
 
-        String credentialsJson = buildCredentialsJson();
-
-        GoogleCredentials credentials = GoogleCredentials
-                .fromStream(new ByteArrayInputStream(credentialsJson.getBytes(StandardCharsets.UTF_8)))
-                .createScoped(Collections.singleton(CalendarScopes.CALENDAR));
+        ServiceAccountCredentials credentials = buildCredentials();
 
         return new Calendar.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
@@ -55,45 +50,47 @@ public class GoogleCalendarConfig {
     }
 
     /**
-     * Construye el JSON de service account a partir de las properties.
+     * Construye las credenciales directamente desde los campos del service account,
+     * sin pasar por JSON. Esto evita todos los problemas de escape de la private key.
      *
-     * GoogleCredentials.fromStream() requiere exactamente estos 4 campos:
-     *   client_id, client_email, private_key, private_key_id
-     *
-     * Cómo obtener los valores desde el JSON descargado de GCP:
-     *   "client_email"   → google.calendar.client-email
-     *   "client_id"      → google.calendar.client-id
-     *   "private_key_id" → google.calendar.private-key-id
-     *   "private_key"    → google.calendar.private-key  (con \n como literales)
+     * La private key puede llegar:
+     *   - Con \n literales (env var de Cloud Run, application.properties)
+     *   - Con newlines reales (algunos sistemas)
+     * En ambos casos se normaliza antes del decode.
      */
-    private String buildCredentialsJson() {
-        // Normalizar la private key:
-        // Spring lee \n en .properties como newline real (carácter 0x0A).
-        // Si llega como literal \\n (desde env var mal escapada) también se convierte.
-        String rawKey = props.getPrivateKey().replace("\\n", "\n");
+    private ServiceAccountCredentials buildCredentials() throws Exception {
+        PrivateKey privateKey = parsePrivateKey(props.getPrivateKey());
 
-        // Para JSON la clave necesita los newlines como \n escapados
-        String jsonKey = rawKey.replace("\n", "\\n");
-
-        return String.format("""
-                {
-                  "type": "service_account",
-                  "project_id": "%s",
-                  "client_email": "%s",
-                  "client_id": "%s",
-                  "private_key_id": "%s",
-                  "private_key": "%s",
-                  "token_uri": "https://oauth2.googleapis.com/token"
-                }
-                """,
-                props.getProjectId(),
-                props.getClientEmail(),
-                nullToEmpty(props.getClientId()),
-                nullToEmpty(props.getPrivateKeyId()),
-                jsonKey);
+        return ServiceAccountCredentials.newBuilder()
+                .setClientEmail(props.getClientEmail())
+                .setClientId(emptyIfNull(props.getClientId()))
+                .setPrivateKeyId(emptyIfNull(props.getPrivateKeyId()))
+                .setPrivateKey(privateKey)
+                .setScopes(Collections.singletonList(CalendarScopes.CALENDAR))
+                .build();
     }
 
-    private String nullToEmpty(String value) {
+    /**
+     * Parsea una clave privada PKCS#8 en formato PEM.
+     * Maneja \n literales (de env vars y .properties) y newlines reales.
+     */
+    private PrivateKey parsePrivateKey(String pemKey) throws Exception {
+        // 1. Convertir \n literales (dos chars) a newlines reales
+        String normalized = pemKey.replace("\\n", "\n");
+
+        // 2. Quitar encabezados PEM y todo espacio en blanco → base64 puro
+        String base64 = normalized
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replaceAll("\\s+", "");
+
+        // 3. Decodificar y construir la clave
+        byte[] keyBytes = Base64.getDecoder().decode(base64);
+        return KeyFactory.getInstance("RSA")
+                .generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+    }
+
+    private String emptyIfNull(String value) {
         return value != null ? value : "";
     }
 }
