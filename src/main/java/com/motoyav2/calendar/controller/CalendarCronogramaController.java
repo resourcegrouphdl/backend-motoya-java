@@ -26,7 +26,7 @@ import reactor.core.publisher.Mono;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/calendar")
+@RequestMapping("/api/v1/calendar")
 @RequiredArgsConstructor
 @ConditionalOnExpression("'${google.calendar.client-email:}' != ''")
 public class CalendarCronogramaController {
