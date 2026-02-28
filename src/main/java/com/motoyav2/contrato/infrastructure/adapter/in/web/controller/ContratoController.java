@@ -110,7 +110,7 @@ public class ContratoController {
                 ? EstadoValidacion.APROBADO
                 : EstadoValidacion.RECHAZADO;
         String observaciones = request.observaciones() != null ? request.observaciones() : "";
-        return validarDocumentoUseCase.validar(id, tipo, estado, observaciones, principal.uid())
+        return validarDocumentoUseCase.validar(id, tipo, estado, observaciones, principal.uid(), request.boucherId())
                 .map(ContratoResponseMapper::toResponse);
     }
 

@@ -1,7 +1,6 @@
 package com.motoyav2.contrato.application;
 
 import com.motoyav2.contrato.domain.enums.EstadoContrato;
-import com.motoyav2.contrato.domain.enums.EstadoValidacion;
 import com.motoyav2.contrato.domain.enums.FaseContrato;
 import com.motoyav2.contrato.domain.model.*;
 import com.motoyav2.contrato.domain.port.in.CrearContratoUseCase;
@@ -44,9 +43,7 @@ public class CrearContratoService implements CrearContratoUseCase {
                             fiador,
                             tienda,
                             datosFinancieros,
-                            BoucherPagoInicial.builder()
-                                    .estadoValidacion(EstadoValidacion.PENDIENTE)
-                                    .build(),
+                            List.of(),
                             factura,
                             List.of(),
                             List.of(),

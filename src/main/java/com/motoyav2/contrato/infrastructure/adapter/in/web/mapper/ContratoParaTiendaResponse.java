@@ -27,7 +27,7 @@ public final class ContratoParaTiendaResponse {
                 .serieMotor(c.datosFinancieros() != null ? c.facturaVehiculo().serieMotor() : null)
                 .serieChasis(c.datosFinancieros() != null ? c.facturaVehiculo().serieChasis() : null)
 
-                .boucher(mapBoucher(c.boucherPagoInicial()))
+                .bouchers(mapBouchers(c.boucheresPagoInicial()))
                 .factura(mapFactura(c.facturaVehiculo()))
                 .evidenciaFirma(mapEvidencia(c.evidenciasFirma()))
                 .documentosGenerados(mapDocumentosGenerados(c.documentosGenerados()))
@@ -37,6 +37,11 @@ public final class ContratoParaTiendaResponse {
                 .evidenciaPlacaRodaje(mapEvidenciaDocumento(c.evidenciaPlacaRodaje()))
                 .actaDeEntrega(mapEvidenciaDocumento(c.actaDeEntrega()))
                 .build();
+    }
+
+    public static List<BoucherPagoInicialAPIDto> mapBouchers(List<BoucherPagoInicial> list) {
+        if (list == null) return List.of();
+        return list.stream().map(ContratoParaTiendaResponse::mapBoucher).toList();
     }
 
     private static BoucherPagoInicialAPIDto mapBoucher(BoucherPagoInicial b) {

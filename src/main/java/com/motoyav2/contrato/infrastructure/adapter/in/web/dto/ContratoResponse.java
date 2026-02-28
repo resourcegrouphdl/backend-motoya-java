@@ -13,7 +13,7 @@ public record ContratoResponse(
         DatosFiadorDto fiador,
         TiendaInfoDto tienda,
         DatosFinancierosDto datosFinancieros,
-        BoucherPagoInicialDto boucherPagoInicial,
+        List<BoucherPagoInicialDto> boucheresPagoInicial,
         FacturaVehiculoDto facturaVehiculo,
         List<CuotaCronogramaDto> cuotas,
         List<DocumentoGeneradoDto> documentosGenerados,

@@ -62,7 +62,7 @@ public class ValidarEvidenciaFirmaService implements ValidarEvidenciaFirmaUseCas
                     Contrato actualizado = new Contrato(
                             contrato.id(), contrato.numeroContrato(), contrato.estado(), contrato.fase(),
                             contrato.titular(), contrato.fiador(), contrato.tienda(), contrato.datosFinancieros(),
-                            contrato.boucherPagoInicial(), contrato.facturaVehiculo(),
+                            contrato.boucheresPagoInicial(), contrato.facturaVehiculo(),
                             contrato.cuotas(), contrato.documentosGenerados(), evidenciasActualizadas,
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                             contrato.motivoRechazo(), contrato.fechaCreacion(), now, contrato.contratoParaImprimir(),

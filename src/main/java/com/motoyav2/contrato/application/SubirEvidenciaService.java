@@ -47,7 +47,7 @@ public class SubirEvidenciaService implements SubirEvidenciaUseCase {
                     Contrato actualizado = new Contrato(
                             contrato.id(), contrato.numeroContrato(), contrato.estado(), contrato.fase(),
                             contrato.titular(), contrato.fiador(), contrato.tienda(), contrato.datosFinancieros(),
-                            contrato.boucherPagoInicial(), contrato.facturaVehiculo(),
+                            contrato.boucheresPagoInicial(), contrato.facturaVehiculo(),
                             contrato.cuotas(), contrato.documentosGenerados(), evidencias,
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                             contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(), contrato.contratoParaImprimir(),

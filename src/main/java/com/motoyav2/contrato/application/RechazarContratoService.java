@@ -37,7 +37,7 @@ public class RechazarContratoService implements RechazarContratoUseCase {
                             contrato.id(), contrato.numeroContrato(),
                             EstadoContrato.RECHAZADO, FaseContrato.FINALIZADO,
                             contrato.titular(), contrato.fiador(), contrato.tienda(), contrato.datosFinancieros(),
-                            contrato.boucherPagoInicial(), contrato.facturaVehiculo(),
+                            contrato.boucheresPagoInicial(), contrato.facturaVehiculo(),
                             contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                             motivo, contrato.fechaCreacion(), Instant.now(), contrato.contratoParaImprimir(),

@@ -23,7 +23,7 @@ public final class ContratoResponseMapper {
                 mapFiador(c.fiador()),
                 mapTienda(c.tienda()),
                 mapFinancieros(c.datosFinancieros()),
-                mapBoucher(c.boucherPagoInicial()),
+                mapBouchers(c.boucheresPagoInicial()),
                 mapFactura(c.facturaVehiculo()),
                 mapCuotas(c.cuotas()),
                 mapDocGenerados(c.documentosGenerados()),
@@ -75,6 +75,11 @@ public final class ContratoResponseMapper {
 
     private static BigDecimal scale2(BigDecimal value) {
         return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private static List<BoucherPagoInicialDto> mapBouchers(List<BoucherPagoInicial> list) {
+        if (list == null) return List.of();
+        return list.stream().map(ContratoResponseMapper::mapBoucher).toList();
     }
 
     private static BoucherPagoInicialDto mapBoucher(BoucherPagoInicial b) {

@@ -48,7 +48,7 @@ public class SubirFacturaService implements SubirFacturaUseCase {
                     Contrato actualizado = new Contrato(
                             contrato.id(), contrato.numeroContrato(), contrato.estado(), contrato.fase(),
                             contrato.titular(), contrato.fiador(), contrato.tienda(), contrato.datosFinancieros(),
-                            contrato.boucherPagoInicial(), nuevaFactura,
+                            contrato.boucheresPagoInicial(), nuevaFactura,
                             contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                             contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(), contrato.contratoParaImprimir(),

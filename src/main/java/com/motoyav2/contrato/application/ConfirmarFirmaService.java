@@ -48,7 +48,7 @@ public class ConfirmarFirmaService implements ConfirmarFirmaUseCase {
                             contrato.id(), contrato.numeroContrato(),
                             EstadoContrato.FIRMADO, FaseContrato.VIGENTE,
                             contrato.titular(), contrato.fiador(), contrato.tienda(), contrato.datosFinancieros(),
-                            contrato.boucherPagoInicial(), contrato.facturaVehiculo(),
+                            contrato.boucheresPagoInicial(), contrato.facturaVehiculo(),
                             contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                             contrato.motivoRechazo(), contrato.fechaCreacion(), now, contrato.contratoParaImprimir(),

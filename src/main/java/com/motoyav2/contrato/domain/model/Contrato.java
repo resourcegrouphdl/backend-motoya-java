@@ -17,7 +17,7 @@ public record Contrato(
         DatosFiador fiador,
         TiendaInfo tienda,
         DatosFinancieros datosFinancieros,
-        BoucherPagoInicial boucherPagoInicial,
+        List<BoucherPagoInicial> boucheresPagoInicial,
         FacturaVehiculo facturaVehiculo,
         List<CuotaCronograma> cuotas,
         List<DocumentoGenerado> documentosGenerados,

@@ -6,5 +6,5 @@ import reactor.core.publisher.Mono;
 
 public interface ValidarDocumentoUseCase {
 
-    Mono<Contrato> validar(String contratoId, String tipoDocumento, EstadoValidacion estado, String observacion, String validadoPor);
+    Mono<Contrato> validar(String contratoId, String tipoDocumento, EstadoValidacion estado, String observacion, String validadoPor, String boucherId);
 }

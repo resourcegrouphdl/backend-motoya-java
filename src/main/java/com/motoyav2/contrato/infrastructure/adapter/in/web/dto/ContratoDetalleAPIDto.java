@@ -21,7 +21,7 @@ public record ContratoDetalleAPIDto (
     String serieChasis,
 
     // Documentos subidos
-    BoucherPagoInicialAPIDto boucher,
+    List<BoucherPagoInicialAPIDto> bouchers,
     FacturaVehiculoAPIDto factura,
     EvidenciaFirmaAPIDto evidenciaFirma,
 

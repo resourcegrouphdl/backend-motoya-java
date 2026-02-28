@@ -40,7 +40,7 @@ public class GenerarContratoPdfService implements GenerarContratoPdfUseCase {
                 EstadoContrato.FIRMA_PENDIENTE,
                 FaseContrato.FIRMA,
                 contrato.titular(), contrato.fiador(), contrato.tienda(),
-                contrato.datosFinancieros(), contrato.boucherPagoInicial(),
+                contrato.datosFinancieros(), contrato.boucheresPagoInicial(),
                 contrato.facturaVehiculo(), contrato.cuotas(), docs,
                 contrato.evidenciasFirma(), contrato.notificaciones(),
                 contrato.creadoPor(), contrato.evaluacionId(),

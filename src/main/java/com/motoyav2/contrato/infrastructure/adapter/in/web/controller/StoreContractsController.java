@@ -50,10 +50,14 @@ public class StoreContractsController {
                 .build();
 
         return subirBoucherUseCase.subir(id, boucher)
-                .map(saved -> UploadBoucherResponse.builder()
-                        .message("Boucher subido exitosamente")
-                        .boucherId(saved.id())
-                        .build());
+                .map(saved -> {
+                    String boucherId = saved.boucheresPagoInicial().getLast().id();
+                    return UploadBoucherResponse.builder()
+                            .message("Boucher subido exitosamente")
+                            .boucherId(boucherId)
+                            .bouchers(ContratoParaTiendaResponse.mapBouchers(saved.boucheresPagoInicial()))
+                            .build();
+                });
     }
 
     @PostMapping("/contrato/{id}/factura")

@@ -24,7 +24,7 @@ public final class ContratoDocumentMapper {
                 mapFiadorToDomain(doc.getFiador()),
                 mapTiendaToDomain(doc.getTienda()),
                 mapFinancierosToDomain(doc.getDatosFinancieros()),
-                mapBoucherToDomain(doc.getBoucherPagoInicial()),
+                mapBoucherosToDomain(doc.getBoucheresPagoInicial()),
                 mapFacturaToDomain(doc.getFacturaVehiculo()),
                 mapCuotasToDomain(doc.getCuotas()),
                 mapDocGeneradosToDomain(doc.getDocumentosGenerados()),
@@ -55,7 +55,7 @@ public final class ContratoDocumentMapper {
         doc.setFiador(mapFiadorToDoc(contrato.fiador()));
         doc.setTienda(mapTiendaToDoc(contrato.tienda()));
         doc.setDatosFinancieros(mapFinancierosToDoc(contrato.datosFinancieros()));
-        doc.setBoucherPagoInicial(mapBoucherToDoc(contrato.boucherPagoInicial()));
+        doc.setBoucheresPagoInicial(mapBucherosToDoc(contrato.boucheresPagoInicial()));
         doc.setFacturaVehiculo(mapFacturaToDoc(contrato.facturaVehiculo()));
         doc.setCuotas(mapCuotasToDoc(contrato.cuotas()));
         doc.setDocumentosGenerados(mapDocGeneradosToDoc(contrato.documentosGenerados()));
@@ -189,6 +189,16 @@ public final class ContratoDocumentMapper {
     }
 
     // --- BoucherPagoInicial ---
+    private static List<BoucherPagoInicial> mapBoucherosToDomain(List<BoucherPagoInicialEmbedded> list) {
+        if (list == null) return List.of();
+        return list.stream().map(ContratoDocumentMapper::mapBoucherToDomain).toList();
+    }
+
+    private static List<BoucherPagoInicialEmbedded> mapBucherosToDoc(List<BoucherPagoInicial> list) {
+        if (list == null) return List.of();
+        return list.stream().map(ContratoDocumentMapper::mapBoucherToDoc).toList();
+    }
+
     private static BoucherPagoInicial mapBoucherToDomain(BoucherPagoInicialEmbedded e) {
         if (e == null) return null;
         return BoucherPagoInicial.builder()

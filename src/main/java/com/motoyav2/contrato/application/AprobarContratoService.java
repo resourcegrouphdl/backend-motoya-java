@@ -41,9 +41,11 @@ public class AprobarContratoService implements AprobarContratoUseCase {
                 "El contrato debe estar EN_VALIDACION para ser aprobado. Estado actual: " + contrato.estado()));
           }
 
-          if (contrato.boucherPagoInicial() == null
-              || contrato.boucherPagoInicial().estadoValidacion() != EstadoValidacion.APROBADO) {
-            return Mono.error(new BadRequestException("El boucher de pago inicial debe estar aprobado"));
+          boolean algoBoucherAprobado = contrato.boucheresPagoInicial() != null
+              && contrato.boucheresPagoInicial().stream()
+                    .anyMatch(b -> b.estadoValidacion() == EstadoValidacion.APROBADO);
+          if (!algoBoucherAprobado) {
+            return Mono.error(new BadRequestException("Al menos un boucher de pago inicial debe estar aprobado"));
           }
           if (contrato.facturaVehiculo() == null
               || contrato.facturaVehiculo().estadoValidacion() != EstadoValidacion.APROBADO) {
@@ -56,7 +58,7 @@ public class AprobarContratoService implements AprobarContratoUseCase {
               contrato.id(), contrato.numeroContrato(),
               EstadoContrato.GENERANDO_CONTRATO, FaseContrato.GENERACION_CONTRATO,
               contrato.titular(), contrato.fiador(), contrato.tienda(), contrato.datosFinancieros(),
-              contrato.boucherPagoInicial(), contrato.facturaVehiculo(),
+              contrato.boucheresPagoInicial(), contrato.facturaVehiculo(),
               contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
               contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
               contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(),
@@ -81,7 +83,7 @@ public class AprobarContratoService implements AprobarContratoUseCase {
                         saved.id(), saved.numeroContrato(),
                         EstadoContrato.CONTRATO_GENERADO, FaseContrato.GENERACION_CONTRATO,
                         saved.titular(), saved.fiador(), saved.tienda(), saved.datosFinancieros(),
-                        saved.boucherPagoInicial(), saved.facturaVehiculo(),
+                        saved.boucheresPagoInicial(), saved.facturaVehiculo(),
                         cuotas, List.of(), saved.evidenciasFirma(),
                         saved.notificaciones(), saved.creadoPor(), saved.evaluacionId(),
                         saved.motivoRechazo(), saved.fechaCreacion(), Instant.now(),

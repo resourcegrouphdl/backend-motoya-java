@@ -19,7 +19,7 @@ public class ContratoDocument {
     private DatosFiadorEmbedded fiador;
     private TiendaInfoEmbedded tienda;
     private DatosFinancierosEmbedded datosFinancieros;
-    private BoucherPagoInicialEmbedded boucherPagoInicial;
+    private List<BoucherPagoInicialEmbedded> boucheresPagoInicial;
     private FacturaVehiculoEmbedded facturaVehiculo;
     private List<CuotaCronogramaEmbedded> cuotas;
     private List<DocumentoGeneradoEmbedded> documentosGenerados;

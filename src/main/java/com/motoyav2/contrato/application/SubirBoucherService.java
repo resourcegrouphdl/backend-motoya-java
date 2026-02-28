@@ -3,7 +3,6 @@ package com.motoyav2.contrato.application;
 import com.motoyav2.contrato.domain.enums.EstadoValidacion;
 import com.motoyav2.contrato.domain.model.BoucherPagoInicial;
 import com.motoyav2.contrato.domain.model.Contrato;
-import com.motoyav2.contrato.domain.model.ContratoParaImprimir;
 import com.motoyav2.contrato.domain.port.in.SubirBoucherUseCase;
 import com.motoyav2.contrato.domain.port.out.ContratoRepository;
 import com.motoyav2.shared.exception.NotFoundException;
@@ -12,6 +11,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -21,7 +22,7 @@ public class SubirBoucherService implements SubirBoucherUseCase {
     private final ContratoRepository contratoRepository;
 
     @Override
-    public Mono<BoucherPagoInicial> subir(String contratoId, BoucherPagoInicial boucher) {
+    public Mono<Contrato> subir(String contratoId, BoucherPagoInicial boucher) {
         return contratoRepository.findById(contratoId)
                 .switchIfEmpty(Mono.error(new NotFoundException("Contrato no encontrado: " + contratoId)))
                 .flatMap(contrato -> {
@@ -37,10 +38,15 @@ public class SubirBoucherService implements SubirBoucherUseCase {
                             .estadoValidacion(EstadoValidacion.PENDIENTE)
                             .build();
 
+                    List<BoucherPagoInicial> listActualizada = new ArrayList<>(
+                            contrato.boucheresPagoInicial() != null ? contrato.boucheresPagoInicial() : List.of()
+                    );
+                    listActualizada.add(nuevoBoucher);
+
                     Contrato actualizado = new Contrato(
                             contrato.id(), contrato.numeroContrato(), contrato.estado(), contrato.fase(),
                             contrato.titular(), contrato.fiador(), contrato.tienda(), contrato.datosFinancieros(),
-                            nuevoBoucher, contrato.facturaVehiculo(),
+                            listActualizada, contrato.facturaVehiculo(),
                             contrato.cuotas(), contrato.documentosGenerados(), contrato.evidenciasFirma(),
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                             contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(), contrato.contratoParaImprimir(),
@@ -48,8 +54,7 @@ public class SubirBoucherService implements SubirBoucherUseCase {
                             contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actaDeEntrega()
                     );
 
-                    return contratoRepository.save(actualizado)
-                            .map(Contrato::boucherPagoInicial);
+                    return contratoRepository.save(actualizado);
                 });
     }
 }
