@@ -157,6 +157,17 @@ public class StoreContractsController {
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
+    @PostMapping("/contrato/{contratoId}/acta-entrega")
+    public Mono<ContratoDetalleAPIDto> subirActaDeEntrega(
+            @PathVariable String contratoId,
+            @RequestBody EvidenciaDocumentoRequest dto,
+            @AuthenticationPrincipal FirebaseUserDetails principal
+    ) {
+        String tiendaId = tiendaIdDe(principal);
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, tiendaId, "ACTA_ENTREGA", toEvidenciaDocumento(dto))
+                .map(ContratoParaTiendaResponse::toResponse);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String tiendaIdDe(FirebaseUserDetails principal) {

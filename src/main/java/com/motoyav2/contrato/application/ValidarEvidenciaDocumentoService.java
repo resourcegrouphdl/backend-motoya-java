@@ -70,7 +70,7 @@ public class ValidarEvidenciaDocumentoService implements ValidarEvidenciaDocumen
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                             contrato.motivoRechazo(), contrato.fechaCreacion(), now, contrato.contratoParaImprimir(),
                             contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
-                            tive, soat, placa
+                            tive, soat, placa, contrato.actaDeEntrega()
                     );
 
                     return contratoRepository.save(actualizado);

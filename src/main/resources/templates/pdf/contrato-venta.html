@@ -4,8 +4,8 @@
     <title>Contrato de Alquiler Vehicular</title>
     <style>
         @page {
-            size: 210mm 297mm;
-            margin: 18mm 15mm 18mm 20mm;
+            size: A4;
+            margin: 28mm 15mm 24mm 20mm;
         }
         body { font-family: Arial, sans-serif; font-size: 9pt; line-height: 1.55; color: #000; margin: 0; padding: 0; }
         h1 { text-align: center; font-size: 11pt; font-weight: bold; margin-bottom: 8pt; text-transform: uppercase; }
@@ -19,6 +19,10 @@
         table.schedule { width: 100%; border-collapse: collapse; margin-top: 8pt; }
         table.schedule th, table.schedule td { border: 1px solid #333; padding: 3pt 6pt; text-align: center; font-size: 8pt; }
         table.schedule th { background-color: #d8d8d8; font-weight: bold; }
+        .bancos-titulo { font-weight: bold; margin-top: 10pt; margin-bottom: 4pt; font-size: 9pt; }
+        table.bancos { width: 100%; border-collapse: collapse; margin-top: 4pt; margin-bottom: 8pt; }
+        table.bancos th { background-color: #d8d8d8; font-weight: bold; font-size: 8pt; padding: 3pt 6pt; border: 1px solid #555; text-align: center; }
+        table.bancos td { font-size: 8pt; padding: 3pt 6pt; border: 1px solid #555; text-align: left; }
         .firma-section { margin-top: 40pt; }
         .firma-line { border-top: 1px solid #000; width: 160pt; margin: 0 auto; }
         .page-break { page-break-before: always; }
@@ -27,22 +31,47 @@
         .header-table td { border: none; vertical-align: middle; }
         .header-logo { text-align: right; }
         .header-logo img { height: 42pt; }
+
+        /* ── Pie de página numerado ── */
+        .pie-pagina {
+            position: fixed;
+            bottom: 7mm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 8pt;
+            color: #555;
+            border-top: 0.5pt solid #ccc;
+            padding-top: 3pt;
+        }
+        .pie-pagina .num-pag:before  { content: counter(page);  }
+        .pie-pagina .total-pag:before { content: counter(pages); }
+
+        /* ── Membrete: logo en todas las páginas ── */
+        .membrete {
+            position: fixed;
+            top: 4mm;
+            left: 0;
+            right: 0;
+            text-align: right;
+            padding-right: 15mm;
+        }
+        .membrete img { height: 16mm; }
     </style>
 </head>
 <body>
 
-<!-- ENCABEZADO: título centrado + logo esquina superior derecha -->
-<table class="header-table">
-    <tr>
-        <td style="width: 15%; border: none;">&#160;</td>
-        <td style="width: 70%; border: none; text-align: center; vertical-align: middle;">
-            <h1 style="margin: 0; padding: 0;">CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA</h1>
-        </td>
-        <td class="header-logo" style="width: 15%; border: none;">
-            <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya"/>
-        </td>
-    </tr>
-</table>
+<!-- Pie de página: se repite en cada hoja gracias a position:fixed -->
+<div class="pie-pagina">
+    P&#225;gina <span class="num-pag"></span> de <span class="total-pag"></span>
+</div>
+
+<!-- Membrete: logo que se repite en todas las páginas -->
+<div class="membrete">
+    <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya"/>
+</div>
+
+<h1>CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA</h1>
 
 <div class="section">
     <p>Conste con el presente documento el CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA, que celebran:</p>
@@ -65,7 +94,7 @@
 <!-- CLAUSULA 2 -->
 <div class="section">
     <p class="clausula-titulo">2)&#160;&#160;&#160;CLAUSULA SEGUNDA</p>
-    <p>EL ARRENDATARIO declara haber seleccionado libremente el bien materia del contrato, del stock ofrecido. En tal sentido, LA EMPRESA est&#225; eximido de cualquier repercusi&#243;n que dicha elecci&#243;n pueda ocasionar, dejando constancia que el bien a que se refiere se encuentra nuevo y a su vez en perfecto estado de conservaci&#243;n y funcionamiento. Por ello LA EMPRESA se obliga a entregar el veh&#237;culo en buenas condiciones, adquirida por EL PROVEEDOR <strong th:text="${cp.proveedor}"></strong> con R.U.C. ____________</p>
+    <p>EL ARRENDATARIO declara haber seleccionado libremente el bien materia del contrato, del stock ofrecido. En tal sentido, LA EMPRESA est&#225; eximido de cualquier repercusi&#243;n que dicha elecci&#243;n pueda ocasionar, dejando constancia que el bien a que se refiere se encuentra nuevo y a su vez en perfecto estado de conservaci&#243;n y funcionamiento. Por ello LA EMPRESA se obliga a entregar el veh&#237;culo en buenas condiciones, adquirida por EL PROVEEDOR <strong th:text="${cp.proveedor}"></strong> con R.U.C.<strong th:text="${cp.rucProveedor}"></strong> </p>
 
     <table class="vehicle-table">
         <tr><td class="label">MARCA</td><td th:text="${cp.marcaDeMoto}"></td></tr>
@@ -87,13 +116,13 @@
 <!-- CLAUSULA 4 -->
 <div class="section">
     <p class="clausula-titulo">4)&#160;&#160;&#160;CL&#193;USULA CUARTA. - PLAZO DEL CONTRATO:</p>
-    <p>Bajo el amparo del art&#237;culo 1558 del C&#243;digo Civil, que especifica, que EL ARRENDATARIO est&#225; obligado a pagar el precio en el momento, de la manera y lugar pactados en el presente contrato, pactando como precio la suma de S/ <strong th:text="${cp.precioTotal}"></strong> (<span th:text="${cp.precioTotalLetras}"></span>).</p>
+    <p>Bajo el amparo del art&#237;culo 1558 del C&#243;digo Civil, que especifica, que EL ARRENDATARIO est&#225; obligado a pagar el precio en el momento, de la manera y lugar pactados en el presente contrato, pactando como precio la suma de S/ <strong th:text="${#numbers.formatDecimal(cp.precioTotal, 1, 'NONE', 2, 'POINT')}"></strong> (<span th:text="${cp.precioTotalLetras}"></span>).</p>
 </div>
 
 <!-- CLAUSULA 5 -->
 <div class="section">
     <p class="clausula-titulo">5)&#160;&#160;&#160;QUINTA CL&#193;USULA. - RETRIBUCI&#211;N, FORMA Y OPORTUNIDAD DE PAGO:</p>
-    <p>Con el fin de transparencia Las partes acuerdan que, en calidad de contraprestaci&#243;n, EL COMPRADOR otorgar&#225; como garant&#237;a o inicial la suma de S/ <strong th:text="${cp.inicial}"></strong> (<span th:text="${cp.inicialLetras}"></span>), la cual se tomar&#225; como parte del valor total del veh&#237;culo y durante el plazo de duraci&#243;n del presente contrato, pagar&#225; AL GESTOR una renta de <span th:text="${cp.numeroDeQuincenas}"></span> quincenas ascendente a S/ <strong th:text="${cp.montoDeLaQuincena}"></strong> (<span th:text="${cp.montoDeLaQuincenaLetras}"></span>) cada una. Dicha renta deber&#225; pagarse &#237;ntegramente en cualquiera de las cuentas bancarias a nombre de MOTO YA DIGITAL S.A.C Para lo cual se le asignar&#225; un cronograma de pagos conveniente a EL ARRENDATARIO llegando a un acuerdo con LA EMPRESA.</p>
+    <p>Con el fin de transparencia Las partes acuerdan que, en calidad de contraprestaci&#243;n, EL COMPRADOR otorgar&#225; como garant&#237;a o inicial la suma de S/ <strong th:text="${#numbers.formatDecimal(cp.inicial, 1, 'NONE', 2, 'POINT')}"></strong> (<span th:text="${cp.inicialLetras}"></span>), la cual se tomar&#225; como parte del valor total del veh&#237;culo y durante el plazo de duraci&#243;n del presente contrato, pagar&#225; AL GESTOR una renta de <span th:text="${cp.numeroDeQuincenas}"></span> quincenas ascendente a S/ <strong th:text="${#numbers.formatDecimal(cp.montoDeLaQuincena, 1, 'NONE', 2, 'POINT')}"></strong> (<span th:text="${cp.montoDeLaQuincenaLetras}"></span>) cada una. Dicha renta deber&#225; pagarse &#237;ntegramente en cualquiera de las cuentas bancarias a nombre de MOTO YA DIGITAL S.A.C Para lo cual se le asignar&#225; un cronograma de pagos conveniente a EL ARRENDATARIO llegando a un acuerdo con LA EMPRESA.</p>
 </div>
 
 <!-- CLAUSULA 6 -->
@@ -108,7 +137,7 @@
 <!-- CLAUSULA 7 -->
 <div class="section">
     <p class="clausula-titulo">7)&#160;&#160;&#160;CL&#193;USULA S&#201;PTIMA. &#8211; OPCI&#211;N DE COMPRA-VALOR RESIDUAL:</p>
-    <p>MOTO YA DIGITAL S.A.C otorga a favor de EL ARRENDATARIO la opci&#243;n de compra del bien materia del presente contrato, el mismo que es equivalente a S/. <strong th:text="${cp.precioTotal}"></strong> (<span th:text="${cp.precioTotalLetras}"></span>). Se entiende que, para ejercitar esta opci&#243;n, EL ARRENDATARIO deber&#225; haber cancelado la garant&#237;a y todas las rentas quincenales estipuladas en el contrato y cualquier deuda generada directa o indirectamente por el presente contrato. Ser&#225; de cuenta de EL ARRENDATARIO.</p>
+    <p>MOTO YA DIGITAL S.A.C otorga a favor de EL ARRENDATARIO la opci&#243;n de compra del bien materia del presente contrato, el mismo que es equivalente a S/. <strong th:text="${#numbers.formatDecimal(cp.precioTotal, 1, 'NONE', 2, 'POINT')}"></strong> (<span th:text="${cp.precioTotalLetras}"></span>). Se entiende que, para ejercitar esta opci&#243;n, EL ARRENDATARIO deber&#225; haber cancelado la garant&#237;a y todas las rentas quincenales estipuladas en el contrato y cualquier deuda generada directa o indirectamente por el presente contrato. Ser&#225; de cuenta de EL ARRENDATARIO.</p>
     <p>LA EMPRESA verificar&#225; la transferencia de la propiedad del veh&#237;culo menor una vez que EL ARRENDATARIO haya cancelado todas las obligaciones que emanan del presente contrato y sin pagos pendientes por concepto de penalidades, papeletas de infracci&#243;n de tr&#225;nsito, compra de SOAT, as&#237; como la cancelaci&#243;n de cualquier obligaci&#243;n que dificulte el saneamiento administrativo del veh&#237;culo menor. LA EMPRESA asumir&#225; los costos para la realizaci&#243;n de la Transferencia Notarial a favor de EL ARRENDATARIO.</p>
 </div>
 
@@ -236,7 +265,7 @@
     <p><span class="info-label">CLIENTE:</span> <span th:text="${cp.nombreTitular}"></span></p>
     <p><span class="info-label">FIADOR:</span> <span th:text="${cp.nombreFiador}"></span></p>
     <p><span class="info-label">CODIGO DE CLIENTE:</span> <span th:text="${cp.numeroDeDocumento}"></span></p>
-    <p><span class="info-label">MONTO DE LA RENTA:</span> S/ <span th:text="${cp.montoDeLaQuincena}"></span></p>
+    <p><span class="info-label">MONTO DE LA RENTA:</span> S/ <span th:text="${#numbers.formatDecimal(cp.montoDeLaQuincena, 1, 'NONE', 2, 'POINT')}"></span></p>
     <p><span class="info-label">NUMERO DE CUOTAS:</span> <span th:text="${cp.numeroDeQuincenas}"></span> CUOTAS QUINCENALES</p>
     <p><span class="info-label">PENALIDAD 3 SOLES POR DIA</span></p>
 
@@ -246,13 +275,43 @@
                 <th>N&#176; CUOTA</th>
                 <th>FECHA VENCIMIENTO</th>
                 <th>MONTO (S/)</th>
+                <th>SALDO (S/)</th>
             </tr>
         </thead>
         <tbody>
             <tr th:each="cuota : ${cuotas}">
                 <td th:text="${cuota.numero}"></td>
                 <td th:text="${cuota.fecha}"></td>
-                <td th:text="${cuota.montoCuota}"></td>
+                <td th:text="${#numbers.formatDecimal(cuota.montoCuota, 1, 'NONE', 2, 'POINT')}"></td>
+                <td th:text="${#numbers.formatDecimal(cuota.saldo,      1, 'NONE', 2, 'POINT')}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class="bancos-titulo">CUENTAS BANCARIAS PARA EL PAGO DE CUOTAS:</p>
+    <table class="bancos">
+        <thead>
+            <tr>
+                <th style="width:28%;">BANCO</th>
+                <th style="width:36%;">N&#176; CUENTA</th>
+                <th style="width:36%;">CCI</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>BCP</strong> &#8212; Banco de Cr&#233;dito del Per&#250;</td>
+                <td>194-1058703-0-68</td>
+                <td>002-19400105870306894</td>
+            </tr>
+            <tr>
+                <td><strong>INTERBANK</strong></td>
+                <td>2003006691585</td>
+                <td>00320000300669158538</td>
+            </tr>
+            <tr>
+                <td><strong>SCOTIABANK</strong></td>
+                <td>0004689149</td>
+                <td>009056 000004689149-25</td>
             </tr>
         </tbody>
     </table>
@@ -264,7 +323,7 @@
 </div>
 
 <!-- INFORMACION LETRAS DE CAMBIO -->
-<div class="section" style="margin-top: 30px;">
+<div class="page-break section">
     <h1>INFORMACION SOBRE LAS LETRAS DE CAMBIO</h1>
     <p>Yo, <strong th:text="${cp.nombreTitular}"></strong> identificado con <span th:text="${cp.tipoDeDocumento}"></span> N&#176; <span th:text="${cp.numeroDeDocumento}"></span> con t&#237;tulo de CLIENTE y la Sr(a). <strong th:text="${cp.nombreFiador}"></strong> identificado(a) con <span th:text="${cp.tipoDocumentoFiador}"></span> N&#176; <span th:text="${cp.numeroDocumentoFiador}"></span> con t&#237;tulo de FIADOR, declaro que la empresa MOTO YA DIGITAL S.A.C. me est&#225; haciendo firmar dos letras de cambio en blanco, hasta la culminaci&#243;n del cr&#233;dito, en caso de cumplir con todas las cl&#225;usulas del contrato, la empresa me entregar&#225; las letras en su oficina AV. TOMAS GUZMAN 977, SAN JUAN DE MIRAFLORES, o a su vez me la enviar&#225;n por WhatsApp ANULADAS.</p>
 
@@ -287,7 +346,7 @@
 </div>
 
 <!-- DECLARACION JURADA DE DOMICILIO -->
-<div class="section" style="margin-top: 30px;">
+<div class="page-break section">
     <h1>DECLARACI&#211;N JURADA DE DOMICILIO</h1>
     <p><strong th:text="${cp.nombreTitular}"></strong> identificado con <span th:text="${cp.tipoDeDocumento}"></span> N&#176; <span th:text="${cp.numeroDeDocumento}"></span> en pleno ejercicio de mis derechos ciudadanos y de conformidad con lo dispuesto en la Ley N&#176; 28882 de Simplificaci&#243;n de la Certificaci&#243;n Domiciliaria, declaro bajo juramento que mi domicilio actual se encuentra ubicado en <span th:text="${cp.domicilioTitular}"></span> distrito de <span th:text="${cp.distritoTitular}"></span> provincia y departamento de LIMA.</p>
     <p>En caso de que la informaci&#243;n que proporciono resulte ser falsa, declaro haber incurrido en los delitos de falsa declaraci&#243;n en proceso administrativo (Art. 411&#176; del C&#243;digo Penal), falsedad ideol&#243;gica o falsedad gen&#233;rica (Arts. 428&#176; y 438&#176; del C&#243;digo Penal) en concordancia con el Art. IV, 1.7 del T&#237;tulo Preliminar de la Ley N&#186; 27444 del Procedimiento Administrativo General (Principio de presunci&#243;n de veracidad).</p>

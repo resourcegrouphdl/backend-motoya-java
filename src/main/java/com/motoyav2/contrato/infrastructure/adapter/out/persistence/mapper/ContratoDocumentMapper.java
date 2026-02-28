@@ -40,7 +40,8 @@ public final class ContratoDocumentMapper {
                 toInstant(doc.getFechaRegistroTitulo()),
                 mapEvidenciaDocumentoToDomain(doc.getTive()),
                 mapEvidenciaDocumentoToDomain(doc.getEvidenciaSOAT()),
-                mapEvidenciaDocumentoToDomain(doc.getEvidenciaPlacaRodaje())
+                mapEvidenciaDocumentoToDomain(doc.getEvidenciaPlacaRodaje()),
+                mapEvidenciaDocumentoToDomain(doc.getActaDeEntrega())
         );
     }
 
@@ -71,6 +72,7 @@ public final class ContratoDocumentMapper {
         doc.setTive(mapEvidenciaDocumentoToDoc(contrato.tive()));
         doc.setEvidenciaSOAT(mapEvidenciaDocumentoToDoc(contrato.evidenciaSOAT()));
         doc.setEvidenciaPlacaRodaje(mapEvidenciaDocumentoToDoc(contrato.evidenciaPlacaRodaje()));
+        doc.setActaDeEntrega(mapEvidenciaDocumentoToDoc(contrato.actaDeEntrega()));
         return doc;
     }
 
@@ -434,6 +436,7 @@ public final class ContratoDocumentMapper {
                 .montoDeLaQuincena(toBigDecimal(e.getMontoDeLaQuincena()))
                 .montoDeLaQuincenaLetras(e.getMontoDeLaQuincenaLetras())
                 .proveedor(e.getProveedor())
+                .rucProveedor(e.getRucProveedor())
                 .build();
     }
 
@@ -467,6 +470,7 @@ public final class ContratoDocumentMapper {
         e.setMontoDeLaQuincena(toDouble(cp.getMontoDeLaQuincena()));
         e.setMontoDeLaQuincenaLetras(cp.getMontoDeLaQuincenaLetras());
         e.setProveedor(cp.getProveedor());
+        e.setRucProveedor(cp.getRucProveedor());
         return e;
     }
 

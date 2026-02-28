@@ -3,9 +3,16 @@
     <meta charset="UTF-8"/>
     <style>
         @page {
-            size: 210mm 297mm;
-            margin: 18mm 15mm 18mm 20mm;
+            size: A4;
+            margin: 18mm 15mm 24mm 20mm;
         }
+        .pie-pagina { position: fixed; bottom: 7mm; left: 0; right: 0; text-align: center; font-size: 8pt; color: #555; border-top: 0.5pt solid #ccc; padding-top: 3pt; }
+        .pie-pagina .num-pag:before  { content: counter(page);  }
+        .pie-pagina .total-pag:before { content: counter(pages); }
+        .bancos-titulo { font-weight: bold; margin-top: 12pt; margin-bottom: 4pt; font-size: 10pt; }
+        table.bancos { width: 100%; border-collapse: collapse; margin-top: 4pt; }
+        table.bancos th { background-color: #d0d0d0; font-weight: bold; font-size: 10pt; padding: 4pt 8pt; border: 1px solid #999; text-align: center; }
+        table.bancos td { font-size: 10pt; padding: 4pt 8pt; border: 1px solid #999; text-align: left; }
         body { font-family: Arial, sans-serif; font-size: 11pt; margin: 0; padding: 0; color: #000; }
         h1 { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; }
         h3 { text-align: center; font-size: 11pt; color: #333; margin-bottom: 14pt; }
@@ -18,6 +25,7 @@
     </style>
 </head>
 <body>
+<div class="pie-pagina">P&#225;gina <span class="num-pag"></span> de <span class="total-pag"></span></div>
     <h1>CRONOGRAMA DE PAGOS</h1>
     <h3 th:text="'Contrato N&#176; ' + ${numeroContrato}"></h3>
 
@@ -32,7 +40,7 @@
         </tr>
         <tr>
             <td><strong>Cuota quincenal:</strong></td>
-            <td th:text="'S/ ' + ${cp.montoDeLaQuincena}"></td>
+            <td th:text="'S/ ' + ${#numbers.formatDecimal(cp.montoDeLaQuincena, 1, 'NONE', 2, 'POINT')}"></td>
         </tr>
         <tr>
             <td><strong>N&#176; de cuotas:</strong></td>
@@ -53,8 +61,36 @@
             <tr th:each="cuota : ${cuotas}">
                 <td class="num" th:text="${cuota.numero}"></td>
                 <td class="num" th:text="${cuota.fecha}"></td>
-                <td th:text="${cuota.montoCuota}"></td>
-                <td th:text="${cuota.saldo}"></td>
+                <td th:text="${#numbers.formatDecimal(cuota.montoCuota, 1, 'NONE', 2, 'POINT')}"></td>
+                <td th:text="${#numbers.formatDecimal(cuota.saldo,      1, 'NONE', 2, 'POINT')}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class="bancos-titulo">CUENTAS BANCARIAS PARA EL PAGO DE CUOTAS:</p>
+    <table class="bancos">
+        <thead>
+            <tr>
+                <th style="width:28%;">BANCO</th>
+                <th style="width:36%;">N&#176; CUENTA</th>
+                <th style="width:36%;">CCI</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>BCP</strong> &#8212; Banco de Cr&#233;dito del Per&#250;</td>
+                <td>194-1058703-0-68</td>
+                <td>002-19400105870306894</td>
+            </tr>
+            <tr>
+                <td><strong>INTERBANK</strong></td>
+                <td>2003006691585</td>
+                <td>00320000300669158538</td>
+            </tr>
+            <tr>
+                <td><strong>SCOTIABANK</strong></td>
+                <td>0004689149</td>
+                <td>009056 000004689149-25</td>
             </tr>
         </tbody>
     </table>

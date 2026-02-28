@@ -47,5 +47,6 @@ public class ContratoParaImprimir {
   private String montoDeLaQuincenaLetras;
 
   private String proveedor;
+  private String rucProveedor;
 
 }

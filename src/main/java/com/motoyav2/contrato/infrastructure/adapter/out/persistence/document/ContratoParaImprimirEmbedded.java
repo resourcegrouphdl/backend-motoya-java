@@ -31,4 +31,5 @@ public class ContratoParaImprimirEmbedded {
     private Double montoDeLaQuincena;
     private String montoDeLaQuincenaLetras;
     private String proveedor;
+    private String rucProveedor;
 }

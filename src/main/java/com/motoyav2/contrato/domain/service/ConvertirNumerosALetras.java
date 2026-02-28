@@ -8,7 +8,7 @@ import java.math.RoundingMode;
 @Service
 public class ConvertirNumerosALetras {
 
-  private static final String SIMBOLO_MONEDA = "S/ ";
+  private static final String SIMBOLO_MONEDA = "";
   private static final String TIPO_MONEDA = "SOLES";
 
   public String convertir(BigDecimal valor) {
@@ -86,7 +86,10 @@ public class ConvertirNumerosALetras {
           (numero % 100 > 0 ? " " + convertirNumero(numero % 100) : "");
     }
 
-    if (numero < 2000) return "mil " + convertirNumero(numero % 1000);
+    if (numero < 2000) {
+      String resto = numero % 1000 > 0 ? " " + convertirNumero(numero % 1000) : "";
+      return "mil" + resto;
+    }
 
     if (numero < 1_000_000)
       return convertirNumero(numero / 1000) +

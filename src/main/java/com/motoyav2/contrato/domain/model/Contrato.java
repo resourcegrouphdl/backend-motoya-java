@@ -34,7 +34,8 @@ public record Contrato(
         Instant fechaRegistroTitulo,
         EvidenciaDocumento tive,
         EvidenciaDocumento evidenciaSOAT,
-        EvidenciaDocumento evidenciaPlacaRodaje
+        EvidenciaDocumento evidenciaPlacaRodaje,
+        EvidenciaDocumento actaDeEntrega
 ) {
 
 

@@ -1,9 +1,12 @@
 package com.motoyav2.cobranza.domain.model;
 
+import lombok.Builder;
+
 /**
  * Datos del titular del crédito embebidos directamente en el caso de cobranza.
  * Copia aislada — no depende del módulo de contratos.
  */
+@Builder
 public record DatosTitular(
         String nombres,
         String apellidos,

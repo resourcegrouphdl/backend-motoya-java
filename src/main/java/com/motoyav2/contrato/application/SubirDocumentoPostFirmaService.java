@@ -36,6 +36,10 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
                                 "El contrato debe estar en estado FIRMADO. Estado actual: " + contrato.estado()));
                     }
 
+                    EstadoValidacion estadoInicial = "ACTA_ENTREGA".equalsIgnoreCase(tipo)
+                            ? EstadoValidacion.APROBADO
+                            : EstadoValidacion.PENDIENTE;
+
                     EvidenciaDocumento nuevaEvidencia = EvidenciaDocumento.builder()
                             .id(UUID.randomUUID().toString())
                             .tipoEvidencia(evidencia.tipoEvidencia())
@@ -45,7 +49,7 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
                             .tamanioBytes(evidencia.tamanioBytes())
                             .fechaSubida(Instant.now())
                             .descripcion(evidencia.descripcion())
-                            .estadoValidacion(EstadoValidacion.PENDIENTE)
+                            .estadoValidacion(estadoInicial)
                             .build();
 
                     Contrato actualizado = buildContratoConDocumento(contrato, tipo, nuevaEvidencia);
@@ -57,12 +61,14 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
         EvidenciaDocumento tive = contrato.tive();
         EvidenciaDocumento soat = contrato.evidenciaSOAT();
         EvidenciaDocumento placa = contrato.evidenciaPlacaRodaje();
+        EvidenciaDocumento acta = contrato.actaDeEntrega();
 
         switch (tipo.toUpperCase()) {
             case "TIVE" -> tive = nueva;
             case "SOAT" -> soat = nueva;
             case "PLACA_RODAJE" -> placa = nueva;
-            default -> throw new BadRequestException("Tipo de documento inválido: " + tipo + ". Use TIVE, SOAT o PLACA_RODAJE");
+            case "ACTA_ENTREGA" -> acta = nueva;
+            default -> throw new BadRequestException("Tipo de documento inválido: " + tipo + ". Use TIVE, SOAT, PLACA_RODAJE o ACTA_ENTREGA");
         }
 
         return new Contrato(
@@ -73,7 +79,7 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
                 contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                 contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(), contrato.contratoParaImprimir(),
                 contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
-                tive, soat, placa
+                tive, soat, placa, acta
         );
     }
 }

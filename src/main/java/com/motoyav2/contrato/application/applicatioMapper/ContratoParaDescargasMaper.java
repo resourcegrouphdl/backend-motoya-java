@@ -17,7 +17,7 @@ public class ContratoParaDescargasMaper {
   private final GeneradorCodigoDeContrato generadorCodigoDeContrato;
   private final ConvertirNumerosALetras convertirNumerosALetra;
 
-  public  ContratoParaImprimir contratoParaImprimir(Contrato co) {
+  public  ContratoParaImprimir contratoParaImprimir(Contrato co, String rucProveedor) {
 
     String codigo = generadorCodigoDeContrato.generarCodigoContrato();
 
@@ -66,6 +66,7 @@ public class ContratoParaDescargasMaper {
         .montoDeLaQuincenaLetras(convertirNumerosALetra.convertir(co.datosFinancieros().cuotaMensual()))
 
         .proveedor(co.tienda().nombreTienda())
+        .rucProveedor(rucProveedor)
 
         .build();
   }

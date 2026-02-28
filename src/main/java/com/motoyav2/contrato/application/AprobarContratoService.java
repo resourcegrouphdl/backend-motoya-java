@@ -10,6 +10,7 @@ import com.motoyav2.contrato.domain.model.CuotaCronograma;
 import com.motoyav2.contrato.domain.service.ContratoStateMachine;
 import com.motoyav2.contrato.domain.port.in.AprobarContratoUseCase;
 import com.motoyav2.contrato.domain.port.out.ContratoRepository;
+import com.motoyav2.contrato.domain.port.out.ObtenerRucDeStoreUseCase;
 import com.motoyav2.contrato.domain.service.CuotaCronogramaCliente;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.NotFoundException;
@@ -26,7 +27,8 @@ public class AprobarContratoService implements AprobarContratoUseCase {
 
   private final ContratoRepository contratoRepository;
   private final CuotaCronogramaCliente cuotaCronogramaCliente;
-  private final ContratoParaDescargasMaper  contratoParaDescargasMaper;
+  private final ContratoParaDescargasMaper contratoParaDescargasMaper;
+  private final ObtenerRucDeStoreUseCase obtenerRucDeStoreUseCase;
 
 
   @Override
@@ -60,33 +62,35 @@ public class AprobarContratoService implements AprobarContratoUseCase {
               contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(),
               contrato.contratoParaImprimir(),
               contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
-              contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje()
+              contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actaDeEntrega()
           );
 
           return contratoRepository.save(enGeneracion)
-              .flatMap(saved -> {
-                List<CuotaCronograma> cuotas = cuotaCronogramaCliente.generarCronograma(
-                    saved.facturaVehiculo().fechaEmision(),
-                    saved.datosFinancieros().cuotaMensual(),
-                    saved.datosFinancieros().numeroCuotas()
-                );
+              .flatMap(saved -> obtenerRucDeStoreUseCase.obtenerRucDeStore(saved.tienda().tiendaId())
+                  .defaultIfEmpty("")
+                  .flatMap(ruc -> {
+                    List<CuotaCronograma> cuotas = cuotaCronogramaCliente.generarCronograma(
+                        saved.facturaVehiculo().fechaEmision(),
+                        saved.datosFinancieros().cuotaMensual(),
+                        saved.datosFinancieros().numeroCuotas()
+                    );
 
-                ContratoParaImprimir contratoParaImprimir = contratoParaDescargasMaper.contratoParaImprimir(saved);
+                    ContratoParaImprimir contratoParaImprimir = contratoParaDescargasMaper.contratoParaImprimir(saved, ruc);
 
-                Contrato contratoGenereado = new Contrato(
-                    saved.id(), saved.numeroContrato(),
-                    EstadoContrato.CONTRATO_GENERADO, FaseContrato.GENERACION_CONTRATO,
-                    saved.titular(), saved.fiador(), saved.tienda(), saved.datosFinancieros(),
-                    saved.boucherPagoInicial(), saved.facturaVehiculo(),
-                    cuotas, List.of(), saved.evidenciasFirma(),
-                    saved.notificaciones(), saved.creadoPor(), saved.evaluacionId(),
-                    saved.motivoRechazo(), saved.fechaCreacion(), Instant.now(),
-                    contratoParaImprimir,
-                    saved.numeroDeTitulo(), saved.fechaRegistroTitulo(),
-                    saved.tive(), saved.evidenciaSOAT(), saved.evidenciaPlacaRodaje()
-                );
-                return contratoRepository.save(contratoGenereado);
-              });
+                    Contrato contratoGenereado = new Contrato(
+                        saved.id(), saved.numeroContrato(),
+                        EstadoContrato.CONTRATO_GENERADO, FaseContrato.GENERACION_CONTRATO,
+                        saved.titular(), saved.fiador(), saved.tienda(), saved.datosFinancieros(),
+                        saved.boucherPagoInicial(), saved.facturaVehiculo(),
+                        cuotas, List.of(), saved.evidenciasFirma(),
+                        saved.notificaciones(), saved.creadoPor(), saved.evaluacionId(),
+                        saved.motivoRechazo(), saved.fechaCreacion(), Instant.now(),
+                        contratoParaImprimir,
+                        saved.numeroDeTitulo(), saved.fechaRegistroTitulo(),
+                        saved.tive(), saved.evidenciaSOAT(), saved.evidenciaPlacaRodaje(), saved.actaDeEntrega()
+                    );
+                    return contratoRepository.save(contratoGenereado);
+                  }));
 
         });
   }

@@ -24,6 +24,15 @@ public class CronogramaResponse {
     /** Lista de cuotas que fallaron (vacía si todo fue exitoso) */
     private List<EventoError> errores;
 
+    /** Nombre limpio del cliente (sin monto) tal como fue parseado */
+    private String nombreCliente;
+
+    /** Monto por cuota parseado del campo nombreCliente, formato "S/.235.00" */
+    private String montoCuota;
+
+    /** contratoId del caso de cobranza creado/actualizado. Null si no se generó caso. */
+    private String contratoId;
+
     /** Detalle de un evento que falló al crearse */
     @Data
     @Builder

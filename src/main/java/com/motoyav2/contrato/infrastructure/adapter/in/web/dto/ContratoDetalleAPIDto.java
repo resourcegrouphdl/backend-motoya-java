@@ -32,6 +32,7 @@ public record ContratoDetalleAPIDto (
     NumeroDeTituloResponse numeroDeTitulo,
     EvidenciaDocumentoResponse tive,
     EvidenciaDocumentoResponse evidenciaSOAT,
-    EvidenciaDocumentoResponse evidenciaPlacaRodaje
+    EvidenciaDocumentoResponse evidenciaPlacaRodaje,
+    EvidenciaDocumentoResponse actaDeEntrega
 ) {
 }

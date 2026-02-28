@@ -3,9 +3,12 @@
     <meta charset="UTF-8"/>
     <style>
         @page {
-            size: 210mm 297mm;
-            margin: 20mm 18mm 20mm 20mm;
+            size: A4;
+            margin: 20mm 18mm 24mm 20mm;
         }
+        .pie-pagina { position: fixed; bottom: 7mm; left: 0; right: 0; text-align: center; font-size: 8pt; color: #555; border-top: 0.5pt solid #ccc; padding-top: 3pt; }
+        .pie-pagina .num-pag:before  { content: counter(page);  }
+        .pie-pagina .total-pag:before { content: counter(pages); }
         body { font-family: Arial, sans-serif; font-size: 11pt; margin: 0; padding: 0; color: #000; line-height: 1.6; }
         h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 6pt; text-transform: uppercase; }
         p { text-align: justify; margin-bottom: 8pt; }
@@ -17,6 +20,7 @@
     </style>
 </head>
 <body>
+<div class="pie-pagina">P&#225;gina <span class="num-pag"></span> de <span class="total-pag"></span></div>
     <h1>PAGAR&#201;</h1>
     <p class="right" th:text="'N&#176; ' + ${numeroContrato}"></p>
 
@@ -27,9 +31,9 @@
         domiciliado(a) en <span th:text="${cp.domicilioTitular}"></span>,
         distrito de <span th:text="${cp.distritoTitular}"></span>, provincia y departamento de Lima,
         me obligo a pagar incondicionalmente a la orden de MOTO YA DIGITAL S.A.C.,
-        la suma de <strong th:text="'S/ ' + ${#numbers.formatDecimal(financieros.montoFinanciado, 1, 2)}"></strong>
+        la suma de <strong th:text="'S/ ' + ${#numbers.formatDecimal(financieros.montoFinanciado, 1, 'NONE', 2, 'POINT')}"></strong>
         (monto financiado), en <strong th:text="${financieros.numeroCuotas}"></strong> cuotas quincenales
-        de <strong th:text="'S/ ' + ${#numbers.formatDecimal(financieros.cuotaMensual, 1, 2)}"></strong> cada una,
+        de <strong th:text="'S/ ' + ${#numbers.formatDecimal(financieros.cuotaMensual, 1, 'NONE', 2, 'POINT')}"></strong> cada una,
         conforme al cronograma de pagos adjunto al contrato N&#176; <span th:text="${numeroContrato}"></span>.
     </p>
 

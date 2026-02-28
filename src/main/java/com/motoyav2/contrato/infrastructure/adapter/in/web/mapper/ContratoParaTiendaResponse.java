@@ -35,6 +35,7 @@ public final class ContratoParaTiendaResponse {
                 .tive(mapEvidenciaDocumento(c.tive()))
                 .evidenciaSOAT(mapEvidenciaDocumento(c.evidenciaSOAT()))
                 .evidenciaPlacaRodaje(mapEvidenciaDocumento(c.evidenciaPlacaRodaje()))
+                .actaDeEntrega(mapEvidenciaDocumento(c.actaDeEntrega()))
                 .build();
     }
 
