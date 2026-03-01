@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotNull;
 
 public record ValidarDocumentoRequest(
         @NotNull Boolean aprobado,
-        String observaciones,
-        String boucherId
+        String observaciones
 ) {
 }

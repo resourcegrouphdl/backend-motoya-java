@@ -99,10 +99,10 @@ public class ContratoController {
                 .map(ContratoResponseMapper::toResponse);
     }
 
-    @PutMapping("/contratos/{id}/documento/{tipo}/validar")
-    public Mono<ContratoResponse> validarDocumento(
+    @PutMapping("/contratos/{id}/boucher/{boucherId}/validar")
+    public Mono<ContratoResponse> validarBoucher(
             @PathVariable String id,
-            @PathVariable String tipo,
+            @PathVariable String boucherId,
             @Valid @RequestBody ValidarDocumentoRequest request,
             @AuthenticationPrincipal FirebaseUserDetails principal
     ) {
@@ -110,7 +110,21 @@ public class ContratoController {
                 ? EstadoValidacion.APROBADO
                 : EstadoValidacion.RECHAZADO;
         String observaciones = request.observaciones() != null ? request.observaciones() : "";
-        return validarDocumentoUseCase.validar(id, tipo, estado, observaciones, principal.uid(), request.boucherId())
+        return validarDocumentoUseCase.validar(id, "BOUCHER", estado, observaciones, principal.uid(), boucherId)
+                .map(ContratoResponseMapper::toResponse);
+    }
+
+    @PutMapping("/contratos/{id}/documento/factura/validar")
+    public Mono<ContratoResponse> validarFactura(
+            @PathVariable String id,
+            @Valid @RequestBody ValidarDocumentoRequest request,
+            @AuthenticationPrincipal FirebaseUserDetails principal
+    ) {
+        EstadoValidacion estado = Boolean.TRUE.equals(request.aprobado())
+                ? EstadoValidacion.APROBADO
+                : EstadoValidacion.RECHAZADO;
+        String observaciones = request.observaciones() != null ? request.observaciones() : "";
+        return validarDocumentoUseCase.validar(id, "FACTURA", estado, observaciones, principal.uid(), null)
                 .map(ContratoResponseMapper::toResponse);
     }
 
