@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import static reactor.netty.http.HttpConnectionLiveness.log;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/store")
@@ -120,6 +122,7 @@ public class StoreContractsController {
             @PathVariable String contratoId,
             @Valid @RequestBody NumeroDeTituloRequest dto
     ) {
+      log.info("si inicio el proceso");
         return registrarNumeroDeTituloUseCase.registrar(contratoId, dto.numeroDeTitulo())
                 .map(ContratoParaTiendaResponse::toResponse);
     }
