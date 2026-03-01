@@ -8,7 +8,6 @@ import com.motoyav2.contrato.domain.port.in.SubirDocumentoPostFirmaUseCase;
 import com.motoyav2.contrato.domain.port.out.ContratoRepository;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.ConflictException;
-import com.motoyav2.shared.exception.ForbiddenException;
 import com.motoyav2.shared.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,9 +27,6 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
         return contratoRepository.findById(contratoId)
                 .switchIfEmpty(Mono.error(new NotFoundException("Contrato no encontrado: " + contratoId)))
                 .flatMap(contrato -> {
-                    if (contrato.tienda() == null || !tiendaId.equals(contrato.tienda().tiendaId())) {
-                        return Mono.error(new ForbiddenException("No tienes permiso para modificar este contrato"));
-                    }
                     if (contrato.estado() != EstadoContrato.FIRMADO) {
                         return Mono.error(new ConflictException(
                                 "El contrato debe estar en estado FIRMADO. Estado actual: " + contrato.estado()));
