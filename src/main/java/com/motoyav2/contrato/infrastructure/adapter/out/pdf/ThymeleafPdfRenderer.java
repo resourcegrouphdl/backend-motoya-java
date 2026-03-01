@@ -6,9 +6,14 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
+import org.w3c.dom.Document;
 import org.xhtmlrenderer.pdf.ITextRenderer;
+import org.xml.sax.InputSource;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayOutputStream;
+import java.io.StringReader;
 import java.util.Map;
 
 /**
@@ -17,14 +22,32 @@ import java.util.Map;
  * IMPORTANTE: usa su propio TemplateEngine en modo XML (no el auto-configurado en modo HTML).
  * Flying Saucer requiere XHTML válido; el modo HTML de Thymeleaf produce HTML5
  * con void elements sin cerrar (<br>, <meta>) que el parser XML de Flying Saucer rechaza.
+ *
+ * Se usa un DocumentBuilder con DTD externo deshabilitado para evitar que Flying Saucer
+ * intente descargar http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd en cada render,
+ * lo que causaba timeouts en Cloud Run (status 0 en el cliente).
  */
 @Component
 public class ThymeleafPdfRenderer {
 
-    private static final String XHTML_DOCTYPE =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-            "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" " +
-            "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
+    private static final String XML_HEADER = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+
+    private static final DocumentBuilderFactory DBF;
+
+    static {
+        DBF = DocumentBuilderFactory.newInstance();
+        DBF.setValidating(false);
+        DBF.setNamespaceAware(true);
+        try {
+            DBF.setFeature("http://xml.org/sax/features/validation", false);
+            DBF.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
+            DBF.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            DBF.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            DBF.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        } catch (Exception ignored) {
+            // Si el parser no soporta estos features, continúa sin ellos
+        }
+    }
 
     private static final Map<TipoDocumentoGenerado, String> TEMPLATE_MAP = Map.of(
             TipoDocumentoGenerado.CONTRATO,         "pdf/contrato-venta",
@@ -57,12 +80,15 @@ public class ThymeleafPdfRenderer {
         context.setVariables(variables);
         String body = templateEngine.process(templateName, context);
 
-        // Flying Saucer necesita DOCTYPE XHTML 1.0 para procesar CSS correctamente
-        String xhtml = XHTML_DOCTYPE + body;
+        String xhtml = XML_HEADER + body;
 
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            DocumentBuilder db = DBF.newDocumentBuilder();
+            db.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
+            Document doc = db.parse(new InputSource(new StringReader(xhtml)));
+
             ITextRenderer renderer = new ITextRenderer();
-            renderer.setDocumentFromString(xhtml);
+            renderer.setDocument(doc, null);
             renderer.layout();
             renderer.createPDF(os);
             return os.toByteArray();
