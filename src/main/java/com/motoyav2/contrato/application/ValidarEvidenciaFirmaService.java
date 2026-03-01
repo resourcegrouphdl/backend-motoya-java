@@ -1,10 +1,13 @@
 package com.motoyav2.contrato.application;
 
+import com.motoyav2.contrato.domain.enums.EstadoContrato;
 import com.motoyav2.contrato.domain.enums.EstadoValidacion;
+import com.motoyav2.contrato.domain.enums.FaseContrato;
 import com.motoyav2.contrato.domain.model.Contrato;
 import com.motoyav2.contrato.domain.model.EvidenciaFirma;
 import com.motoyav2.contrato.domain.port.in.ValidarEvidenciaFirmaUseCase;
 import com.motoyav2.contrato.domain.port.out.ContratoRepository;
+import com.motoyav2.contrato.domain.service.ContratoStateMachine;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -59,8 +62,21 @@ public class ValidarEvidenciaFirmaService implements ValidarEvidenciaFirmaUseCas
                             })
                             .toList();
 
+                    boolean todasAprobadas = evidenciasActualizadas.stream()
+                            .allMatch(e -> EstadoValidacion.APROBADO == e.estadoValidacion());
+
+                    EstadoContrato nuevoEstado = todasAprobadas
+                            && contrato.estado() == EstadoContrato.FIRMA_PENDIENTE
+                            && ContratoStateMachine.canTransition(contrato.estado(), EstadoContrato.FIRMADO)
+                            ? EstadoContrato.FIRMADO
+                            : contrato.estado();
+
+                    FaseContrato nuevaFase = nuevoEstado == EstadoContrato.FIRMADO
+                            ? FaseContrato.VIGENTE
+                            : contrato.fase();
+
                     Contrato actualizado = new Contrato(
-                            contrato.id(), contrato.numeroContrato(), contrato.estado(), contrato.fase(),
+                            contrato.id(), contrato.numeroContrato(), nuevoEstado, nuevaFase,
                             contrato.titular(), contrato.fiador(), contrato.tienda(), contrato.datosFinancieros(),
                             contrato.boucheresPagoInicial(), contrato.facturaVehiculo(),
                             contrato.cuotas(), contrato.documentosGenerados(), evidenciasActualizadas,

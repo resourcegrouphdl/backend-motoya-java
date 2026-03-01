@@ -3,12 +3,61 @@
     <meta charset="UTF-8"/>
     <title>Contrato de Alquiler Vehicular</title>
     <style>
+        /*
+         * LAYOUT A4 — Flying Saucer (xhtmlrenderer)
+         *
+         * Estrategia: tabla de layout con <thead> y <tfoot>.
+         * En Flying Saucer, <thead> y <tfoot> se repiten automáticamente en
+         * CADA página impresa, igual que en un navegador.
+         * Esto garantiza que el logo y el espaciador inferior estén siempre
+         * presentes sin importar cuántas páginas tenga el documento.
+         *
+         * El pie de página (número) usa position:fixed con @page margin:0,
+         * lo que ancla el elemento al borde físico de la hoja.
+         */
         @page {
             size: A4;
-            margin: 28mm 15mm 24mm 20mm;
+            margin: 0 40 0 40;
         }
-        body { font-family: Arial, sans-serif; font-size: 9pt; line-height: 1.55; color: #000; margin: 0; padding: 0; }
-        h1 { text-align: center; font-size: 11pt; font-weight: bold; margin-bottom: 8pt; text-transform: uppercase; }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 15pt;
+            line-height: 1.55;
+            color: #000;
+            margin: 2;
+            padding: 2;
+        }
+
+        /* ── Tabla de layout principal ── */
+        table.pg-layout {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.pg-layout thead td,
+        table.pg-layout tfoot td,
+        table.pg-layout tbody td {
+            border: none;
+        }
+        /* Cabecera: logo — se repite en todas las páginas vía <thead> */
+        table.pg-layout thead td {
+            padding: 5mm 8mm 4mm 10mm;
+            text-align: right;
+            vertical-align: middle;
+            border-bottom: 0.5pt solid #ccc;
+        }
+        table.pg-layout thead td img { height: 18mm; }
+        /* Spacer inferior: reserva espacio para el pie de página fijo */
+        table.pg-layout tfoot td {
+            height: 16mm;
+        }
+        /* Celda de contenido: márgenes laterales del documento */
+        table.pg-layout tbody td {
+            padding: 4mm 8mm 0 10mm;
+            vertical-align: top;
+        }
+
+        h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-top: 4pt; margin-bottom: 8pt; text-transform: uppercase; }
         .center { text-align: center; }
         .section { margin-bottom: 10pt; text-align: justify; }
         .clausula-titulo { font-weight: bold; margin-top: 10pt; margin-bottom: 3pt; }
@@ -27,17 +76,14 @@
         .firma-line { border-top: 1px solid #000; width: 160pt; margin: 0 auto; }
         .page-break { page-break-before: always; }
         .info-label { font-weight: bold; }
-        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 6pt; }
-        .header-table td { border: none; vertical-align: middle; }
-        .header-logo { text-align: right; }
-        .header-logo img { height: 42pt; }
 
-        /* ── Pie de página numerado ── */
+        /* ── Pie de página con número de página ── */
+        /* Con @page margin:0, bottom:5mm = 5mm desde el borde físico inferior */
         .pie-pagina {
             position: fixed;
-            bottom: 7mm;
-            left: 0;
-            right: 0;
+            bottom: 5mm;
+            left: 24mm;
+            right: 24mm;
             text-align: center;
             font-size: 8pt;
             color: #555;
@@ -46,30 +92,30 @@
         }
         .pie-pagina .num-pag:before  { content: counter(page);  }
         .pie-pagina .total-pag:before { content: counter(pages); }
-
-        /* ── Membrete: logo en todas las páginas ── */
-        .membrete {
-            position: fixed;
-            top: 4mm;
-            left: 0;
-            right: 0;
-            text-align: right;
-            padding-right: 15mm;
-        }
-        .membrete img { height: 16mm; }
     </style>
 </head>
 <body>
 
-<!-- Pie de página: se repite en cada hoja gracias a position:fixed -->
+<!-- Pie de página con número de página (position:fixed, @page margin:0) -->
 <div class="pie-pagina">
     P&#225;gina <span class="num-pag"></span> de <span class="total-pag"></span>
 </div>
 
-<!-- Membrete: logo que se repite en todas las páginas -->
-<div class="membrete">
-    <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya"/>
-</div>
+<!-- Tabla de layout: thead/tfoot se repiten en CADA página automáticamente -->
+<table class="pg-layout">
+    <thead>
+        <tr>
+            <td>
+                <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya"/>
+            </td>
+        </tr>
+    </thead>
+    <tfoot>
+        <tr><td>&#160;</td></tr>
+    </tfoot>
+    <tbody>
+        <tr>
+            <td>
 
 <h1>CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA</h1>
 
@@ -242,6 +288,7 @@
     <table style="width: 100%; border: none;">
         <tr>
             <td style="width: 50%; text-align: center; border: none; padding-top: 40px; vertical-align: bottom;">
+                <img src="https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/firma.png?alt=media&token=cd8e7b16-2740-44ce-95df-0cfb08328e48">
                 <div class="firma-line">&#160;</div>
                 <p>LA EMPRESA</p>
             </td>
@@ -362,6 +409,11 @@
         </tr>
     </table>
 </div>
+
+            </td>
+        </tr>
+    </tbody>
+</table>
 
 </body>
 </html>
