@@ -33,8 +33,8 @@ public class PdfGenerationService {
     private final StoragePort storagePort;
 
     public Mono<List<DocumentoGenerado>> generarTodos(Contrato contrato, List<CuotaCronograma> cuotas) {
-        return Flux.fromArray(TipoDocumentoGenerado.values())
-                .flatMap(tipo -> generarUno(contrato, cuotas, tipo))
+        return Flux.just(TipoDocumentoGenerado.CONTRATO, TipoDocumentoGenerado.CRONOGRAMA)
+                .concatMap(tipo -> generarUno(contrato, cuotas, tipo))
                 .collectList();
     }
 
