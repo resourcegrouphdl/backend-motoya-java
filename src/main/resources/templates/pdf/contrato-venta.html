@@ -3,18 +3,7 @@
     <meta charset="UTF-8"/>
     <title>Contrato de Alquiler Vehicular</title>
     <style>
-        /*
-         * LAYOUT A4 — Flying Saucer (xhtmlrenderer)
-         *
-         * Estrategia: tabla de layout con <thead> y <tfoot>.
-         * En Flying Saucer, <thead> y <tfoot> se repiten automáticamente en
-         * CADA página impresa, igual que en un navegador.
-         * Esto garantiza que el logo y el espaciador inferior estén siempre
-         * presentes sin importar cuántas páginas tenga el documento.
-         *
-         * El pie de página (número) usa position:fixed con @page margin:0,
-         * lo que ancla el elemento al borde físico de la hoja.
-         */
+        /* LAYOUT A4 - Flying Saucer: thead y tfoot se repiten en cada pagina */
         @page {
             size: A4;
             margin: 0 40 0 40;
@@ -39,7 +28,7 @@
         table.pg-layout tbody td {
             border: none;
         }
-        /* Cabecera: logo — se repite en todas las páginas vía <thead> */
+        /* Cabecera: logo - se repite en todas las paginas via thead */
         table.pg-layout thead td {
             padding: 5mm 8mm 4mm 10mm;
             text-align: right;
