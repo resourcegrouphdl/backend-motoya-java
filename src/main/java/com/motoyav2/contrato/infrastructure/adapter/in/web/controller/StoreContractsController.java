@@ -173,3 +173,5 @@ public class StoreContractsController {
                 .build();
     }
 }
+
+// se ha desabilitaodo el clain de reconocimeinto por el moment
