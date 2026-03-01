@@ -9,5 +9,5 @@ public interface SubirDocumentoPostFirmaUseCase {
     /**
      * @param tipo "TIVE" | "SOAT" | "PLACA_RODAJE"
      */
-    Mono<Contrato> subir(String contratoId, String tiendaId, String tipo, EvidenciaDocumento evidencia);
+    Mono<Contrato> subir(String contratoId, String tipo, EvidenciaDocumento evidencia);
 }

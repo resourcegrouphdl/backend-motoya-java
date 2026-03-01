@@ -23,7 +23,7 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
     private final ContratoRepository contratoRepository;
 
     @Override
-    public Mono<Contrato> subir(String contratoId, String tiendaId, String tipo, EvidenciaDocumento evidencia) {
+    public Mono<Contrato> subir(String contratoId, String tipo, EvidenciaDocumento evidencia) {
         return contratoRepository.findById(contratoId)
                 .switchIfEmpty(Mono.error(new NotFoundException("Contrato no encontrado: " + contratoId)))
                 .flatMap(contrato -> {

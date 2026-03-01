@@ -4,10 +4,8 @@ import com.motoyav2.contrato.domain.model.*;
 import com.motoyav2.contrato.domain.port.in.*;
 import com.motoyav2.contrato.infrastructure.adapter.in.web.dto.*;
 import com.motoyav2.contrato.infrastructure.adapter.in.web.mapper.ContratoParaTiendaResponse;
-import com.motoyav2.shared.security.FirebaseUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -120,64 +118,49 @@ public class StoreContractsController {
     @PostMapping("/contrato/{contratoId}/numero-titulo")
     public Mono<ContratoDetalleAPIDto> subirNumeroDeTitulo(
             @PathVariable String contratoId,
-            @Valid @RequestBody NumeroDeTituloRequest dto,
-            @AuthenticationPrincipal FirebaseUserDetails principal
+            @Valid @RequestBody NumeroDeTituloRequest dto
     ) {
-        String tiendaId = tiendaIdDe(principal);
-        return registrarNumeroDeTituloUseCase.registrar(contratoId, tiendaId, dto.numeroDeTitulo())
+        return registrarNumeroDeTituloUseCase.registrar(contratoId, dto.numeroDeTitulo())
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
     @PostMapping("/contrato/{contratoId}/tive")
     public Mono<ContratoDetalleAPIDto> subirTIVE(
             @PathVariable String contratoId,
-            @RequestBody EvidenciaDocumentoRequest dto,
-            @AuthenticationPrincipal FirebaseUserDetails principal
+            @RequestBody EvidenciaDocumentoRequest dto
     ) {
-        String tiendaId = tiendaIdDe(principal);
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, tiendaId, "TIVE", toEvidenciaDocumento(dto))
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "TIVE", toEvidenciaDocumento(dto))
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
     @PostMapping("/contrato/{contratoId}/evidencia-soat")
     public Mono<ContratoDetalleAPIDto> subirSOAT(
             @PathVariable String contratoId,
-            @RequestBody EvidenciaDocumentoRequest dto,
-            @AuthenticationPrincipal FirebaseUserDetails principal
+            @RequestBody EvidenciaDocumentoRequest dto
     ) {
-        String tiendaId = tiendaIdDe(principal);
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, tiendaId, "SOAT", toEvidenciaDocumento(dto))
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "SOAT", toEvidenciaDocumento(dto))
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
     @PostMapping("/contrato/{contratoId}/evidencia-placa-rodaje")
     public Mono<ContratoDetalleAPIDto> subirPlacaRodaje(
             @PathVariable String contratoId,
-            @RequestBody EvidenciaDocumentoRequest dto,
-            @AuthenticationPrincipal FirebaseUserDetails principal
+            @RequestBody EvidenciaDocumentoRequest dto
     ) {
-        String tiendaId = tiendaIdDe(principal);
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, tiendaId, "PLACA_RODAJE", toEvidenciaDocumento(dto))
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "PLACA_RODAJE", toEvidenciaDocumento(dto))
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
     @PostMapping("/contrato/{contratoId}/acta-entrega")
     public Mono<ContratoDetalleAPIDto> subirActaDeEntrega(
             @PathVariable String contratoId,
-            @RequestBody EvidenciaDocumentoRequest dto,
-            @AuthenticationPrincipal FirebaseUserDetails principal
+            @RequestBody EvidenciaDocumentoRequest dto
     ) {
-        String tiendaId = tiendaIdDe(principal);
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, tiendaId, "ACTA_ENTREGA", toEvidenciaDocumento(dto))
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "ACTA_ENTREGA", toEvidenciaDocumento(dto))
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private String tiendaIdDe(FirebaseUserDetails principal) {
-        Object claim = principal.claims().get("tiendaId");
-        return claim != null ? claim.toString() : principal.uid();
-    }
 
     private EvidenciaDocumento toEvidenciaDocumento(EvidenciaDocumentoRequest dto) {
         return EvidenciaDocumento.builder()
