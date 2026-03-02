@@ -93,6 +93,13 @@
 			<artifactId>openhtmltopdf-pdfbox</artifactId>
 			<version>1.0.10</version>
 		</dependency>
+		<!-- PDFBox 2.0.27 explícito: la versión directa en <dependencies> tiene mayor
+		     precedencia que el BOM de Spring Boot (que gestiona PDFBox 3.x) -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>2.0.27</version>
+		</dependency>
 		<!-- OGNL is optional in Thymeleaf 3.1.x POM but required by StandardDialect at runtime -->
 		<!-- Must stay on 3.3.x — Thymeleaf 3.1.x uses OgnlContext constructor removed in 3.4.x -->
 		<dependency>
@@ -214,10 +221,12 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
 			</dependency>
+			<!-- Forzado a 2.0.27: openhtmltopdf-pdfbox 1.0.10 usa API de PDFBox 2.x;
+			     PDFBox 3.x eliminó los campos estáticos PDType1Font.COURIER_BOLD_OBLIQUE etc. -->
 			<dependency>
 				<groupId>org.apache.pdfbox</groupId>
 				<artifactId>pdfbox</artifactId>
-				<version>3.0.3</version>
+				<version>2.0.27</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
