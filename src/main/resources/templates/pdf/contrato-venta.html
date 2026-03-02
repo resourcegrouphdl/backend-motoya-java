@@ -64,29 +64,20 @@
         .page-break { page-break-before: always; }
         .info-label { font-weight: bold; }
 
-        /* ── Pie de página con número de página ── */
-        /* Con @page margin: 28mm 14mm 10mm 14mm, bottom fijo = desde el borde físico */
-        .pie-pagina {
-            position: fixed;
-            bottom: 5mm;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 8pt;
-            color: #555;
-            border-top: 0.5pt solid #ccc;
-            padding-top: 3pt;
+        /* ── Pie de página con número de página via margin box ── */
+        @page {
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: Arial, sans-serif;
+                font-size: 8pt;
+                color: #555;
+                border-top: 0.5pt solid #ccc;
+                padding-top: 3pt;
+            }
         }
-        .pie-pagina .num-pag:before  { content: counter(page);  }
-        .pie-pagina .total-pag:before { content: counter(pages); }
     </style>
 </head>
 <body>
-
-<!-- Pie de página con número de página (position:fixed, @page margin:0) -->
-<div class="pie-pagina">
-    P&#225;gina <span class="num-pag"></span> de <span class="total-pag"></span>
-</div>
 
 <!-- Cabecera con running element: se repite en cada página automáticamente -->
 <div id="cabecera">
