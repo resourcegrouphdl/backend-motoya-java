@@ -53,8 +53,8 @@ public class ContratoParaDescargasMaper {
         .numeroDeSerie(co.facturaVehiculo() != null ? co.facturaVehiculo().serieChasis() : "")
         .numeroDeMotor(co.facturaVehiculo() != null ? co.facturaVehiculo().serieMotor() : "")
 
-        .precioTotal(s2(co.datosFinancieros().precioVehiculo()))
-        .precioTotalLetras(convertirNumerosALetra.convertir(co.datosFinancieros().precioVehiculo()))
+        .precioTotal(s2(calcularPrecioTotal(co.datosFinancieros().cuotaInicial(),co.datosFinancieros().cuotaMensual(),co.datosFinancieros().numeroCuotas())))
+        .precioTotalLetras(convertirNumerosALetra.convertir(calcularPrecioTotal(co.datosFinancieros().cuotaInicial(),co.datosFinancieros().cuotaMensual(),co.datosFinancieros().numeroCuotas())))
 
         .inicial(s2(co.datosFinancieros().cuotaInicial()))
         .inicialLetras(convertirNumerosALetra.convertir(co.datosFinancieros().cuotaInicial()))
@@ -73,6 +73,20 @@ public class ContratoParaDescargasMaper {
 
   private BigDecimal s2(BigDecimal value) {
     return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
+  }
+
+
+  private BigDecimal calcularPrecioTotal(BigDecimal inicial,
+                                         BigDecimal cuota,
+                                         Integer numeroDeCuotas) {
+
+    if (inicial == null) inicial = BigDecimal.ZERO;
+    if (cuota == null) cuota = BigDecimal.ZERO;
+    if (numeroDeCuotas == null) numeroDeCuotas = 0;
+
+    return inicial.add(
+        cuota.multiply(BigDecimal.valueOf(numeroDeCuotas))
+    );
   }
 
 }
