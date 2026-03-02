@@ -6,7 +6,7 @@
         /* LAYOUT A4 - Flying Saucer: thead y tfoot se repiten en cada pagina */
         @page {
             size: A4;
-            margin: 0 40 0 40;
+            margin: 0;
         }
 
         body {
@@ -14,8 +14,8 @@
             font-size: 10pt;
             line-height: 1.55;
             color: #000;
-            margin: 2;
-            padding: 2;
+            margin: 0;
+            padding: 0;
         }
 
         /* ── Tabla de layout principal ── */
@@ -42,7 +42,7 @@
         }
         /* Celda de contenido: márgenes laterales del documento */
         table.pg-layout tbody td {
-            padding: 4mm 8mm 0 10mm;
+            padding: 4mm 10mm 0 10mm;
             vertical-align: top;
         }
 
@@ -50,7 +50,7 @@
         .center { text-align: center; }
         .section { margin-bottom: 10pt; text-align: justify; }
         .clausula-titulo { font-weight: bold; margin-top: 10pt; margin-bottom: 3pt; }
-        .bullet { margin-left: 15pt; margin-bottom: 5pt; }
+        .bullet { margin-left: 15pt; margin-bottom: 5pt; text-align: justify; }
         .vehicle-table { border-collapse: collapse; margin: 8pt 0; }
         .vehicle-table td { padding: 2pt 18pt 2pt 4pt; }
         .vehicle-table .label { font-weight: bold; }
