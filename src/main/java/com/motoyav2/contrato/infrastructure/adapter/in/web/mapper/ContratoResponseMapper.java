@@ -34,7 +34,8 @@ public final class ContratoResponseMapper {
                 c.numeroDeTitulo(), c.fechaRegistroTitulo(),
                 mapEvidenciaDocumento(c.tive()),
                 mapEvidenciaDocumento(c.evidenciaSOAT()),
-                mapEvidenciaDocumento(c.evidenciaPlacaRodaje())
+                mapEvidenciaDocumento(c.evidenciaPlacaRodaje()),
+                mapEvidenciaDocumento(c.actaDeEntrega())
         );
     }
 

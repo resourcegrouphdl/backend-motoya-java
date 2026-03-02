@@ -29,7 +29,8 @@ public record ContratoResponse(
         Instant fechaRegistroTitulo,
         EvidenciaDocumentoDto tive,
         EvidenciaDocumentoDto evidenciaSOAT,
-        EvidenciaDocumentoDto evidenciaPlacaRodaje
+        EvidenciaDocumentoDto evidenciaPlacaRodaje,
+        EvidenciaDocumentoDto actaDeEntrega
 ) {
     public record DatosTitularDto(
             String nombres, String apellidos, String tipoDocumento, String numeroDocumento,
