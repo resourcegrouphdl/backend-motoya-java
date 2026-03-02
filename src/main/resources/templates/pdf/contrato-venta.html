@@ -3,10 +3,10 @@
     <meta charset="UTF-8"/>
     <title>Contrato de Alquiler Vehicular</title>
     <style>
-        /* LAYOUT A4 - Flying Saucer: thead y tfoot se repiten en cada pagina */
+        /* LAYOUT A4 - OpenHTMLtoPDF: márgenes reales en @page, sin tabla de layout */
         @page {
             size: A4;
-            margin: 0;
+            margin: 28mm 14mm 20mm 14mm; /* top suficiente para cabecera fija */
         }
 
         body {
@@ -18,7 +18,18 @@
             padding: 0;
         }
 
-        /* ── Tabla de layout principal ── */
+        /* ── Cabecera que se repite en cada página via running element ── */
+        #cabecera {
+            position: running(cabecera);
+            text-align: right;
+            border-bottom: 0.5pt solid #ccc;
+            padding-bottom: 3mm;
+        }
+        #cabecera img { height: 18mm; }
+
+        @page { @top-right { content: element(cabecera); } }
+
+        /* ── Tabla de layout principal (ya no necesaria para header/footer) ── */
         table.pg-layout {
             width: 100%;
             border-collapse: collapse;
@@ -28,21 +39,8 @@
         table.pg-layout tbody td {
             border: none;
         }
-        /* Cabecera: logo - se repite en todas las paginas via thead */
-        table.pg-layout thead td {
-            padding: 5mm 8mm 4mm 10mm;
-            text-align: right;
-            vertical-align: middle;
-            border-bottom: 0.5pt solid #ccc;
-        }
-        table.pg-layout thead td img { height: 18mm; }
-        /* Spacer inferior: reserva espacio para el pie de página fijo */
-        table.pg-layout tfoot td {
-            height: 16mm;
-        }
-        /* Celda de contenido: márgenes laterales del documento */
         table.pg-layout tbody td {
-            padding: 4mm 10mm 0 10mm;
+            padding: 0;
             vertical-align: top;
         }
 
@@ -67,12 +65,12 @@
         .info-label { font-weight: bold; }
 
         /* ── Pie de página con número de página ── */
-        /* Con @page margin:0, bottom:5mm = 5mm desde el borde físico inferior */
+        /* Con @page margin: 28mm 14mm 20mm 14mm, bottom fijo = desde el borde físico */
         .pie-pagina {
             position: fixed;
             bottom: 5mm;
-            left: 24mm;
-            right: 24mm;
+            left: 0;
+            right: 0;
             text-align: center;
             font-size: 8pt;
             color: #555;
@@ -90,21 +88,13 @@
     P&#225;gina <span class="num-pag"></span> de <span class="total-pag"></span>
 </div>
 
-<!-- Tabla de layout: thead/tfoot se repiten en CADA página automáticamente -->
-<table class="pg-layout">
-    <thead>
-        <tr>
-            <td>
-                <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya"/>
-            </td>
-        </tr>
-    </thead>
-    <tfoot>
-        <tr><td>&#160;</td></tr>
-    </tfoot>
-    <tbody>
-        <tr>
-            <td>
+<!-- Cabecera con running element: se repite en cada página automáticamente -->
+<div id="cabecera">
+    <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya"/>
+</div>
+
+<!-- Contenido del documento -->
+<div>
 
 <h1>CONTRATO DE ALQUILER VEHICULAR CON PROMESA DE VENTA</h1>
 
@@ -399,10 +389,7 @@
     </table>
 </div>
 
-            </td>
-        </tr>
-    </tbody>
-</table>
+</div>
 
 </body>
 </html>
