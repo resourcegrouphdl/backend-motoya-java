@@ -321,7 +321,7 @@ public class CalendarCronogramaService {
         return switch (estado.toUpperCase()) {
             case "PAGADO"   -> "2";
             case "ATRASADO" -> "8";
-            default         -> "4";
+            default         -> "7";
         };
     }
 
