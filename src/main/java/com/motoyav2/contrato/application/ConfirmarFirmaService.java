@@ -6,20 +6,24 @@ import com.motoyav2.contrato.domain.enums.FaseContrato;
 import com.motoyav2.contrato.domain.model.Contrato;
 import com.motoyav2.contrato.domain.port.in.ConfirmarFirmaUseCase;
 import com.motoyav2.contrato.domain.port.out.ContratoRepository;
+import com.motoyav2.contrato.domain.port.out.FinanzasIntegrationPort;
 import com.motoyav2.contrato.domain.service.ContratoStateMachine;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConfirmarFirmaService implements ConfirmarFirmaUseCase {
 
     private final ContratoRepository contratoRepository;
+    private final FinanzasIntegrationPort finanzasIntegrationPort;
 
     @Override
     public Mono<Contrato> confirmar(String contratoId, String confirmadoPor) {
@@ -56,7 +60,14 @@ public class ConfirmarFirmaService implements ConfirmarFirmaUseCase {
                             contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actaDeEntrega()
                     );
 
-                    return contratoRepository.save(firmado);
+                    return contratoRepository.save(firmado)
+                            .flatMap(saved -> finanzasIntegrationPort
+                                    .iniciarFacturaDesdeContrato(saved)
+                                    .doOnError(e -> log.error(
+                                            "[Contrato→Finanzas] Error al inicializar factura para contratoId={}: {}",
+                                            saved.id(), e.getMessage()))
+                                    .onErrorResume(e -> Mono.empty()) // no bloquea el flujo principal
+                                    .thenReturn(saved));
                 });
     }
 }
