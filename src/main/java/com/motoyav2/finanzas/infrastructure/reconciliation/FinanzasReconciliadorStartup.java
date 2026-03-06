@@ -11,7 +11,9 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -19,38 +21,39 @@ import java.util.Map;
 /**
  * Reconciliador de arranque para el módulo Finanzas.
  *
- * Se ejecuta en cada cold start de Cloud Run, pero usa un flag en Firestore
- * para no repetir el trabajo: solo hace el barrido real la PRIMERA vez.
+ * Espera 5 segundos al iniciar para que la conexión gRPC/TLS de Firestore
+ * esté estable en Cloud Run, luego reintenta hasta 3 veces con backoff.
  *
- * Flujo:
- *   1. Leer /finanzas_config/reconciliacion
- *   2. Si existe y completado=true → salir (1 lectura, costo mínimo)
- *   3. Si no existe → barrer contratos FIRMADO/ACTIVO/COMPLETADO
- *      → crear facturas faltantes
- *      → escribir flag completado=true
- *
- * Es idempotente: el adapter verifica existencia antes de escribir en /facturas.
+ * Solo ejecuta el barrido real la PRIMERA vez (flag en /finanzas_config/reconciliacion).
+ * Arranques posteriores hacen 1 sola lectura y salen.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class FinanzasReconciliadorStartup implements ApplicationRunner {
 
-    private static final String COL_CONFIG   = "finanzas_config";
-    private static final String DOC_FLAG     = "reconciliacion";
-    private static final String CAMPO_OK     = "completado";
-    private static final String CAMPO_FECHA  = "fechaEjecucion";
-    private static final String CAMPO_TOTAL  = "totalProcesados";
+    private static final String COL_CONFIG  = "finanzas_config";
+    private static final String DOC_FLAG    = "reconciliacion";
+    private static final String CAMPO_OK    = "completado";
+    private static final String CAMPO_FECHA = "fechaEjecucion";
+    private static final String CAMPO_TOTAL = "totalProcesados";
 
     private final Firestore db;
     private final FinanzasIntegrationPort finanzasIntegrationPort;
 
     @Override
     public void run(ApplicationArguments args) {
-        verificarYEjecutar()
+        // Delay inicial: esperar que la conexión TLS/gRPC de Firestore esté lista en Cloud Run
+        Mono.delay(Duration.ofSeconds(5))
+                .then(verificarYEjecutar())
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(5))
+                        .maxBackoff(Duration.ofSeconds(30))
+                        .doBeforeRetry(signal -> log.warn(
+                                "[Reconciliador Finanzas] Reintentando ({}/{}) — causa: {}",
+                                signal.totalRetries() + 1, 3, signal.failure().getMessage())))
                 .subscribe(
                         null,
-                        e -> log.error("[Reconciliador Finanzas] Error inesperado: {}", e.getMessage())
+                        e -> log.error("[Reconciliador Finanzas] Falló tras reintentos — se ejecutará en el próximo arranque: {}", e.getMessage())
                 );
     }
 
@@ -58,14 +61,11 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         return FirestoreReactiveUtils.toMono(
                 db.collection(COL_CONFIG).document(DOC_FLAG).get())
                 .flatMap(snap -> {
-                    // Si ya se ejecutó correctamente, salir sin hacer nada
                     if (snap.exists() && Boolean.TRUE.equals(snap.getBoolean(CAMPO_OK))) {
                         log.info("[Reconciliador Finanzas] Ya ejecutado anteriormente — omitiendo barrido");
                         return Mono.empty();
                     }
-
-                    // Primera vez (o ejecución fallida anterior) → ejecutar barrido
-                    log.info("[Reconciliador Finanzas] Primera ejecución — iniciando barrido de contratos...");
+                    log.info("[Reconciliador Finanzas] Primera ejecución — iniciando barrido...");
                     return ejecutarBarrido();
                 });
     }
@@ -78,16 +78,13 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
                 .map(snap -> snap.toObject(ContratoDocument.class))
                 .flatMap(doc -> {
                     String contratoId = doc.getId();
-
-                    // Verificar si ya tiene factura (idempotencia por si se interrumpió)
                     return FirestoreReactiveUtils.toMono(
                             db.collection("facturas").document(contratoId).get())
                             .flatMap(facturaSnap -> {
                                 if (facturaSnap.exists()) {
                                     log.debug("[Reconciliador] Factura ya existe — contratoId={}", contratoId);
-                                    return Mono.just(0); // contabilizar como procesado (ya existía)
+                                    return Mono.just(0);
                                 }
-
                                 return Mono.fromCallable(() -> ContratoDocumentMapper.toDomain(doc))
                                         .flatMap(contrato -> finanzasIntegrationPort
                                                 .iniciarFacturaDesdeContrato(contrato)
@@ -100,9 +97,9 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
                                                 })
                                                 .thenReturn(1));
                             });
-                }, 5) // concurrencia máxima: 5 contratos en paralelo
+                }, 5)
                 .reduce(0, Integer::sum)
-                .flatMap(totalCreadas -> marcarComoCompletado(totalCreadas))
+                .flatMap(this::marcarComoCompletado)
                 .then();
     }
 
