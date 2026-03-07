@@ -26,8 +26,8 @@ import java.util.Map;
 /**
  * Reconciliador de arranque para el módulo Finanzas.
  *
- * Espera 5s para que la conexión TLS/gRPC de Firestore esté estable en Cloud Run,
- * luego reintenta hasta 3 veces con backoff exponencial.
+ * Espera 15s para que la conexión TLS/gRPC de Firestore esté estable en Cloud Run,
+ * luego reintenta hasta 5 veces con backoff exponencial (10s base, 60s máx).
  *
  * Solo ejecuta el barrido real la PRIMERA vez (flag en /finanzas_config/reconciliacion).
  * Arranques posteriores hacen 1 sola lectura y salen.
@@ -57,12 +57,16 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        Mono.delay(Duration.ofSeconds(5))
+        // Cloud Run: espera 15s para que el canal gRPC/TLS de Firestore se estabilice.
+        // Luego reintenta hasta 5 veces con backoff exponencial (10s base, 60s máx).
+        // Tiempo máximo total: 15 + 10 + 20 + 40 + 60 + 60 ≈ 205s antes de desistir.
+        Mono.delay(Duration.ofSeconds(15))
                 .then(verificarYEjecutar())
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(5))
-                        .maxBackoff(Duration.ofSeconds(30))
+                .retryWhen(Retry.backoff(5, Duration.ofSeconds(10))
+                        .maxBackoff(Duration.ofSeconds(60))
+                        .filter(e -> e.getMessage() != null && e.getMessage().contains("UNAVAILABLE"))
                         .doBeforeRetry(s -> log.warn(
-                                "[Reconciliador] Reintentando ({}/3) — causa: {}",
+                                "[Reconciliador] Reintentando ({}/5) — causa: {}",
                                 s.totalRetries() + 1, s.failure().getMessage())))
                 .subscribe(
                         null,
