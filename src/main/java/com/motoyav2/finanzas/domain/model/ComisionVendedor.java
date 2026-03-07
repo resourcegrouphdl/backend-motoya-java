@@ -12,8 +12,16 @@ import java.time.LocalDateTime;
 @Builder
 public class ComisionVendedor {
     String id;
+    String contratoId;
+    // Datos del vendedor (de users)
     String vendedorId;
     String vendedorNombre;
+    String vendedorEmail;
+    String vendedorPhone;
+    String vendedorDocumento;
+    String vendedorTipoDocumento;
+    String vendedorUserType;
+    // Datos de tienda y período
     String tiendaId;
     String tiendaNombre;
     LocalDate periodoInicio;

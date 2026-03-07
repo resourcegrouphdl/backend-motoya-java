@@ -35,6 +35,9 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
     private static final String COL_FACTURAS     = "facturas";
     private static final String COL_PAGOS        = "pagos";
     private static final String COL_KPIS         = "finanzas_kpis";
+    private static final String COL_COMISIONES   = "comisiones";
+    private static final String COL_SOLICITUDES  = "solicitudes";
+    private static final String COL_USERS        = "users";
     private static final int    CONDICION_PAGO_DEFAULT = 15;
 
     private final Firestore db;
@@ -159,6 +162,94 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
                 .doOnError(e -> log.error(
                         "[Finanzas] Error al crear factura desde contrato={}: {}",
                         facturaId, e.getMessage()))
+                .then(crearComisionDesdeContrato(contrato));
+    }
+
+    // ── Creación de comisión con lookup: evaluacionId → solicitudes → vendedorId → users ──
+
+    private Mono<Void> crearComisionDesdeContrato(Contrato contrato) {
+        String evaluacionId = contrato.evaluacionId();
+        if (evaluacionId == null || evaluacionId.isBlank()) {
+            log.warn("[Finanzas] contratoId={} sin evaluacionId — omitiendo comisión", contrato.id());
+            return Mono.empty();
+        }
+
+        // Verificar idempotencia
+        String comisionId = contrato.id() + "-COM";
+        return FirestoreReactiveUtils.toMono(
+                db.collection(COL_COMISIONES).document(comisionId).get())
+                .flatMap(comisionSnap -> {
+                    if (comisionSnap.exists()) {
+                        log.warn("[Finanzas] Comisión ya existe para contratoId={} — omitiendo", contrato.id());
+                        return Mono.empty();
+                    }
+                    return resolverVendedor(evaluacionId)
+                            .flatMap(vendedor -> guardarComision(comisionId, contrato, vendedor));
+                });
+    }
+
+    /** Paso 1 → 2: solicitudes/{evaluacionId} → vendedorId → users/{vendedorId} */
+    private Mono<Map<String, Object>> resolverVendedor(String evaluacionId) {
+        return FirestoreReactiveUtils.toMono(
+                db.collection(COL_SOLICITUDES).document(evaluacionId).get())
+                .flatMap(solicitudSnap -> {
+                    if (!solicitudSnap.exists()) return Mono.empty();
+                    String vendedorId = solicitudSnap.getString("vendedorId");
+                    if (vendedorId == null || vendedorId.isBlank()) return Mono.empty();
+                    return FirestoreReactiveUtils.toMono(
+                            db.collection(COL_USERS).document(vendedorId).get())
+                            .map(userSnap -> {
+                                Map<String, Object> v = new HashMap<>();
+                                v.put("vendedorId",           vendedorId);
+                                v.put("firstName",            nvl(userSnap.getString("firstName")));
+                                v.put("lastName",             nvl(userSnap.getString("lastName")));
+                                v.put("email",                nvl(userSnap.getString("email")));
+                                v.put("phone",                nvl(userSnap.getString("phone")));
+                                v.put("documentNumber",       nvl(userSnap.getString("documentNumber")));
+                                v.put("documentType",         nvl(userSnap.getString("documentType")));
+                                v.put("userType",             nvl(userSnap.getString("userType")));
+                                return v;
+                            });
+                });
+    }
+
+    private Mono<Void> guardarComision(String comisionId, Contrato contrato, Map<String, Object> vendedor) {
+        String ahora = Instant.now().toString();
+        String hoy   = LocalDate.now().toString();
+
+        String vendedorId     = (String) vendedor.get("vendedorId");
+        String firstName      = (String) vendedor.get("firstName");
+        String lastName       = (String) vendedor.get("lastName");
+        String vendedorNombre = (lastName + " " + firstName).trim();
+        String tiendaId       = contrato.tienda() != null ? contrato.tienda().tiendaId()     : "";
+        String tiendaNombre   = contrato.tienda() != null ? contrato.tienda().nombreTienda() : "";
+
+        Map<String, Object> comision = new HashMap<>();
+        comision.put("id",                   comisionId);
+        comision.put("contratoId",           contrato.id());
+        comision.put("vendedorId",           vendedorId);
+        comision.put("vendedorNombre",       vendedorNombre);
+        comision.put("vendedorEmail",        vendedor.get("email"));
+        comision.put("vendedorPhone",        vendedor.get("phone"));
+        comision.put("vendedorDocumento",    vendedor.get("documentNumber"));
+        comision.put("vendedorTipoDocumento",vendedor.get("documentType"));
+        comision.put("vendedorUserType",     vendedor.get("userType"));
+        comision.put("tiendaId",             tiendaId);
+        comision.put("tiendaNombre",         tiendaNombre);
+        comision.put("periodoInicio",        hoy);
+        comision.put("periodoFin",           hoy);
+        comision.put("totalVentas",          1);
+        comision.put("montoComision",        0.0);
+        comision.put("estado",               "PENDIENTE");
+        comision.put("pagadoEn",             null);
+        comision.put("creadoEn",             ahora);
+        comision.put("actualizadoEn",        ahora);
+
+        return FirestoreReactiveUtils.toMono(
+                db.collection(COL_COMISIONES).document(comisionId).set(comision))
+                .doOnSuccess(v -> log.info(
+                        "[Finanzas] Comisión creada — id={} vendedor={} tienda={}",
+                        comisionId, vendedorNombre, tiendaNombre))
                 .then();
     }
 

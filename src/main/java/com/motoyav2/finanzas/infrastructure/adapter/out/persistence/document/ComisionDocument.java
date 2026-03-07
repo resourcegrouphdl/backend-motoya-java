@@ -11,8 +11,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ComisionDocument {
     private String id;
+    private String contratoId;
+    // Datos del vendedor (de users)
     private String vendedorId;
     private String vendedorNombre;
+    private String vendedorEmail;
+    private String vendedorPhone;
+    private String vendedorDocumento;
+    private String vendedorTipoDocumento;
+    private String vendedorUserType;
+    // Datos de tienda y período
     private String tiendaId;
     private String tiendaNombre;
     private String periodoInicio;
