@@ -27,7 +27,7 @@ import static com.motoyav2.finanzas.infrastructure.adapter.out.persistence.util.
 @RequiredArgsConstructor
 public class CuentaPortAdapter implements CuentaPorPagarPort {
 
-    private static final String COL_CUENTAS = "cuentas_pagar";
+    private static final String COL_CUENTAS = "finanzas_cuentas_pagar";
     private static final String COL_CUOTAS  = "cuotas";
 
     private final Firestore db;

@@ -17,6 +17,15 @@ public class FacturaDocument {
     private String ventaId;
     private String clienteNombre;
     private String motoModelo;
+    // Datos completos del vehículo (de facturaVehiculo.estadoValidacion=APROBADO)
+    private String marcaVehiculo;
+    private String modeloVehiculo;
+    private Integer anioVehiculo;
+    private String colorVehiculo;
+    private String serieMotor;
+    private String serieChasis;
+    private String urlDocumentoFactura;
+    private String fechaEmisionFactura;
     private Double montoTotal;
     private String fechaFactura;
     private Integer condicionPago;

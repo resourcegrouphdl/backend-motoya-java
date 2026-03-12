@@ -34,10 +34,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
 
-    private static final String COL_FACTURAS     = "facturas";
+    private static final String COL_FACTURAS     = "finanzas_facturas";
     private static final String COL_PAGOS        = "pagos";
     private static final String COL_KPIS         = "finanzas_kpis";
-    private static final String COL_COMISIONES   = "comisiones";
+    private static final String COL_COMISIONES   = "finanzas_comisiones";
     private static final String COL_SOLICITUDES  = "solicitudes";
     private static final String COL_USERS        = "users";
     private static final int    CONDICION_PAGO_DEFAULT = 15;
@@ -46,6 +46,14 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
 
     @Override
     public Mono<Void> iniciarFacturaDesdeContrato(Contrato contrato) {
+        // Guard: solo procesar contratos con factura de vehículo aprobada
+        if (contrato.facturaVehiculo() == null
+                || contrato.facturaVehiculo().estadoValidacion() == null
+                || !"APROBADO".equals(contrato.facturaVehiculo().estadoValidacion().name())) {
+            log.warn("[Finanzas] contratoId={} sin facturaVehiculo APROBADO — omitiendo factura",
+                    contrato.id());
+            return Mono.empty();
+        }
         // Idempotencia: si ya existe la factura, no duplicar
         return FirestoreReactiveUtils.toMono(
                 db.collection(COL_FACTURAS).document(contrato.id()).get())
@@ -68,10 +76,20 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         String tiendaId     = contrato.tienda() != null ? contrato.tienda().tiendaId()     : "";
         String tiendaNombre = contrato.tienda() != null ? contrato.tienda().nombreTienda() : "";
         String clienteNombre = buildNombreCliente(contrato);
-        String motoModelo    = buildMotoModelo(contrato);
-        String numeroFactura = contrato.facturaVehiculo() != null
-                ? contrato.facturaVehiculo().numeroFactura() : "";
         String ventaId = contrato.evaluacionId() != null ? contrato.evaluacionId() : "";
+
+        // ── Datos completos de la factura del vehículo ────────────────────
+        var fv = contrato.facturaVehiculo(); // ya garantizado no-null por el guard
+        String numeroFactura    = nvl(fv.numeroFactura());
+        String marcaVehiculo    = nvl(fv.marcaVehiculo());
+        String modeloVehiculo   = nvl(fv.modeloVehiculo());
+        String motoModelo       = (marcaVehiculo + " " + modeloVehiculo).trim();
+        Integer anioVehiculo    = fv.anioVehiculo();
+        String colorVehiculo    = nvl(fv.colorVehiculo());
+        String serieMotor       = nvl(fv.serieMotor());
+        String serieChasis      = nvl(fv.serieChasis());
+        String urlDocFact       = nvl(fv.urlDocumento());
+        String fechaEmisionFact = fv.fechaEmision() != null ? fv.fechaEmision().toString() : null;
 
         double montoTotal = contrato.datosFinancieros() != null
                 && contrato.datosFinancieros().precioVehiculo() != null
@@ -92,21 +110,29 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
 
         // ── Documento factura ─────────────────────────────────────────────
         Map<String, Object> factura = new HashMap<>();
-        factura.put("id",             facturaId);
-        factura.put("numero",         numeroFactura);
-        factura.put("tiendaId",       tiendaId);
-        factura.put("tiendaNombre",   tiendaNombre);
-        factura.put("ventaId",        ventaId);
-        factura.put("clienteNombre",  clienteNombre);
-        factura.put("motoModelo",     motoModelo);
-        factura.put("montoTotal",     montoTotal);
-        factura.put("fechaFactura",   hoy);
-        factura.put("condicionPago",  CONDICION_PAGO_DEFAULT);
-        factura.put("estado",         "PENDIENTE");
-        factura.put("creadoEn",       ahora);
-        factura.put("actualizadoEn",  ahora);
-        factura.put("_alertaActiva",  true);
-        factura.put("_tieneVencidos", false);
+        factura.put("id",                   facturaId);
+        factura.put("numero",               numeroFactura);
+        factura.put("tiendaId",             tiendaId);
+        factura.put("tiendaNombre",         tiendaNombre);
+        factura.put("ventaId",              ventaId);
+        factura.put("clienteNombre",        clienteNombre);
+        factura.put("motoModelo",           motoModelo);
+        factura.put("marcaVehiculo",        marcaVehiculo);
+        factura.put("modeloVehiculo",       modeloVehiculo);
+        factura.put("anioVehiculo",         anioVehiculo);
+        factura.put("colorVehiculo",        colorVehiculo);
+        factura.put("serieMotor",           serieMotor);
+        factura.put("serieChasis",          serieChasis);
+        factura.put("urlDocumentoFactura",  urlDocFact);
+        factura.put("fechaEmisionFactura",  fechaEmisionFact);
+        factura.put("montoTotal",           montoTotal);
+        factura.put("fechaFactura",         hoy);
+        factura.put("condicionPago",        CONDICION_PAGO_DEFAULT);
+        factura.put("estado",               "PENDIENTE");
+        factura.put("creadoEn",             ahora);
+        factura.put("actualizadoEn",        ahora);
+        factura.put("alertaActiva",         true);
+        factura.put("tieneVencidos",        false);
 
         // ── Pago 1: INICIAL ───────────────────────────────────────────────
         String pagoId1 = facturaId + "-P1";
@@ -263,13 +289,6 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         String nombres   = nvl(contrato.titular().nombres());
         String apellidos = nvl(contrato.titular().apellidos());
         return (apellidos + " " + nombres).trim();
-    }
-
-    private String buildMotoModelo(Contrato contrato) {
-        if (contrato.facturaVehiculo() == null) return "";
-        String marca  = nvl(contrato.facturaVehiculo().marcaVehiculo());
-        String modelo = nvl(contrato.facturaVehiculo().modeloVehiculo());
-        return (marca + " " + modelo).trim();
     }
 
     private String nvl(String val) {

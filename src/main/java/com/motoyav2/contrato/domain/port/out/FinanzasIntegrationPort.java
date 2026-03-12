@@ -11,9 +11,11 @@ import reactor.core.publisher.Mono;
 public interface FinanzasIntegrationPort {
 
     /**
-     * Crea la factura inicial en el módulo de finanzas cuando
-     * un contrato pasa al estado FIRMADO.
+     * Crea la factura en el módulo de finanzas cuando la facturaVehiculo
+     * del contrato es validada como APROBADO.
+     * Solo procesa si facturaVehiculo.estadoValidacion == APROBADO.
      * Genera automáticamente los 2 pagos (P1 INICIAL 20% y P2 SALDO 80%).
+     * Es idempotente: si la factura ya existe en finanzas_facturas, no duplica.
      */
     Mono<Void> iniciarFacturaDesdeContrato(Contrato contrato);
 }

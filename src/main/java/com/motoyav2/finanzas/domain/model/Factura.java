@@ -18,6 +18,15 @@ public class Factura {
     String ventaId;
     String clienteNombre;
     String motoModelo;
+    // Datos completos del vehículo (de facturaVehiculo.estadoValidacion=APROBADO)
+    String marcaVehiculo;
+    String modeloVehiculo;
+    Integer anioVehiculo;
+    String colorVehiculo;
+    String serieMotor;
+    String serieChasis;
+    String urlDocumentoFactura;
+    LocalDate fechaEmisionFactura;
     BigDecimal montoTotal;
     LocalDate fechaFactura;
     int condicionPago;

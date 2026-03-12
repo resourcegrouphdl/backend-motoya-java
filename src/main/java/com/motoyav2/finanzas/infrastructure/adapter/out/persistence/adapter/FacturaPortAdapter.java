@@ -28,7 +28,7 @@ import static com.motoyav2.finanzas.infrastructure.adapter.out.persistence.util.
 @RequiredArgsConstructor
 public class FacturaPortAdapter implements FacturaPort {
 
-    private static final String COL_FACTURAS = "facturas";
+    private static final String COL_FACTURAS = "finanzas_facturas";
     private static final String COL_PAGOS    = "pagos";
 
     private final Firestore db;
@@ -105,6 +105,14 @@ public class FacturaPortAdapter implements FacturaPort {
                 .ventaId(doc.getVentaId())
                 .clienteNombre(doc.getClienteNombre())
                 .motoModelo(doc.getMotoModelo())
+                .marcaVehiculo(doc.getMarcaVehiculo())
+                .modeloVehiculo(doc.getModeloVehiculo())
+                .anioVehiculo(doc.getAnioVehiculo())
+                .colorVehiculo(doc.getColorVehiculo())
+                .serieMotor(doc.getSerieMotor())
+                .serieChasis(doc.getSerieChasis())
+                .urlDocumentoFactura(doc.getUrlDocumentoFactura())
+                .fechaEmisionFactura(parseDate(doc.getFechaEmisionFactura()))
                 .montoTotal(doc.getMontoTotal() != null ? BigDecimal.valueOf(doc.getMontoTotal()) : BigDecimal.ZERO)
                 .fechaFactura(parseDate(doc.getFechaFactura()))
                 .condicionPago(doc.getCondicionPago() != null ? doc.getCondicionPago() : 0)

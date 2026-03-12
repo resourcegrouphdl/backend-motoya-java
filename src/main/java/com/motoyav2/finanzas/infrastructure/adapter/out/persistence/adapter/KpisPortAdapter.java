@@ -40,7 +40,7 @@ public class KpisPortAdapter implements KpisPort {
     @Override
     public Mono<Void> recalcularCompleto() {
         Mono<Long> factPendientes = toFlux(
-                db.collection("facturas").whereNotEqualTo("estado", "PAGADO").get()
+                db.collection("finanzas_facturas").whereNotEqualTo("estado", "PAGADO").get()
         ).count();
 
         Mono<Long> pagosVenc = toFlux(
@@ -48,7 +48,7 @@ public class KpisPortAdapter implements KpisPort {
         ).count();
 
         Mono<Long> comPendientes = toFlux(
-                db.collection("comisiones").whereEqualTo("estado", "PENDIENTE").get()
+                db.collection("finanzas_comisiones").whereEqualTo("estado", "PENDIENTE").get()
         ).count();
 
         return Mono.zip(factPendientes, pagosVenc, comPendientes)

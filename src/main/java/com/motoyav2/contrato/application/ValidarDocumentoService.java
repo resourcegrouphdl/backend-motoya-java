@@ -8,6 +8,7 @@ import com.motoyav2.contrato.domain.model.Contrato;
 import com.motoyav2.contrato.domain.model.FacturaVehiculo;
 import com.motoyav2.contrato.domain.port.in.ValidarDocumentoUseCase;
 import com.motoyav2.contrato.domain.port.out.ContratoRepository;
+import com.motoyav2.contrato.domain.port.out.FinanzasIntegrationPort;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.List;
 public class ValidarDocumentoService implements ValidarDocumentoUseCase {
 
     private final ContratoRepository contratoRepository;
+    private final FinanzasIntegrationPort finanzasIntegrationPort;
 
     @Override
     public Mono<Contrato> validar(String contratoId, String tipoDocumento, EstadoValidacion estado, String observacion, String validadoPor, String boucherId) {
@@ -112,7 +114,15 @@ public class ValidarDocumentoService implements ValidarDocumentoUseCase {
                             contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actasDeEntrega()
                     );
 
-                    return contratoRepository.save(actualizado);
+                    boolean esFacturaAprobada = "FACTURA".equals(tipoDocumento.toUpperCase())
+                            && estado == EstadoValidacion.APROBADO;
+
+                    return contratoRepository.save(actualizado)
+                            .flatMap(saved -> {
+                                if (!esFacturaAprobada) return Mono.just(saved);
+                                return finanzasIntegrationPort.iniciarFacturaDesdeContrato(saved)
+                                        .thenReturn(saved);
+                            });
                 });
     }
 }

@@ -23,7 +23,7 @@ import static com.motoyav2.finanzas.infrastructure.adapter.out.persistence.util.
 @RequiredArgsConstructor
 public class ComisionPortAdapter implements ComisionPort {
 
-    private static final String COL = "comisiones";
+    private static final String COL = "finanzas_comisiones";
     private final Firestore db;
 
     @Override

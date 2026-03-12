@@ -42,9 +42,9 @@ import java.util.Map;
 public class FinanzasReconciliadorStartup implements ApplicationRunner {
 
     private static final String COL_CONTRATOS  = "contratos";
-    private static final String COL_FACTURAS   = "facturas";
+    private static final String COL_FACTURAS   = "finanzas_facturas";
     private static final String COL_PAGOS      = "pagos";
-    private static final String COL_COMISIONES = "comisiones";
+    private static final String COL_COMISIONES = "finanzas_comisiones";
     private static final String COL_SOLICITUDES= "solicitudes";
     private static final String COL_USERS      = "users";
     private static final String COL_CONFIG     = "finanzas_config";
@@ -77,10 +77,14 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
 
     // ── Disparo manual (endpoint admin) ──────────────────────────────────
 
-    /** Ejecuta el reconciliador sin delay — para llamar desde el endpoint admin. */
+    /**
+     * Ejecuta el barrido sin delay y sin chequear el flag — para el endpoint admin.
+     * Siempre recorre todos los contratos con facturaVehiculo.estadoValidacion=APROBADO
+     * y crea las facturas que aún no existan (idempotente por documento).
+     */
     public Mono<String> ejecutarManual() {
         log.info("[Reconciliador] Ejecución manual solicitada");
-        return verificarYEjecutar()
+        return ejecutarBarrido()
                 .thenReturn("Reconciliación completada")
                 .onErrorResume(e -> {
                     log.error("[Reconciliador] Error en ejecución manual: {}", e.getMessage());
@@ -108,7 +112,7 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
     private Mono<Void> ejecutarBarrido() {
         return FirestoreReactiveUtils.toFlux(
                 db.collection(COL_CONTRATOS)
-                        .whereEqualTo("estado", "FIRMADO")
+                        .whereEqualTo("facturaVehiculo.estadoValidacion", "APROBADO")
                         .get())
                 .map(snap -> snap.toObject(ContratoDocument.class))
                 .flatMap(doc -> procesarContrato(doc), 5) // max 5 en paralelo
@@ -153,10 +157,17 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
 
         // ── Datos de factura vehículo ─────────────────────────────────────
         FacturaVehiculoEmbedded fv = doc.getFacturaVehiculo();
-        String numeroFactura = fv != null ? nvl(fv.getNumeroFactura()) : "";
-        String marca         = fv != null ? nvl(fv.getMarcaVehiculo())  : "";
-        String modelo        = fv != null ? nvl(fv.getModeloVehiculo()) : "";
-        String motoModelo    = (marca + " " + modelo).trim();
+        String numeroFactura      = fv != null ? nvl(fv.getNumeroFactura())    : "";
+        String marca              = fv != null ? nvl(fv.getMarcaVehiculo())    : "";
+        String modelo             = fv != null ? nvl(fv.getModeloVehiculo())   : "";
+        String motoModelo         = (marca + " " + modelo).trim();
+        String colorVehiculo      = fv != null ? nvl(fv.getColorVehiculo())    : "";
+        String serieMotor         = fv != null ? nvl(fv.getSerieMotor())       : "";
+        String serieChasis        = fv != null ? nvl(fv.getSerieChasis())      : "";
+        String urlDocumentoFact   = fv != null ? nvl(fv.getUrlDocumento())     : "";
+        Integer anioVehiculo      = fv != null ? fv.getAnioVehiculo()          : null;
+        String fechaEmisionFact   = (fv != null && fv.getFechaEmision() != null)
+                ? fv.getFechaEmision().toString() : null;
 
         // ── Datos del titular ─────────────────────────────────────────────
         String clienteNombre = "";
@@ -181,21 +192,29 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
 
         // ── Documento factura ─────────────────────────────────────────────
         Map<String, Object> factura = new HashMap<>();
-        factura.put("id",             contratoId);
-        factura.put("numero",         numeroFactura);
-        factura.put("tiendaId",       tiendaId);
-        factura.put("tiendaNombre",   tiendaNombre);
-        factura.put("ventaId",        nvl(doc.getEvaluacionId()));
-        factura.put("clienteNombre",  clienteNombre);
-        factura.put("motoModelo",     motoModelo);
-        factura.put("montoTotal",     montoTotal);
-        factura.put("fechaFactura",   hoy);
-        factura.put("condicionPago",  CONDICION_PAGO_DIAS);
-        factura.put("estado",         "PENDIENTE");
-        factura.put("creadoEn",       ahora);
-        factura.put("actualizadoEn",  ahora);
-        factura.put("_alertaActiva",  true);
-        factura.put("_tieneVencidos", false);
+        factura.put("id",                   contratoId);
+        factura.put("numero",               numeroFactura);
+        factura.put("tiendaId",             tiendaId);
+        factura.put("tiendaNombre",         tiendaNombre);
+        factura.put("ventaId",              nvl(doc.getEvaluacionId()));
+        factura.put("clienteNombre",        clienteNombre);
+        factura.put("motoModelo",           motoModelo);
+        factura.put("marcaVehiculo",        marca);
+        factura.put("modeloVehiculo",       modelo);
+        factura.put("anioVehiculo",         anioVehiculo);
+        factura.put("colorVehiculo",        colorVehiculo);
+        factura.put("serieMotor",           serieMotor);
+        factura.put("serieChasis",          serieChasis);
+        factura.put("urlDocumentoFactura",  urlDocumentoFact);
+        factura.put("fechaEmisionFactura",  fechaEmisionFact);
+        factura.put("montoTotal",           montoTotal);
+        factura.put("fechaFactura",         hoy);
+        factura.put("condicionPago",        CONDICION_PAGO_DIAS);
+        factura.put("estado",               "PENDIENTE");
+        factura.put("creadoEn",             ahora);
+        factura.put("actualizadoEn",        ahora);
+        factura.put("alertaActiva",         true);
+        factura.put("tieneVencidos",        false);
 
         // ── Pago 1: INICIAL ───────────────────────────────────────────────
         String pagoId1 = contratoId + "-P1";
