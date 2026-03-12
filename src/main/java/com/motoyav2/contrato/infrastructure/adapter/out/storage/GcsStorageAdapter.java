@@ -56,6 +56,40 @@ public class GcsStorageAdapter implements StoragePort {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * Recupera la URL de descarga de un archivo ya existente en Storage.
+     * Lee el token guardado en los metadatos del objeto ("firebaseStorageDownloadTokens").
+     * Si el objeto no tiene token (fue subido sin él), genera uno nuevo y lo persiste.
+     */
+    @Override
+    public Mono<String> getDownloadUrl(String path) {
+        return Mono.fromCallable(() -> {
+            BlobId blobId = BlobId.of(bucketName, path);
+            com.google.cloud.storage.Blob blob = storage.get(blobId);
+            if (blob == null) {
+                throw new IllegalArgumentException("Archivo no encontrado en Storage: " + path);
+            }
+
+            Map<String, String> metadata = blob.getMetadata();
+            String token = (metadata != null) ? metadata.get("firebaseStorageDownloadTokens") : null;
+
+            if (token == null || token.isBlank()) {
+                // El objeto existe pero no tiene token — generamos uno y lo guardamos
+                token = UUID.randomUUID().toString();
+                BlobInfo updated = blob.toBuilder()
+                        .setMetadata(Map.of("firebaseStorageDownloadTokens", token))
+                        .build();
+                storage.update(updated);
+            }
+
+            String encodedPath = path.replace("/", "%2F");
+            return String.format(
+                    "https://firebasestorage.googleapis.com/v0/b/%s/o/%s?alt=media&token=%s",
+                    bucketName, encodedPath, token
+            );
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
     private String extractFileName(String path) {
         int lastSlash = path.lastIndexOf('/');
         return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;

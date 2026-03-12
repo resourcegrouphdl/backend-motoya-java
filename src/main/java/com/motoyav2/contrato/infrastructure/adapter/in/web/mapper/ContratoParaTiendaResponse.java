@@ -35,7 +35,7 @@ public final class ContratoParaTiendaResponse {
                 .tive(mapEvidenciaDocumento(c.tive()))
                 .evidenciaSOAT(mapEvidenciaDocumento(c.evidenciaSOAT()))
                 .evidenciaPlacaRodaje(mapEvidenciaDocumento(c.evidenciaPlacaRodaje()))
-                .actaDeEntrega(mapEvidenciaDocumento(c.actaDeEntrega()))
+                .actasDeEntrega(mapEvidenciaDocumentos(c.actasDeEntrega()))
                 .build();
     }
 
@@ -136,5 +136,10 @@ public final class ContratoParaTiendaResponse {
                 ev.fechaValidacion() != null ? ev.fechaValidacion().toString() : null,
                 ev.observacionesValidacion()
         );
+    }
+
+    private static List<EvidenciaDocumentoResponse> mapEvidenciaDocumentos(List<EvidenciaDocumento> list) {
+        if (list == null) return List.of();
+        return list.stream().map(ContratoParaTiendaResponse::mapEvidenciaDocumento).toList();
     }
 }

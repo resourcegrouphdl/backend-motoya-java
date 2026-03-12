@@ -1,0 +1,8 @@
+Hola [(${cliente})],
+
+Te informamos que tu contrato *N° [(${numeroContrato})]* ha sido cancelado.
+
+Si tienes alguna consulta sobre este proceso, comunícate con nuestro equipo de atención al cliente.
+
+Atentamente,
+*Equipo Motoya* 🏍️

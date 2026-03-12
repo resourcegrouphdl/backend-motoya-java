@@ -1,0 +1,16 @@
+Hola [(${fiador})]  👋
+
+Te informamos que la solicitud de crédito para la compra de una motocicleta, presentada por [(${cliente})] , ha sido aprobada.
+
+Has sido registrado como fiador/garante en esta operación.
+
+📄 Certificado de aprobación: [(${certificado})]
+🔗 Ver certificado:
+[(${certificadoUrl})]
+
+Te recordamos que, como fiador, tu compromiso consiste en respaldar el cumplimiento de las obligaciones de pago del titular del crédito durante la vigencia del financiamiento.
+
+Para cualquier consulta o información adicional, puedes comunicarte con nosotros.
+
+Saludos,
+Equipo Moto-ya digital

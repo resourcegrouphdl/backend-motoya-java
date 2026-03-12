@@ -1,0 +1,10 @@
+Hola [(${cliente})],
+
+Lamentamos informarte que tu solicitud de contrato no pudo ser aprobada en esta oportunidad.
+
+📋 *Motivo:* [(${motivo})]
+
+Si tienes dudas o deseas más información, comunícate con nosotros y con gusto te orientaremos sobre los próximos pasos.
+
+Atentamente,
+*Equipo Motoya* 🏍️

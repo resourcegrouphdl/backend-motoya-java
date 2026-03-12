@@ -33,6 +33,6 @@ public record ContratoDetalleAPIDto (
     EvidenciaDocumentoResponse tive,
     EvidenciaDocumentoResponse evidenciaSOAT,
     EvidenciaDocumentoResponse evidenciaPlacaRodaje,
-    EvidenciaDocumentoResponse actaDeEntrega
+    List<EvidenciaDocumentoResponse> actasDeEntrega
 ) {
 }

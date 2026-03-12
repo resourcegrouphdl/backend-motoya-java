@@ -1,0 +1,837 @@
+{
+  "info": {
+    "name": "Motoya v2 - Módulo Notificaciones",
+    "_postman_id": "motoya-notifications-v1",
+    "description": "Colección Postman para el módulo de notificaciones de Motoya v2.\n\n## Canales disponibles\n- WHATSAPP (Factiliza)\n- EMAIL (JavaMail / SMTP)\n- SMS (Twilio)\n\n## Endpoints disponibles\n| Método | Ruta | Descripción |\n|--------|------|--------------|\n| POST | /api/v1/notifications/send | Envío síncrono (texto/template) |\n| POST | /api/v1/notifications/async | Envío asíncrono Outbox |\n| POST | /api/v1/notifications/email | Email síncrono |\n| POST | /api/v1/notifications/email/async | Email asíncrono Outbox |\n| POST | /api/v1/notifications/send/media | WhatsApp con archivo de Storage |\n| POST | /internal/notifications/process | Procesar cola Outbox |\n\n## Variables de entorno requeridas\n- `base_url`: http://localhost:8080\n- `firebase_token`: Bearer token de Firebase Auth\n- `internal_token`: Token para endpoints internos (default: `cambiar-en-prod-123`)\n\n## Autenticación\n- Endpoints `/api/v1/notifications/*` → Header `Authorization: Bearer {{firebase_token}}`\n- Endpoint `/internal/notifications/process` → Header `X-Internal-Token: {{internal_token}}`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080", "type": "string" },
+    { "key": "firebase_token", "value": "REEMPLAZAR_CON_TOKEN_FIREBASE", "type": "string" },
+    { "key": "internal_token", "value": "cambiar-en-prod-123", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Envío Directo (Síncrono)",
+      "description": "Envía la notificación inmediatamente y espera la respuesta del proveedor.",
+      "item": [
+        {
+          "name": "Enviar WhatsApp - Recordatorio de cuota",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"RECORDATORIO_CUOTA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\",\n    \"fecha\": \"15/03/2026\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar WhatsApp - Cuota vencida",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CUOTA_VENCIDA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\",\n    \"diasVencido\": \"5\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar WhatsApp - Pago confirmado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"PAGO_CONFIRMADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar WhatsApp - Contrato listo para firma",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CONTRATO_LISTO_PARA_FIRMA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar WhatsApp - Contrato firmado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CONTRATO_FIRMADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar WhatsApp - Contrato rechazado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CONTRATO_RECHAZADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"motivoRechazo\": \"Documentación incompleta\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar WhatsApp - Contrato cancelado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CONTRATO_CANCELADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar SMS - Recordatorio de cuota",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"SMS\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"RECORDATORIO_CUOTA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\",\n    \"fecha\": \"15/03/2026\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Envío Email Directo (Síncrono)",
+      "description": "Endpoint dedicado para email con validación de formato de correo.",
+      "item": [
+        {
+          "name": "Email - Contrato activado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CONTRATO_ACTIVADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\",\n    \"precioVehiculo\": \"S/ 8,500.00\",\n    \"numeroCuotas\": \"24\",\n    \"cuotaMensual\": \"S/ 380.00\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Email - Contrato completado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CONTRATO_COMPLETADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Email - Comisión disponible (vendedor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"vendedor@motoya.pe\",\n  \"template\": \"COMISION_DISPONIBLE\",\n  \"variables\": {\n    \"vendedor\": \"Carlos Gómez\",\n    \"monto\": \"S/ 250.00\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Envío Asíncrono (Outbox Pattern)",
+      "description": "Registra el evento en Firestore y retorna inmediatamente (202 ACCEPTED). El procesador lo enviará en el siguiente ciclo.",
+      "item": [
+        {
+          "name": "Async - WhatsApp Recordatorio cuota",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/async", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "async"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"RECORDATORIO_CUOTA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\",\n    \"fecha\": \"15/03/2026\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Async - WhatsApp Pago confirmado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/async", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "async"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"PAGO_CONFIRMADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Async - Email Contrato activado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email/async", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email", "async"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CONTRATO_ACTIVADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\",\n    \"precioVehiculo\": \"S/ 8,500.00\",\n    \"numeroCuotas\": \"24\",\n    \"cuotaMensual\": \"S/ 380.00\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Async - Email Comisión disponible",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email/async", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email", "async"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"vendedor@motoya.pe\",\n  \"template\": \"COMISION_DISPONIBLE\",\n  \"variables\": {\n    \"vendedor\": \"Carlos Gómez\",\n    \"monto\": \"S/ 250.00\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Crédito - Notificaciones",
+      "description": "Notificaciones del flujo de evaluación y aprobación de crédito. Cada evento se puede enviar por WhatsApp y/o Email.",
+      "item": [
+        {
+          "name": "WhatsApp - Solicitud recibida",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CREDITO_MOTO_SOLICITUD_RECIBIDA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numero-solicitud\": \"SOL-2026-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Email - Solicitud recibida",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CREDITO_MOTO_SOLICITUD_RECIBIDA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroSolicitud\": \"SOL-2026-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "WhatsApp - Crédito aprobado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CREDITO_APROBADO_NOTIFICACION\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Email - Crédito aprobado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CREDITO_APROBADO_NOTIFICACION\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "WhatsApp - Notificación al fiador",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654322\",\n  \"template\": \"CREDITO_MOTO_FIADOR_NOTIFICACION\",\n  \"variables\": {\n    \"fiador\": \"María García\",\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Email - Notificación al fiador",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"fiador@gmail.com\",\n  \"template\": \"CREDITO_MOTO_FIADOR_NOTIFICACION\",\n  \"variables\": {\n    \"fiador\": \"María García\",\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "WhatsApp - Notificación a referencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654323\",\n  \"template\": \"CREDITO_NOTIFICACION_REFERENCIA\",\n  \"variables\": {\n    \"referencia\": \"Carlos López\",\n    \"cliente\": \"Juan Pérez\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Email - Notificación a referencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"referencia@gmail.com\",\n  \"template\": \"CREDITO_NOTIFICACION_REFERENCIA\",\n  \"variables\": {\n    \"referencia\": \"Carlos López\",\n    \"cliente\": \"Juan Pérez\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Async - WhatsApp Solicitud recibida",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/async", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "async"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CREDITO_MOTO_SOLICITUD_RECIBIDA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numero-solicitud\": \"SOL-2026-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Async - Email Solicitud recibida",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email/async", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email", "async"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CREDITO_MOTO_SOLICITUD_RECIBIDA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroSolicitud\": \"SOL-2026-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Async - WhatsApp Crédito aprobado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/async", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "async"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CREDITO_APROBADO_NOTIFICACION\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Async - Email Crédito aprobado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email/async", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email", "async"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CREDITO_APROBADO_NOTIFICACION\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp Media (Archivos desde Storage)",
+      "description": "Envía archivos almacenados en Firebase Storage por WhatsApp.\nEl backend obtiene la URL de descarga automáticamente a partir del path en Storage.\n\nmediaType válidos: image | document | video | audio\n\nPath de ejemplo para contratos PDF: contratos/contratos-pdf/{contratoId}/{archivo}.pdf",
+      "item": [
+        {
+          "name": "Enviar imagen por WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send/media", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send", "media"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient\": \"51987654321\",\n  \"storagePath\": \"imagenes/vehiculos/moto-abc123.jpg\",\n  \"mediaType\": \"image\",\n  \"filename\": \"moto.jpg\",\n  \"caption\": \"Aquí está la foto de tu vehículo 🏍️\",\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar PDF de contrato por WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send/media", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send", "media"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient\": \"51987654321\",\n  \"storagePath\": \"contratos/contratos-pdf/contrato-abc123/contrato-abc123.pdf\",\n  \"mediaType\": \"document\",\n  \"filename\": \"contrato-abc123.pdf\",\n  \"caption\": \"Aquí está tu contrato para firma 📄\",\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar voucher/boucher por WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send/media", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send", "media"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient\": \"51987654321\",\n  \"storagePath\": \"contratos/bouchers/contrato-abc123/voucher.jpg\",\n  \"mediaType\": \"image\",\n  \"filename\": \"voucher.jpg\",\n  \"caption\": \"Confirmación de tu pago ✅\",\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Procesador Interno (Outbox)",
+      "description": "Endpoint interno para procesar eventos pendientes en el Outbox. Lo invoca Cloud Scheduler o una Cloud Function. Requiere X-Internal-Token.",
+      "item": [
+        {
+          "name": "Procesar eventos pendientes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Internal-Token", "value": "{{internal_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/internal/notifications/process", "host": ["{{base_url}}"], "path": ["internal", "notifications", "process"] },
+            "body": { "mode": "none" }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Referencia - Todos los templates",
+      "description": "Solicitudes de referencia con todas las combinaciones de template + canal. Útil para verificar que cada template funciona correctamente.",
+      "item": [
+        {
+          "name": "[REF] CONTRATO_LISTO_PARA_FIRMA - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CONTRATO_LISTO_PARA_FIRMA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CONTRATO_FIRMADO - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CONTRATO_FIRMADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CONTRATO_ACTIVADO - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CONTRATO_ACTIVADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\",\n    \"precioVehiculo\": \"S/ 8,500.00\",\n    \"numeroCuotas\": \"24\",\n    \"cuotaMensual\": \"S/ 380.00\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CONTRATO_RECHAZADO - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CONTRATO_RECHAZADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"motivoRechazo\": \"Documentación incompleta\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CONTRATO_CANCELADO - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CONTRATO_CANCELADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CONTRATO_COMPLETADO - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CONTRATO_COMPLETADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] RECORDATORIO_CUOTA - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"RECORDATORIO_CUOTA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\",\n    \"fecha\": \"15/03/2026\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CUOTA_VENCIDA - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CUOTA_VENCIDA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\",\n    \"diasVencido\": \"5\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] PAGO_CONFIRMADO - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"PAGO_CONFIRMADO\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"monto\": \"S/ 120.00\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] COMISION_DISPONIBLE - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"vendedor@motoya.pe\",\n  \"template\": \"COMISION_DISPONIBLE\",\n  \"variables\": {\n    \"vendedor\": \"Carlos Gómez\",\n    \"monto\": \"S/ 250.00\",\n    \"numeroContrato\": \"C-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CREDITO_MOTO_SOLICITUD_RECIBIDA - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CREDITO_MOTO_SOLICITUD_RECIBIDA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numero-solicitud\": \"SOL-2026-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CREDITO_MOTO_SOLICITUD_RECIBIDA - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CREDITO_MOTO_SOLICITUD_RECIBIDA\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"numeroSolicitud\": \"SOL-2026-001\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CREDITO_APROBADO_NOTIFICACION - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654321\",\n  \"template\": \"CREDITO_APROBADO_NOTIFICACION\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CREDITO_APROBADO_NOTIFICACION - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"cliente@gmail.com\",\n  \"template\": \"CREDITO_APROBADO_NOTIFICACION\",\n  \"variables\": {\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CREDITO_MOTO_FIADOR_NOTIFICACION - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654322\",\n  \"template\": \"CREDITO_MOTO_FIADOR_NOTIFICACION\",\n  \"variables\": {\n    \"fiador\": \"María García\",\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CREDITO_MOTO_FIADOR_NOTIFICACION - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"fiador@gmail.com\",\n  \"template\": \"CREDITO_MOTO_FIADOR_NOTIFICACION\",\n  \"variables\": {\n    \"fiador\": \"María García\",\n    \"cliente\": \"Juan Pérez\",\n    \"certificado\": \"CERT-2026-001\",\n    \"certificadoUrl\": \"https://firebasestorage.googleapis.com/v0/b/motoya-form.appspot.com/o/certificados%2FCERT-2026-001.pdf?alt=media&token=REEMPLAZAR\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CREDITO_NOTIFICACION_REFERENCIA - WhatsApp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"51987654323\",\n  \"template\": \"CREDITO_NOTIFICACION_REFERENCIA\",\n  \"variables\": {\n    \"referencia\": \"Carlos López\",\n    \"cliente\": \"Juan Pérez\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[REF] CREDITO_NOTIFICACION_REFERENCIA - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{firebase_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/email", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "email"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"referencia@gmail.com\",\n  \"template\": \"CREDITO_NOTIFICACION_REFERENCIA\",\n  \"variables\": {\n    \"referencia\": \"Carlos López\",\n    \"cliente\": \"Juan Pérez\"\n  },\n  \"contratoId\": \"contrato-abc123\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

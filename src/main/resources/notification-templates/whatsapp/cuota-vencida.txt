@@ -1,0 +1,12 @@
+⚠️ Hola [(${cliente})],
+
+Tu cuota está *VENCIDA* hace [(${diasVencido})] día(s).
+
+💰 *Monto pendiente:* [(${monto})]
+
+Es importante que regularices tu pago a la brevedad posible para evitar cargos adicionales y mantener tu historial crediticio al día.
+
+Comunícate con nosotros para coordinar tu pago:
+📞 Llámanos o escríbenos aquí mismo.
+
+*Equipo Motoya* 🏍️

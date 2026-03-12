@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Notificación de fiador - Motoya</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0; }
+        .container { max-width:800px; margin:30px auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color:#E63946; padding:24px 30px; text-align:center; }
+        .header img { max-height:50px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto; }
+        .header h1 { color:#ffffff; margin:0; font-size:22px; }
+        .body { padding:30px; }
+        .body h2 { color:#333333; }
+        .body p { color:#555555; line-height:1.6; }
+        .detail-box { background-color:#f9f9f9; border-left:4px solid #E63946; padding:15px; margin:20px 0; border-radius:4px; }
+        .detail-box p { margin:5px 0; }
+        .warning { background:#fff3cd; border-left:4px solid #ffcc00; padding:15px; margin-top:20px; border-radius:4px; }
+        .btn { display:inline-block; margin-top:20px; padding:12px 28px; background-color:#E63946; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold; font-size:15px; }
+        .footer { background-color:#333333; padding:20px; text-align:center; color:#aaaaaa; font-size:12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya"/>
+        <h1>📋 Notificación de Fiador / Garante</h1>
+    </div>
+
+    <div class="body">
+
+        <h2>Hola, [[${fiador}]]</h2>
+
+        <p>
+            Le informamos que la solicitud de crédito para la compra de una motocicleta,
+            presentada por <strong>[[${cliente}]]</strong>, ha sido <strong>aprobada</strong>.
+            Usted ha sido registrado como <strong>fiador / garante</strong> en esta operación.
+        </p>
+
+        <div class="detail-box">
+            <p><strong>👤 Titular del crédito:</strong> [[${cliente}]]</p>
+            <p><strong>📄 Certificado de aprobación N°:</strong> [[${certificado}]]</p>
+        </div>
+
+        <p>Puede consultar el certificado de aprobación en el siguiente enlace:</p>
+
+        <a class="btn" th:href="${certificadoUrl}" href="#">⬇ Ver Certificado</a>
+
+        <div class="warning" style="margin-top:24px;">
+            <p><strong>⚠️ Responsabilidad como fiador</strong></p>
+            <p>
+                Como fiador, su compromiso consiste en <strong>respaldar el cumplimiento de las
+                obligaciones de pago</strong> del titular del crédito durante la vigencia del
+                financiamiento. En caso de incumplimiento por parte del titular, usted podrá
+                ser requerido para cubrir las cuotas pendientes.
+            </p>
+            <p>
+                El incumplimiento prolongado podrá generar el <strong>reporte de la deuda
+                a centrales de riesgo</strong>, conforme a la normativa vigente del sistema
+                financiero peruano.
+            </p>
+        </div>
+
+        <p style="margin-top:20px;">
+            Para cualquier consulta, puede comunicarse con nosotros a través de su asesor de ventas.
+        </p>
+
+        <p>Atentamente,<br/><strong>Equipo Motoya</strong></p>
+
+    </div>
+
+    <div class="footer">
+        <p>Este correo ha sido enviado automáticamente por el sistema de Motoya.</p>
+        <p>La información de sus datos personales es tratada conforme a la <strong>Ley N° 29733 - Ley de Protección de Datos Personales del Perú</strong>.</p>
+        <p>© 2026 Motoya. Todos los derechos reservados.</p>
+    </div>
+
+</div>
+</body>
+</html>

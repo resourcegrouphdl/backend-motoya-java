@@ -7,6 +7,7 @@ import com.motoyav2.contrato.domain.enums.FaseContrato;
 import com.motoyav2.contrato.domain.model.Contrato;
 import com.motoyav2.contrato.domain.model.ContratoParaImprimir;
 import com.motoyav2.contrato.domain.model.CuotaCronograma;
+import com.motoyav2.contrato.domain.port.out.CrearEventoEnCalendar;
 import com.motoyav2.contrato.domain.service.ContratoStateMachine;
 import com.motoyav2.contrato.domain.port.in.AprobarContratoUseCase;
 import com.motoyav2.contrato.domain.port.out.ContratoRepository;
@@ -15,12 +16,14 @@ import com.motoyav2.contrato.domain.service.CuotaCronogramaCliente;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AprobarContratoService implements AprobarContratoUseCase {
@@ -29,6 +32,7 @@ public class AprobarContratoService implements AprobarContratoUseCase {
   private final CuotaCronogramaCliente cuotaCronogramaCliente;
   private final ContratoParaDescargasMaper contratoParaDescargasMaper;
   private final ObtenerRucDeStoreUseCase obtenerRucDeStoreUseCase;
+  private final CrearEventoEnCalendar crearEventoEnCalendar;
 
 
   @Override
@@ -64,7 +68,7 @@ public class AprobarContratoService implements AprobarContratoUseCase {
               contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(),
               contrato.contratoParaImprimir(),
               contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
-              contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actaDeEntrega()
+              contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actasDeEntrega()
           );
 
           return contratoRepository.save(enGeneracion)
@@ -79,7 +83,7 @@ public class AprobarContratoService implements AprobarContratoUseCase {
 
                     ContratoParaImprimir contratoParaImprimir = contratoParaDescargasMaper.contratoParaImprimir(saved, ruc);
 
-                    Contrato contratoGenereado = new Contrato(
+                    Contrato contratoGenerado = new Contrato(
                         saved.id(), saved.numeroContrato(),
                         EstadoContrato.CONTRATO_GENERADO, FaseContrato.GENERACION_CONTRATO,
                         saved.titular(), saved.fiador(), saved.tienda(), saved.datosFinancieros(),
@@ -89,9 +93,22 @@ public class AprobarContratoService implements AprobarContratoUseCase {
                         saved.motivoRechazo(), saved.fechaCreacion(), Instant.now(),
                         contratoParaImprimir,
                         saved.numeroDeTitulo(), saved.fechaRegistroTitulo(),
-                        saved.tive(), saved.evidenciaSOAT(), saved.evidenciaPlacaRodaje(), saved.actaDeEntrega()
+                        saved.tive(), saved.evidenciaSOAT(), saved.evidenciaPlacaRodaje(), saved.actasDeEntrega()
                     );
-                    return contratoRepository.save(contratoGenereado);
+
+                    // Primero persistir el contrato con el cronograma completo,
+                    // luego disparar los eventos de Google Calendar usando las cuotas ya generadas.
+                    // onErrorResume garantiza que un fallo en Calendar no bloquee el flujo principal.
+                    return contratoRepository.save(contratoGenerado)
+                        .flatMap(persistido -> crearEventoEnCalendar.crearEventoEnCalendar(persistido)
+                            .doOnSuccess(v -> log.info(
+                                "[Calendar] Eventos creados para contratoId={}", persistido.id()))
+                            .onErrorResume(e -> {
+                                log.error("[Calendar] Error creando eventos para contratoId={}: {}",
+                                    persistido.id(), e.getMessage());
+                                return Mono.empty(); // no bloquea el flujo principal
+                            })
+                            .thenReturn(persistido));
                   }));
 
         });

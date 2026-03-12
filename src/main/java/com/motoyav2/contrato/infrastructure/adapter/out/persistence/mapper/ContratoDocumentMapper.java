@@ -41,7 +41,7 @@ public final class ContratoDocumentMapper {
                 mapEvidenciaDocumentoToDomain(doc.getTive()),
                 mapEvidenciaDocumentoToDomain(doc.getEvidenciaSOAT()),
                 mapEvidenciaDocumentoToDomain(doc.getEvidenciaPlacaRodaje()),
-                mapEvidenciaDocumentoToDomain(doc.getActaDeEntrega())
+                mapEvidenciaDocumentosListToDomain(doc.getActasDeEntrega())
         );
     }
 
@@ -72,7 +72,7 @@ public final class ContratoDocumentMapper {
         doc.setTive(mapEvidenciaDocumentoToDoc(contrato.tive()));
         doc.setEvidenciaSOAT(mapEvidenciaDocumentoToDoc(contrato.evidenciaSOAT()));
         doc.setEvidenciaPlacaRodaje(mapEvidenciaDocumentoToDoc(contrato.evidenciaPlacaRodaje()));
-        doc.setActaDeEntrega(mapEvidenciaDocumentoToDoc(contrato.actaDeEntrega()));
+        doc.setActasDeEntrega(mapEvidenciaDocumentosListToDoc(contrato.actasDeEntrega()));
         return doc;
     }
 
@@ -485,6 +485,16 @@ public final class ContratoDocumentMapper {
     }
 
     // --- EvidenciaDocumento (post-firma) ---
+    private static List<EvidenciaDocumento> mapEvidenciaDocumentosListToDomain(List<EvidenciaDocumentoEmbedded> list) {
+        if (list == null) return List.of();
+        return list.stream().map(ContratoDocumentMapper::mapEvidenciaDocumentoToDomain).toList();
+    }
+
+    private static List<EvidenciaDocumentoEmbedded> mapEvidenciaDocumentosListToDoc(List<EvidenciaDocumento> list) {
+        if (list == null) return List.of();
+        return list.stream().map(ContratoDocumentMapper::mapEvidenciaDocumentoToDoc).toList();
+    }
+
     private static EvidenciaDocumento mapEvidenciaDocumentoToDomain(EvidenciaDocumentoEmbedded e) {
         if (e == null) return null;
         return EvidenciaDocumento.builder()

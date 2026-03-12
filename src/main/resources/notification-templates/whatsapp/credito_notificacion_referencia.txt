@@ -1,0 +1,13 @@
+Estimado(a) [(${referencia})],
+
+Por medio del presente mensaje le informamos que su nombre y número de contacto han sido consignados como referencia personal por el(la) señor(a) [(${cliente})], en el marco de su solicitud de crédito para la adquisición de una motocicleta.
+
+Su condición de referencia personal implica que su contacto podría ser utilizado por nuestra entidad únicamente con fines de verificación o localización del titular del crédito, en caso resulte necesario dentro del proceso de evaluación o gestión del financiamiento.
+
+En caso de que usted no reconozca al titular mencionado o no desee figurar como referencia, le solicitamos responder a este mensaje indicando dicha situación, a fin de proceder con la actualización correspondiente en nuestros registros.
+
+Agradecemos su atención y colaboración.
+
+Atentamente,
+Moto-ya digital.
+Área de Atención al Cliente

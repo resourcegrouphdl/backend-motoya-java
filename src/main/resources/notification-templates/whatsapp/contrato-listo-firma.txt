@@ -1,0 +1,11 @@
+Hola [(${cliente})] 👋
+
+Tus documentos del contrato *N° [(${numeroContrato})]* ya están listos para firma. 🏍️
+
+📋 *Resumen:*
+• Cuota mensual: [(${cuotaMensual})]
+• N° cuotas: [(${numeroCuotas})]
+
+Por favor, acércate a nuestra tienda para completar el proceso de firma. Lleva tu DNI y cualquier consulta comunícate con nosotros.
+
+¡Gracias por elegir *Motoya*! 🚀

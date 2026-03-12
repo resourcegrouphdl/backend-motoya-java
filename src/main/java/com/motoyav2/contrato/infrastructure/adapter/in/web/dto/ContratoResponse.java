@@ -30,7 +30,7 @@ public record ContratoResponse(
         EvidenciaDocumentoDto tive,
         EvidenciaDocumentoDto evidenciaSOAT,
         EvidenciaDocumentoDto evidenciaPlacaRodaje,
-        EvidenciaDocumentoDto actaDeEntrega
+        List<EvidenciaDocumentoDto> actasDeEntrega
 ) {
     public record DatosTitularDto(
             String nombres, String apellidos, String tipoDocumento, String numeroDocumento,

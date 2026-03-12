@@ -1,0 +1,9 @@
+¡Felicitaciones [(${cliente})]! 🎉
+
+Tu contrato *N° [(${numeroContrato})]* ha sido firmado exitosamente.
+
+🏍️ Tu moto ya está en camino. El equipo de *[(${tienda})]* se pondrá en contacto contigo para coordinar la entrega.
+
+Recuerda mantener al día tus pagos para evitar cargos adicionales.
+
+¡Gracias por confiar en *Motoya*! 🚀

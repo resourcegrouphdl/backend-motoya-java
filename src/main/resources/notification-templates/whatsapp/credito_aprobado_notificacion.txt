@@ -1,0 +1,17 @@
+Hola [(${cliente})] 👋
+
+¡Tenemos buenas noticias! 🎉
+
+Tu solicitud de crédito para la compra de tu motocicleta ha sido aprobada.
+Además, se ha generado tu Certificado de Aprobación.
+
+📄 Certificado N°: [(${certificado})]
+🔗 Descarga tu certificado aquí:
+[(${certificadoUrl})]
+
+El siguiente paso es contactar a tu asesor de ventas para continuar con el proceso y coordinar la selección y entrega de tu motocicleta 🏍️.
+
+Si tienes alguna consulta, estamos para ayudarte.
+
+Saludos,
+Equipo Moto-ya digital

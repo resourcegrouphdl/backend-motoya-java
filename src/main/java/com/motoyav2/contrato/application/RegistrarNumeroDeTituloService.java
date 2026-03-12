@@ -37,7 +37,7 @@ public class RegistrarNumeroDeTituloService implements RegistrarNumeroDeTituloUs
                             contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                             contrato.motivoRechazo(), contrato.fechaCreacion(), now, contrato.contratoParaImprimir(),
                             numeroDeTitulo, now,
-                            contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actaDeEntrega()
+                            contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actasDeEntrega()
                     );
 
                     return contratoRepository.save(actualizado);

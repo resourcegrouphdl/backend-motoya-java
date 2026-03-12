@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,7 +25,7 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
     private final ContratoRepository contratoRepository;
 
     @Override
-    public Mono<Contrato> subir(String contratoId, String tipo, EvidenciaDocumento evidencia) {
+    public Mono<Contrato> subir(String contratoId, String tipo, List<EvidenciaDocumento> evidencias) {
         return contratoRepository.findById(contratoId)
                 .switchIfEmpty(Mono.error(new NotFoundException("Contrato no encontrado: " + contratoId)))
                 .flatMap(contrato -> {
@@ -32,38 +34,43 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
                                 "El contrato debe estar en estado FIRMADO. Estado actual: " + contrato.estado()));
                     }
 
-                    EstadoValidacion estadoInicial = "ACTA_ENTREGA".equalsIgnoreCase(tipo)
-                            ? EstadoValidacion.APROBADO
-                            : EstadoValidacion.PENDIENTE;
+                    boolean esActa = "ACTA_ENTREGA".equalsIgnoreCase(tipo);
+                    EstadoValidacion estadoInicial = esActa ? EstadoValidacion.APROBADO : EstadoValidacion.PENDIENTE;
 
-                    EvidenciaDocumento nuevaEvidencia = EvidenciaDocumento.builder()
-                            .id(UUID.randomUUID().toString())
-                            .tipoEvidencia(evidencia.tipoEvidencia())
-                            .urlEvidencia(evidencia.urlEvidencia())
-                            .nombreArchivo(evidencia.nombreArchivo())
-                            .tipoArchivo(evidencia.tipoArchivo())
-                            .tamanioBytes(evidencia.tamanioBytes())
-                            .fechaSubida(Instant.now())
-                            .descripcion(evidencia.descripcion())
-                            .estadoValidacion(estadoInicial)
-                            .build();
+                    List<EvidenciaDocumento> nuevas = evidencias.stream()
+                            .map(ev -> EvidenciaDocumento.builder()
+                                    .id(UUID.randomUUID().toString())
+                                    .tipoEvidencia(ev.tipoEvidencia())
+                                    .urlEvidencia(ev.urlEvidencia())
+                                    .nombreArchivo(ev.nombreArchivo())
+                                    .tipoArchivo(ev.tipoArchivo())
+                                    .tamanioBytes(ev.tamanioBytes())
+                                    .fechaSubida(Instant.now())
+                                    .descripcion(ev.descripcion())
+                                    .estadoValidacion(estadoInicial)
+                                    .build())
+                            .toList();
 
-                    Contrato actualizado = buildContratoConDocumento(contrato, tipo, nuevaEvidencia);
+                    Contrato actualizado = buildContratoConDocumento(contrato, tipo, nuevas);
                     return contratoRepository.save(actualizado);
                 });
     }
 
-    private Contrato buildContratoConDocumento(Contrato contrato, String tipo, EvidenciaDocumento nueva) {
+    private Contrato buildContratoConDocumento(Contrato contrato, String tipo, List<EvidenciaDocumento> nuevas) {
         EvidenciaDocumento tive = contrato.tive();
         EvidenciaDocumento soat = contrato.evidenciaSOAT();
         EvidenciaDocumento placa = contrato.evidenciaPlacaRodaje();
-        EvidenciaDocumento acta = contrato.actaDeEntrega();
+        List<EvidenciaDocumento> actas = contrato.actasDeEntrega();
 
         switch (tipo.toUpperCase()) {
-            case "TIVE" -> tive = nueva;
-            case "SOAT" -> soat = nueva;
-            case "PLACA_RODAJE" -> placa = nueva;
-            case "ACTA_ENTREGA" -> acta = nueva;
+            case "TIVE" -> tive = nuevas.get(0);
+            case "SOAT" -> soat = nuevas.get(0);
+            case "PLACA_RODAJE" -> placa = nuevas.get(0);
+            case "ACTA_ENTREGA" -> {
+                List<EvidenciaDocumento> merged = new ArrayList<>(actas != null ? actas : List.of());
+                merged.addAll(nuevas);
+                actas = merged;
+            }
             default -> throw new BadRequestException("Tipo de documento inválido: " + tipo + ". Use TIVE, SOAT, PLACA_RODAJE o ACTA_ENTREGA");
         }
 
@@ -75,7 +82,7 @@ public class SubirDocumentoPostFirmaService implements SubirDocumentoPostFirmaUs
                 contrato.notificaciones(), contrato.creadoPor(), contrato.evaluacionId(),
                 contrato.motivoRechazo(), contrato.fechaCreacion(), Instant.now(), contrato.contratoParaImprimir(),
                 contrato.numeroDeTitulo(), contrato.fechaRegistroTitulo(),
-                tive, soat, placa, acta
+                tive, soat, placa, actas
         );
     }
 }

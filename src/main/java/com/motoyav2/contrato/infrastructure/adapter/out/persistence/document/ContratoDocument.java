@@ -37,5 +37,5 @@ public class ContratoDocument {
     private EvidenciaDocumentoEmbedded tive;
     private EvidenciaDocumentoEmbedded evidenciaSOAT;
     private EvidenciaDocumentoEmbedded evidenciaPlacaRodaje;
-    private EvidenciaDocumentoEmbedded actaDeEntrega;
+    private List<EvidenciaDocumentoEmbedded> actasDeEntrega;
 }

@@ -1,6 +1,8 @@
 package com.motoyav2.finanzas.infrastructure.adapter.out.integration;
 
+import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.SetOptions;
 import com.google.cloud.firestore.WriteBatch;
 import com.motoyav2.contrato.domain.model.Contrato;
 import com.motoyav2.contrato.domain.port.out.FinanzasIntegrationPort;
@@ -150,10 +152,11 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         batch.set(facturaRef.collection(COL_PAGOS).document(pagoId1), pago1);
         batch.set(facturaRef.collection(COL_PAGOS).document(pagoId2), pago2);
 
-        // Incrementar KPI de facturas pendientes
-        batch.update(db.collection(COL_KPIS).document("current"),
-                "totalFacturasPendientes", com.google.cloud.firestore.FieldValue.increment(1),
-                "ultimaActualizacion", ahora);
+        // set+merge en lugar de update: crea el doc si no existe
+        batch.set(db.collection(COL_KPIS).document("current"),
+                Map.of("totalFacturasPendientes", FieldValue.increment(1),
+                       "ultimaActualizacion", ahora),
+                SetOptions.merge());
 
         return FirestoreReactiveUtils.toMono(batch.commit())
                 .doOnSuccess(v -> log.info(

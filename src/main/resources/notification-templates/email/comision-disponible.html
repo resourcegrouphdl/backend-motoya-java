@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Nueva comisión disponible - Motoya</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color: #F4A261; padding: 30px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
+        .body { padding: 30px; }
+        .body h2 { color: #333333; }
+        .body p { color: #555555; line-height: 1.6; }
+        .detail-box { background-color: #fff9f0; border-left: 4px solid #F4A261; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .monto { font-size: 28px; font-weight: bold; color: #E63946; text-align: center; padding: 10px; }
+        .footer { background-color: #333333; padding: 20px; text-align: center; color: #aaaaaa; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>💰 ¡Nueva comisión disponible!</h1>
+    </div>
+    <div class="body">
+        <h2>Hola, [[${vendedor}]]</h2>
+        <p>¡Excelente trabajo! Se ha generado una nueva comisión por tu venta:</p>
+
+        <div class="detail-box">
+            <p><strong>📋 Contrato N°:</strong> [[${contratoId}]]</p>
+            <p><strong>Comisión generada:</strong></p>
+            <div class="monto">[[${monto}]]</div>
+        </div>
+
+        <p>Tu comisión será procesada y transferida según el calendario de pagos establecido. Puedes consultar el detalle en el sistema.</p>
+
+        <p>¡Sigue así! Tu desempeño es fundamental para el crecimiento de <strong>Motoya</strong> 🚀</p>
+    </div>
+    <div class="footer">
+        <p>© 2025 Motoya. Todos los derechos reservados.</p>
+        <p>Este es un mensaje interno del sistema Motoya.</p>
+    </div>
+</div>
+</body>
+</html>

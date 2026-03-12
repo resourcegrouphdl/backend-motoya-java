@@ -35,7 +35,7 @@ public record Contrato(
         EvidenciaDocumento tive,
         EvidenciaDocumento evidenciaSOAT,
         EvidenciaDocumento evidenciaPlacaRodaje,
-        EvidenciaDocumento actaDeEntrega
+        List<EvidenciaDocumento> actasDeEntrega
 ) {
 
 

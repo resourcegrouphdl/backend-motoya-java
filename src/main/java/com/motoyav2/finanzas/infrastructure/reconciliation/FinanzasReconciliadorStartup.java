@@ -1,8 +1,9 @@
 package com.motoyav2.finanzas.infrastructure.reconciliation;
 
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.WriteBatch;
 import com.google.cloud.firestore.FieldValue;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.SetOptions;
+import com.google.cloud.firestore.WriteBatch;
 import com.motoyav2.contrato.infrastructure.adapter.out.persistence.document.ContratoDocument;
 import com.motoyav2.contrato.infrastructure.adapter.out.persistence.document.FacturaVehiculoEmbedded;
 import com.motoyav2.contrato.infrastructure.adapter.out.persistence.document.TiendaInfoEmbedded;
@@ -72,6 +73,19 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
                         null,
                         e -> log.error("[Reconciliador] Falló tras reintentos — reintentará en próximo arranque: {}", e.getMessage())
                 );
+    }
+
+    // ── Disparo manual (endpoint admin) ──────────────────────────────────
+
+    /** Ejecuta el reconciliador sin delay — para llamar desde el endpoint admin. */
+    public Mono<String> ejecutarManual() {
+        log.info("[Reconciliador] Ejecución manual solicitada");
+        return verificarYEjecutar()
+                .thenReturn("Reconciliación completada")
+                .onErrorResume(e -> {
+                    log.error("[Reconciliador] Error en ejecución manual: {}", e.getMessage());
+                    return Mono.just("Error: " + e.getMessage());
+                });
     }
 
     // ── Flag check ────────────────────────────────────────────────────────
@@ -225,10 +239,12 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         batch.set(facturaRef, factura);
         batch.set(facturaRef.collection(COL_PAGOS).document(pagoId1), pago1);
         batch.set(facturaRef.collection(COL_PAGOS).document(pagoId2), pago2);
-        batch.update(
+        // set+merge en lugar de update: crea el doc si no existe
+        batch.set(
                 db.collection("finanzas_kpis").document("current"),
-                "totalFacturasPendientes", FieldValue.increment(1),
-                "ultimaActualizacion", ahora
+                Map.of("totalFacturasPendientes", FieldValue.increment(1),
+                       "ultimaActualizacion", ahora),
+                SetOptions.merge()
         );
 
         return FirestoreReactiveUtils.toMono(batch.commit())

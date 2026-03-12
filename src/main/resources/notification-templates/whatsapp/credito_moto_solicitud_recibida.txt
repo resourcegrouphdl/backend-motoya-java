@@ -1,0 +1,15 @@
+Hola [(${cliente})] 👋
+
+Hemos recibido correctamente tu solicitud de crédito para la compra de tu motocicleta 🏍️.
+
+📄 Número de solicitud: [(${numero-solicitud})]
+
+Nuestro equipo ya se encuentra evaluando tu información.
+Te notificaremos por este medio cuando tengamos una respuesta.
+
+⏱️ El proceso de evaluación puede tomar hasta 24 horas.
+
+Si tienes alguna consulta, puedes comunicarte con tu asesor de ventas.
+
+Saludos,
+Equipo Moto-ya digital

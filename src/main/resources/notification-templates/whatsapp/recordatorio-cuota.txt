@@ -1,0 +1,12 @@
+Hola [(${cliente})] 👋
+
+Te recordamos que tienes una cuota próxima a vencer:
+
+💰 *Monto:* [(${monto})]
+📅 *Fecha de vencimiento:* [(${fecha})]
+
+Realiza tu pago a tiempo para evitar cargos por mora. Puedes pagar en cualquiera de nuestras tiendas o mediante transferencia bancaria.
+
+¿Necesitas ayuda? Escríbenos aquí mismo.
+
+*Motoya* 🏍️

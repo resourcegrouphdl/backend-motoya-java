@@ -35,7 +35,7 @@ public final class ContratoResponseMapper {
                 mapEvidenciaDocumento(c.tive()),
                 mapEvidenciaDocumento(c.evidenciaSOAT()),
                 mapEvidenciaDocumento(c.evidenciaPlacaRodaje()),
-                mapEvidenciaDocumento(c.actaDeEntrega())
+                mapEvidenciaDocumentos(c.actasDeEntrega())
         );
     }
 
@@ -150,5 +150,10 @@ public final class ContratoResponseMapper {
                 ev.estadoValidacion() != null ? ev.estadoValidacion().name() : null,
                 ev.validadoPor(), ev.fechaValidacion(), ev.observacionesValidacion()
         );
+    }
+
+    private static List<EvidenciaDocumentoDto> mapEvidenciaDocumentos(List<EvidenciaDocumento> list) {
+        if (list == null) return List.of();
+        return list.stream().map(ContratoResponseMapper::mapEvidenciaDocumento).toList();
     }
 }

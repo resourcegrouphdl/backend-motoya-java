@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 import static reactor.netty.http.HttpConnectionLiveness.log;
 
 @RestController
@@ -132,7 +134,7 @@ public class StoreContractsController {
             @PathVariable String contratoId,
             @RequestBody EvidenciaDocumentoRequest dto
     ) {
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, "TIVE", toEvidenciaDocumento(dto))
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "TIVE", List.of(toEvidenciaDocumento(dto)))
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
@@ -141,7 +143,7 @@ public class StoreContractsController {
             @PathVariable String contratoId,
             @RequestBody EvidenciaDocumentoRequest dto
     ) {
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, "SOAT", toEvidenciaDocumento(dto))
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "SOAT", List.of(toEvidenciaDocumento(dto)))
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
@@ -150,16 +152,19 @@ public class StoreContractsController {
             @PathVariable String contratoId,
             @RequestBody EvidenciaDocumentoRequest dto
     ) {
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, "PLACA_RODAJE", toEvidenciaDocumento(dto))
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "PLACA_RODAJE", List.of(toEvidenciaDocumento(dto)))
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
     @PostMapping("/contrato/{contratoId}/acta-entrega")
     public Mono<ContratoDetalleAPIDto> subirActaDeEntrega(
             @PathVariable String contratoId,
-            @RequestBody EvidenciaDocumentoRequest dto
+            @RequestBody List<EvidenciaDocumentoRequest> dtos
     ) {
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, "ACTA_ENTREGA", toEvidenciaDocumento(dto))
+        List<EvidenciaDocumento> evidencias = dtos.stream()
+                .map(this::toEvidenciaDocumento)
+                .toList();
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "ACTA_ENTREGA", evidencias)
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 
