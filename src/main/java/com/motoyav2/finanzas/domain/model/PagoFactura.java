@@ -1,5 +1,6 @@
 package com.motoyav2.finanzas.domain.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.motoyav2.finanzas.domain.enums.EstadoPago;
 import com.motoyav2.finanzas.domain.enums.MetodoPago;
 import com.motoyav2.finanzas.domain.enums.TipoConceptoPago;
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 
 @Value
 @Builder
+@JsonInclude(JsonInclude.Include.ALWAYS)
 public class PagoFactura {
     String id;
     String facturaId;

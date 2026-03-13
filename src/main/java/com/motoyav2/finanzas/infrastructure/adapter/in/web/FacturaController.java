@@ -3,8 +3,8 @@ package com.motoyav2.finanzas.infrastructure.adapter.in.web;
 import com.motoyav2.finanzas.application.port.in.ListarFacturasUseCase;
 import com.motoyav2.finanzas.application.port.in.ObtenerFacturaUseCase;
 import com.motoyav2.finanzas.domain.enums.EstadoPago;
-import com.motoyav2.finanzas.domain.model.Factura;
 import com.motoyav2.finanzas.infrastructure.adapter.in.web.dto.request.FiltrosFacturaRequest;
+import com.motoyav2.finanzas.infrastructure.adapter.in.web.dto.response.FacturaResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +22,7 @@ public class FacturaController {
     private final ObtenerFacturaUseCase obtenerFactura;
 
     @GetMapping
-    public Flux<Factura> listar(
+    public Flux<FacturaResponse> listar(
             @RequestParam(required = false) String tiendaId,
             @RequestParam(required = false) EstadoPago estado,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
@@ -34,16 +34,16 @@ public class FacturaController {
         filtros.setFechaDesde(fechaDesde);
         filtros.setFechaHasta(fechaHasta);
 
-        return listarFacturas.ejecutar(filtros);
+        return listarFacturas.ejecutar(filtros).map(FacturaResponse::from);
     }
 
     @GetMapping("/{id}")
-    public Mono<Factura> obtener(@PathVariable String id) {
-        return obtenerFactura.ejecutar(id);
+    public Mono<FacturaResponse> obtener(@PathVariable String id) {
+        return obtenerFactura.ejecutar(id).map(FacturaResponse::from);
     }
 
     @GetMapping("/{id}/cronograma")
-    public Mono<Factura> cronograma(@PathVariable String id) {
-        return obtenerFactura.ejecutar(id);
+    public Mono<FacturaResponse> cronograma(@PathVariable String id) {
+        return obtenerFactura.ejecutar(id).map(FacturaResponse::from);
     }
 }
