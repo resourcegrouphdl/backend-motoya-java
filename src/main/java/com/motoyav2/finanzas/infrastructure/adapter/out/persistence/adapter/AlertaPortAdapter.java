@@ -54,7 +54,6 @@ public class AlertaPortAdapter implements AlertaFinancieraPort {
 
         return Flux.merge(pagosPorVencer, cuotasPorVencer)
                 .sort(Comparator.comparing(DashboardFinanzas.ProximoPago::getFechaVencimiento))
-                .take(20)
                 .collectList();
     }
 

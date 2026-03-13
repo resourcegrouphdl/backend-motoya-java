@@ -83,8 +83,8 @@ public class FacturaService implements ListarFacturasUseCase, ObtenerFacturaUseC
                     EstadoPago nuevoEstado = Factura.calcularEstado(pagosActualizados);
                     Map<String, Object> camposFactura = Map.of(
                             "estado", nuevoEstado.name(),
-                            "_alertaActiva", nuevoEstado != EstadoPago.PAGADO,
-                            "_tieneVencidos", nuevoEstado == EstadoPago.VENCIDO,
+                            "alertaActiva", nuevoEstado != EstadoPago.PAGADO,
+                            "tieneVencidos", nuevoEstado == EstadoPago.VENCIDO,
                             "actualizadoEn", Instant.now().toString()
                     );
 

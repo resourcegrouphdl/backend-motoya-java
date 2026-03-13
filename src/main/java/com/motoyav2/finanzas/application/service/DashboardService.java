@@ -40,6 +40,7 @@ public class DashboardService implements ObtenerDashboardUseCase {
                             .comisionesPendientes(toLong(kpis.get("comisionesPendientes")))
                             .proximosPagos(tuple.getT2())
                             .alertas(tuple.getT3())
+                            .ultimaActualizacion(kpis.get("ultimaActualizacion") instanceof String s ? s : null)
                             .build();
                 });
     }

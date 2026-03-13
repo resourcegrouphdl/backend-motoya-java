@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 
 import static com.motoyav2.finanzas.infrastructure.adapter.out.persistence.util.FirestoreReactiveUtils.*;
@@ -47,6 +48,20 @@ public class ComisionPortAdapter implements ComisionPort {
         ))).then();
     }
 
+    private EstadoPago parseEstadoPago(String val) {
+        try { return val != null ? EstadoPago.valueOf(val) : EstadoPago.PENDIENTE; }
+        catch (IllegalArgumentException e) { return EstadoPago.PENDIENTE; }
+    }
+
+    private LocalDateTime parseInstantAsLocalDateTime(String val) {
+        if (val == null) return null;
+        try { return Instant.parse(val).atZone(ZoneOffset.UTC).toLocalDateTime(); }
+        catch (Exception e) {
+            try { return LocalDateTime.parse(val); }
+            catch (Exception ex) { return null; }
+        }
+    }
+
     private ComisionVendedor toComision(ComisionDocument doc) {
         return ComisionVendedor.builder()
                 .id(doc.getId())
@@ -64,8 +79,8 @@ public class ComisionPortAdapter implements ComisionPort {
                 .periodoFin(doc.getPeriodoFin() != null ? LocalDate.parse(doc.getPeriodoFin()) : null)
                 .totalVentas(doc.getTotalVentas() != null ? doc.getTotalVentas() : 0)
                 .montoComision(doc.getMontoComision() != null ? BigDecimal.valueOf(doc.getMontoComision()) : BigDecimal.ZERO)
-                .estado(doc.getEstado() != null ? EstadoPago.valueOf(doc.getEstado()) : EstadoPago.PENDIENTE)
-                .pagadoEn(doc.getPagadoEn() != null ? LocalDateTime.parse(doc.getPagadoEn()) : null)
+                .estado(parseEstadoPago(doc.getEstado()))
+                .pagadoEn(parseInstantAsLocalDateTime(doc.getPagadoEn()))
                 .build();
     }
 }

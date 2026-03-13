@@ -17,6 +17,8 @@ public class DashboardFinanzas {
     long comisionesPendientes;
     List<ProximoPago> proximosPagos;
     List<AlertaFinanciera> alertas;
+    /** Timestamp ISO 8601 de la última vez que se recalcularon los KPIs */
+    String ultimaActualizacion;
 
     @Value
     @Builder

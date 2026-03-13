@@ -44,9 +44,9 @@ public class CuentaPorPagarService implements ListarCuentasUseCase, CrearCuentaU
 
     @Override
     public Mono<CuentaPorPagar> ejecutar(CrearCuentaCommand cmd) {
-        List<CuotaCuenta> cuotas = generarCuotas(cmd);
         LocalDate fechaVencimiento = cmd.getFechaVencimiento();
         String cuentaId = generarId("CTA");
+        List<CuotaCuenta> cuotas = generarCuotas(cmd, cuentaId);
 
         CuentaPorPagar cuenta = CuentaPorPagar.builder()
                 .id(cuentaId)
@@ -87,8 +87,8 @@ public class CuentaPorPagarService implements ListarCuentasUseCase, CrearCuentaU
                                     "actualizadoEn", Instant.now().toString()))
                             .then(cuentaPort.actualizarCuenta(cuentaId, Map.of(
                                     "estado", EstadoCuenta.PAGADO.name(),
-                                    "_alertaActiva", false,
-                                    "_tieneVencidos", false,
+                                    "alertaActiva", false,
+                                    "tieneVencidos", false,
                                     "actualizadoEn", Instant.now().toString())));
                 });
     }
@@ -124,8 +124,8 @@ public class CuentaPorPagarService implements ListarCuentasUseCase, CrearCuentaU
 
                     Map<String, Object> camposCuenta = new java.util.HashMap<>(Map.of(
                             "estado", nuevoEstado.name(),
-                            "_alertaActiva", nuevoEstado != EstadoCuenta.PAGADO,
-                            "_tieneVencidos", nuevoEstado == EstadoCuenta.VENCIDO,
+                            "alertaActiva", nuevoEstado != EstadoCuenta.PAGADO,
+                            "tieneVencidos", nuevoEstado == EstadoCuenta.VENCIDO,
                             "actualizadoEn", Instant.now().toString()
                     ));
                     if (nuevaFechaVenc != null) {
@@ -142,14 +142,13 @@ public class CuentaPorPagarService implements ListarCuentasUseCase, CrearCuentaU
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
-    private List<CuotaCuenta> generarCuotas(CrearCuentaCommand cmd) {
+    private List<CuotaCuenta> generarCuotas(CrearCuentaCommand cmd, String cuentaId) {
         int n = cmd.getNumeroCuotas();
         BigDecimal montoPorCuota = cmd.getMontoTotal()
                 .divide(BigDecimal.valueOf(n), 2, RoundingMode.DOWN);
         BigDecimal residuo = cmd.getMontoTotal().subtract(montoPorCuota.multiply(BigDecimal.valueOf(n)));
 
         List<CuotaCuenta> cuotas = new ArrayList<>();
-        String cuentaId = generarId("CTA");
 
         for (int i = 1; i <= n; i++) {
             BigDecimal monto = (i == n) ? montoPorCuota.add(residuo) : montoPorCuota;
