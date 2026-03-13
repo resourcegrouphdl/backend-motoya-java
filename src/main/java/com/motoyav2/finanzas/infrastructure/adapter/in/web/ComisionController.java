@@ -20,7 +20,7 @@ public class ComisionController {
     private final ListarComisionesUseCase listarComisiones;
     private final PagarComisionUseCase pagarComision;
 
-    @GetMapping
+    @GetMapping({"", "/listar"})
     public Flux<ComisionVendedor> listar(
             @RequestParam(required = false) String tiendaId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
