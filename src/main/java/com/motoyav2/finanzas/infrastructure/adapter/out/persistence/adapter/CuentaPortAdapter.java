@@ -16,8 +16,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -98,8 +100,8 @@ public class CuentaPortAdapter implements CuentaPorPagarPort {
                 .montoTotal(doc.getMontoTotal() != null ? BigDecimal.valueOf(doc.getMontoTotal()) : BigDecimal.ZERO)
                 .numeroCuotas(doc.getNumeroCuotas() != null ? doc.getNumeroCuotas() : 0)
                 .estado(doc.getEstado() != null ? EstadoCuenta.valueOf(doc.getEstado()) : EstadoCuenta.PENDIENTE)
-                .fechaVencimiento(doc.getFechaVencimiento() != null ? LocalDate.parse(doc.getFechaVencimiento()) : null)
-                .creadoEn(doc.getCreadoEn() != null ? LocalDateTime.parse(doc.getCreadoEn()) : null)
+                .fechaVencimiento(parseDate(doc.getFechaVencimiento()))
+                .creadoEn(parseDateTime(doc.getCreadoEn()))
                 .cuotas(cuotas)
                 .build();
     }
@@ -110,8 +112,8 @@ public class CuentaPortAdapter implements CuentaPorPagarPort {
                 .cuentaId(doc.getCuentaId())
                 .numero(doc.getNumero() != null ? doc.getNumero() : 0)
                 .monto(doc.getMonto() != null ? BigDecimal.valueOf(doc.getMonto()) : BigDecimal.ZERO)
-                .fechaVencimiento(doc.getFechaVencimiento() != null ? LocalDate.parse(doc.getFechaVencimiento()) : null)
-                .fechaPago(doc.getFechaPago() != null ? LocalDate.parse(doc.getFechaPago()) : null)
+                .fechaVencimiento(parseDate(doc.getFechaVencimiento()))
+                .fechaPago(parseDate(doc.getFechaPago()))
                 .estado(doc.getEstado() != null ? EstadoCuenta.valueOf(doc.getEstado()) : EstadoCuenta.PENDIENTE)
                 .build();
     }
@@ -143,5 +145,25 @@ public class CuentaPortAdapter implements CuentaPorPagarPort {
                 "descripcion", cuenta.getDescripcion(),
                 "tipo", cuenta.getTipo().name()
         );
+    }
+
+    private LocalDate parseDate(String val) {
+        if (val == null) return null;
+        try {
+            return LocalDate.parse(val);
+        } catch (Exception e) {
+            try { return Instant.parse(val).atZone(ZoneOffset.UTC).toLocalDate(); }
+            catch (Exception ex) { return null; }
+        }
+    }
+
+    private LocalDateTime parseDateTime(String val) {
+        if (val == null) return null;
+        try {
+            return LocalDateTime.parse(val);
+        } catch (Exception e) {
+            try { return Instant.parse(val).atZone(ZoneOffset.UTC).toLocalDateTime(); }
+            catch (Exception ex) { return null; }
+        }
     }
 }

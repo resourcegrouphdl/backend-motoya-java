@@ -18,7 +18,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -137,7 +139,13 @@ public class FacturaPortAdapter implements FacturaPort {
     }
 
     private LocalDate parseDate(String val) {
-        return val != null ? LocalDate.parse(val) : null;
+        if (val == null) return null;
+        try {
+            return LocalDate.parse(val);
+        } catch (Exception e) {
+            try { return Instant.parse(val).atZone(ZoneOffset.UTC).toLocalDate(); }
+            catch (Exception ex) { return null; }
+        }
     }
 
     private EstadoPago parseEstadoPago(String val) {
