@@ -177,7 +177,7 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         }
 
         // ── Monto total desde datos financieros ───────────────────────────
-        double montoTotal = 0.0;
+        double montoTotal = 100.00;
         if (doc.getDatosFinancieros() != null && doc.getDatosFinancieros().getPrecioVehiculo() != null) {
             montoTotal = doc.getDatosFinancieros().getPrecioVehiculo();
         }
