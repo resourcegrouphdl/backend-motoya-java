@@ -19,6 +19,9 @@ public class FacturaVehiculoEmbedded {
     private String colorVehiculo;
     private String serieMotor;
     private String serieChasis;
+    private String urlXml;
+    private String nombreArchivoXml;
+    private Integer tamanioXml;
     private String estadoValidacion;
     private String observacionesValidacion;
     private String validadoPor;

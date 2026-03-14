@@ -14,7 +14,10 @@ public record FacturaUploadRequest(
     Integer anioVehiculo,
     String colorVehiculo,
     String serieMotor,
-    String serieChasis
+    String serieChasis,
+    String urlXml,
+    String nombreArchivoXml,
+    Integer tamanioXml
     // estadoValidacion: 'PENDIENTE';
 ) {
 }

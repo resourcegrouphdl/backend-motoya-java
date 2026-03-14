@@ -78,6 +78,9 @@ public class StoreContractsController {
                 .colorVehiculo(facturaUploadRequest.colorVehiculo())
                 .serieMotor(facturaUploadRequest.serieMotor())
                 .serieChasis(facturaUploadRequest.serieChasis())
+                .urlXml(facturaUploadRequest.urlXml())
+                .nombreArchivoXml(facturaUploadRequest.nombreArchivoXml())
+                .tamanioXml(facturaUploadRequest.tamanioXml())
                 .build();
 
         return subirFacturaUseCase.subir(id, factura)
@@ -159,12 +162,9 @@ public class StoreContractsController {
     @PostMapping("/contrato/{contratoId}/acta-entrega")
     public Mono<ContratoDetalleAPIDto> subirActaDeEntrega(
             @PathVariable String contratoId,
-            @RequestBody List<EvidenciaDocumentoRequest> dtos
+            @RequestBody EvidenciaDocumentoRequest dto
     ) {
-        List<EvidenciaDocumento> evidencias = dtos.stream()
-                .map(this::toEvidenciaDocumento)
-                .toList();
-        return subirDocumentoPostFirmaUseCase.subir(contratoId, "ACTA_ENTREGA", evidencias)
+        return subirDocumentoPostFirmaUseCase.subir(contratoId, "ACTA_ENTREGA", List.of(toEvidenciaDocumento(dto)))
                 .map(ContratoParaTiendaResponse::toResponse);
     }
 

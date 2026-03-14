@@ -19,6 +19,9 @@ public record FacturaVehiculoAPIDto(
     String colorVehiculo,
     String serieMotor,
     String serieChasis,
+    String urlXml,
+    String nombreArchivoXml,
+    Integer tamanioXml,
     EstadoValidacion estadoValidacion,
     // Campos de admin (solo lectura para tienda)
     String validadoPor,

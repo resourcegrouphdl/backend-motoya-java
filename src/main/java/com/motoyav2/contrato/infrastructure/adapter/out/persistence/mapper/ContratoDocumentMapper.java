@@ -249,6 +249,9 @@ public final class ContratoDocumentMapper {
                 .colorVehiculo(e.getColorVehiculo())
                 .serieMotor(e.getSerieMotor())
                 .serieChasis(e.getSerieChasis())
+                .urlXml(e.getUrlXml())
+                .nombreArchivoXml(e.getNombreArchivoXml())
+                .tamanioXml(e.getTamanioXml())
                 .estadoValidacion(e.getEstadoValidacion() != null ? EstadoValidacion.valueOf(e.getEstadoValidacion()) : null)
                 .observacionesValidacion(e.getObservacionesValidacion())
                 .validadoPor(e.getValidadoPor())
@@ -273,6 +276,9 @@ public final class ContratoDocumentMapper {
         e.setColorVehiculo(f.colorVehiculo());
         e.setSerieMotor(f.serieMotor());
         e.setSerieChasis(f.serieChasis());
+        e.setUrlXml(f.urlXml());
+        e.setNombreArchivoXml(f.nombreArchivoXml());
+        e.setTamanioXml(f.tamanioXml());
         e.setEstadoValidacion(f.estadoValidacion() != null ? f.estadoValidacion().name() : null);
         e.setObservacionesValidacion(f.observacionesValidacion());
         e.setValidadoPor(f.validadoPor());

@@ -42,6 +42,9 @@ public class SubirFacturaService implements SubirFacturaUseCase {
                             .colorVehiculo(factura.colorVehiculo())
                             .serieMotor(factura.serieMotor())
                             .serieChasis(factura.serieChasis())
+                            .urlXml(factura.urlXml())
+                            .nombreArchivoXml(factura.nombreArchivoXml())
+                            .tamanioXml(factura.tamanioXml())
                             .estadoValidacion(EstadoValidacion.PENDIENTE)
                             .build();
 

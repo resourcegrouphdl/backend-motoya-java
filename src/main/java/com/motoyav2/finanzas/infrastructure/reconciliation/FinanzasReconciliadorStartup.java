@@ -177,14 +177,14 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         }
 
         // ── Monto total desde datos financieros ───────────────────────────
-        double montoTotal = 100.00;
+        double montoTotal = 0.0;
         if (doc.getDatosFinancieros() != null && doc.getDatosFinancieros().getPrecioVehiculo() != null) {
             montoTotal = doc.getDatosFinancieros().getPrecioVehiculo();
         }
 
         // ── Cálculo P1 (20%) y P2 (80%) ──────────────────────────────────
         BigDecimal total  = BigDecimal.valueOf(montoTotal);
-        BigDecimal montoP1 = total.multiply(BigDecimal.valueOf(0.20)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal montoP1 = total.multiply(BigDecimal.valueOf(doc.getDatosFinancieros().getCuotaInicial())).setScale(2, RoundingMode.HALF_UP);
         BigDecimal montoP2 = total.subtract(montoP1);
 
         String fechaP1 = LocalDate.now().plusDays(2).toString();
@@ -345,7 +345,7 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         comision.put("periodoInicio",         hoy);
         comision.put("periodoFin",            hoy);
         comision.put("totalVentas",           1);
-        comision.put("montoComision",         0.0);
+        comision.put("montoComision",         100.0);
         comision.put("estado",                "PENDIENTE");
         comision.put("pagadoEn",              null);
         comision.put("creadoEn",              ahora);
