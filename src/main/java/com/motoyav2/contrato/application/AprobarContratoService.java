@@ -7,6 +7,7 @@ import com.motoyav2.contrato.domain.enums.FaseContrato;
 import com.motoyav2.contrato.domain.model.Contrato;
 import com.motoyav2.contrato.domain.model.ContratoParaImprimir;
 import com.motoyav2.contrato.domain.model.CuotaCronograma;
+import com.motoyav2.contrato.domain.port.out.CobranzaIntegrationPort;
 import com.motoyav2.contrato.domain.port.out.CrearEventoEnCalendar;
 import com.motoyav2.contrato.domain.service.ContratoStateMachine;
 import com.motoyav2.contrato.domain.port.in.AprobarContratoUseCase;
@@ -33,6 +34,7 @@ public class AprobarContratoService implements AprobarContratoUseCase {
   private final ContratoParaDescargasMaper contratoParaDescargasMaper;
   private final ObtenerRucDeStoreUseCase obtenerRucDeStoreUseCase;
   private final CrearEventoEnCalendar crearEventoEnCalendar;
+  private final CobranzaIntegrationPort cobranzaIntegrationPort;
 
 
   @Override
@@ -96,19 +98,33 @@ public class AprobarContratoService implements AprobarContratoUseCase {
                         saved.tive(), saved.evidenciaSOAT(), saved.evidenciaPlacaRodaje(), saved.actasDeEntrega()
                     );
 
-                    // Primero persistir el contrato con el cronograma completo,
-                    // luego disparar los eventos de Google Calendar usando las cuotas ya generadas.
-                    // onErrorResume garantiza que un fallo en Calendar no bloquee el flujo principal.
+                    // Persiste el contrato con el cronograma completo y luego dispara,
+                    // en paralelo e independientes:
+                    //   1. Cobranzas: inicia el caso de cobro (principal, fallo logeado pero no bloquea)
+                    //   2. Calendar: escribe el cronograma como respaldo (fallo logeado pero no bloquea)
                     return contratoRepository.save(contratoGenerado)
-                        .flatMap(persistido -> crearEventoEnCalendar.crearEventoEnCalendar(persistido)
-                            .doOnSuccess(v -> log.info(
-                                "[Calendar] Eventos creados para contratoId={}", persistido.id()))
-                            .onErrorResume(e -> {
-                                log.error("[Calendar] Error creando eventos para contratoId={}: {}",
-                                    persistido.id(), e.getMessage());
-                                return Mono.empty(); // no bloquea el flujo principal
-                            })
-                            .thenReturn(persistido));
+                        .flatMap(persistido -> {
+                            Mono<Void> iniciarCobranza = cobranzaIntegrationPort
+                                .iniciarCasoDesdeContrato(persistido)
+                                .onErrorResume(e -> {
+                                    log.error("[Cobranza] Error iniciando caso para contratoId={}: {}",
+                                        persistido.id(), e.getMessage());
+                                    return Mono.empty();
+                                });
+
+                            Mono<Void> respaldarCalendar = crearEventoEnCalendar
+                                .crearEventoEnCalendar(persistido)
+                                .doOnSuccess(v -> log.info(
+                                    "[Calendar] Eventos de respaldo creados para contratoId={}", persistido.id()))
+                                .onErrorResume(e -> {
+                                    log.error("[Calendar] Error creando respaldo en Calendar para contratoId={}: {}",
+                                        persistido.id(), e.getMessage());
+                                    return Mono.empty();
+                                });
+
+                            return Mono.when(iniciarCobranza, respaldarCalendar)
+                                .thenReturn(persistido);
+                        });
                   }));
 
         });

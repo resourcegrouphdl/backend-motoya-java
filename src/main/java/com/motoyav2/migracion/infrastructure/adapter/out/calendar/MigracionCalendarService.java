@@ -13,8 +13,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import com.google.api.client.util.DateTime;
+
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -64,15 +69,32 @@ public class MigracionCalendarService {
 
         log.info("[Migracion-Calendar] Leyendo eventos del calendario: {}", calendarId);
 
+        DateTime timeMin = new DateTime(
+                LocalDate.now().minusYears(2).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        );
+        DateTime timeMax = new DateTime(
+                LocalDate.now().plusYears(2).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        );
+
         return Mono.fromCallable(() -> {
-                    Events result = calendarApi.events().list(calendarId)
-                            .setSingleEvents(true)
-                            .setOrderBy("startTime")
-                            .execute();
-                    return result.getItems() != null ? result.getItems() : Collections.<Event>emptyList();
+                    List<Event> todos = new ArrayList<>();
+                    String pageToken = null;
+                    do {
+                        Events result = calendarApi.events().list(calendarId)
+                                .setSingleEvents(true)
+                                .setOrderBy("startTime")
+                                .setTimeMin(timeMin)
+                                .setTimeMax(timeMax)
+                                .setMaxResults(2500)
+                                .setPageToken(pageToken)
+                                .execute();
+                        if (result.getItems() != null) todos.addAll(result.getItems());
+                        pageToken = result.getNextPageToken();
+                    } while (pageToken != null);
+                    return todos;
                 })
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnSuccess(events -> log.info("[Migracion-Calendar] {} eventos obtenidos", events.size()))
+                .doOnSuccess(events -> log.info("[Migracion-Calendar] {} eventos obtenidos (calendario: {})", events.size(), calendarId))
                 .flatMapMany(Flux::fromIterable)
                 .flatMap(this::parsearEvento);
     }

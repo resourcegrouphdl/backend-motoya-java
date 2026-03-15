@@ -32,6 +32,20 @@ public class CronogramaMapper {
     request.setContratoId(contrato.id());
     request.setStoreId(contrato.tienda().tiendaId());
     request.setCuotas(mapCuotas(contrato.cuotas()));
+    request.setCreadoPor(contrato.creadoPor());
+
+    // Datos completos del titular para que cobranzas cree el caso con info real
+    var t = contrato.titular();
+    request.setTitularNombres(t.nombres());
+    request.setTitularApellidos(t.apellidos());
+    request.setTitularTipoDocumento(t.tipoDocumento());
+    request.setTitularNumeroDocumento(t.numeroDocumento());
+    request.setTitularTelefono(t.telefono());
+    request.setTitularEmail(t.email());
+    request.setTitularDireccion(t.direccion());
+    request.setTitularDistrito(t.distrito());
+    request.setTitularProvincia(t.provincia());
+    request.setTitularDepartamento(t.departamento());
 
     return request;
   }

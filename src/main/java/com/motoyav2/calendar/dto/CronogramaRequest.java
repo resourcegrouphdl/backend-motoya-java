@@ -53,4 +53,17 @@ public class CronogramaRequest {
 
     /** Usuario que dispara la acción */
     private String creadoPor;
+
+    // ── Datos completos del titular (para CasoCobranza) ──────────────────────
+
+    private String titularNombres;
+    private String titularApellidos;
+    private String titularTipoDocumento;
+    private String titularNumeroDocumento;
+    private String titularTelefono;
+    private String titularEmail;
+    private String titularDireccion;
+    private String titularDistrito;
+    private String titularProvincia;
+    private String titularDepartamento;
 }
