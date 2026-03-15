@@ -51,7 +51,7 @@ public class CobranzaController {
     // DASHBOARD
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/dashboard")
+    @GetMapping("/api/v1/cobranzas/dashboard")
     public Mono<DashboardDto> getDashboard(ServerWebExchange exchange) {
         String storeId = (String) exchange.getAttributes().get("storeId");
         String userId  = (String) exchange.getAttributes().get("userId");
@@ -64,7 +64,7 @@ public class CobranzaController {
     // CASOS
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/casos")
+    @GetMapping("/api/v1/cobranzas/casos")
     public Flux<CasoResumenDto> getCasosDeCobranza(
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String prioridad,
@@ -80,19 +80,30 @@ public class CobranzaController {
         return listarCasosUseCase.ejecutar(query);
     }
 
-    @GetMapping("/api/cobranzas/{contratoId}")
+    @GetMapping("/api/v1/cobranzas/casos/{contratoId}/vista360")
     public Mono<Vista360CasoDto> getVista360(
             @PathVariable String contratoId,
             ServerWebExchange exchange) {
-        log.debug("GET /{contratoId} contratoId={}", contratoId);
+        log.debug("GET /casos/{contratoId}/vista360 contratoId={}", contratoId);
         return obtenerCasoUseCase.ejecutar(contratoId);
+    }
+
+    @GetMapping("/api/v1/cobranzas/casos/urgentes")
+    public Flux<CasoResumenDto> getCasosUrgentes(
+            @RequestParam(defaultValue = "10") int limit,
+            ServerWebExchange exchange) {
+
+        String storeId = (String) exchange.getAttributes().get("storeId");
+        log.debug("GET /casos/urgentes storeId={} limit={}", storeId, limit);
+        ListarCasosQuery query = new ListarCasosQuery(storeId, "INTERVENCION_REQUERIDA", "CRITICA", null, 0, limit);
+        return listarCasosUseCase.ejecutar(query);
     }
 
     // =========================================================================
     // INICIAR CASO
     // =========================================================================
 
-    @PostMapping("/api/cobranzas/iniciar")
+    @PostMapping("/api/v1/cobranzas/iniciar")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<CasoCobranzaDocument> iniciarCaso(
             @RequestBody IniciarCasoRequest request,
@@ -151,7 +162,7 @@ public class CobranzaController {
     // IMPORTAR CALENDARIO
     // =========================================================================
 
-    @PostMapping("/api/cobranzas/importar-calendario")
+    @PostMapping("/api/v1/cobranzas/importar-calendario")
     public Mono<ImportarCalendarioResultDto> importarCalendario(
             @RequestBody ImportarCalendarioRequest request,
             ServerWebExchange exchange) {
@@ -174,26 +185,19 @@ public class CobranzaController {
     // PROMESAS
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/promesas")
+    @GetMapping("/api/v1/cobranzas/casos/{contratoId}/promesas")
     public Flux<PromesaDocument> getPromesas(
-            @RequestParam(required = false) String contratoId,
+            @PathVariable String contratoId,
             @RequestParam(required = false) String estado,
             ServerWebExchange exchange) {
 
-        String storeId = (String) exchange.getAttributes().get("storeId");
-        log.debug("GET /promesas storeId={} contratoId={} estado={}", storeId, contratoId, estado);
-
-        if (contratoId != null) {
-            // Delegate to ObtenerCasoUseCase via Vista360 — or use PromesaPort directly
-            // For simplicity, use eventoService to avoid extra port injection; use Vista360 datos
-            // The cleanest approach: return promesas from Vista360 but we don't have direct PromesaPort here.
-            // Return empty — caller should use the Vista360 endpoint for per-contrato promesas.
-            return Flux.empty();
-        }
-        return Flux.empty();
+        log.debug("GET /casos/{contratoId}/promesas contratoId={} estado={}", contratoId, estado);
+        return obtenerCasoUseCase.ejecutar(contratoId)
+                .flatMapMany(v -> Flux.fromIterable(v.promesas() != null ? v.promesas() : List.of()))
+                .filter(p -> estado == null || estado.equalsIgnoreCase(p.getEstado()));
     }
 
-    @PostMapping("/api/cobranzas/{contratoId}/promesa")
+    @PostMapping("/api/v1/cobranzas/casos/{contratoId}/promesas")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<Map<String, Object>> registrarPromesa(
             @PathVariable String contratoId,
@@ -202,7 +206,7 @@ public class CobranzaController {
 
         String userId      = (String) exchange.getAttributes().get("userId");
         String userNombre  = (String) exchange.getAttributes().get("userNombre");
-        log.debug("POST /{contratoId}/promesa contratoId={} userId={}", contratoId, userId);
+        log.debug("POST /casos/{contratoId}/promesas contratoId={} userId={}", contratoId, userId);
 
         RegistrarPromesaCommand command = new RegistrarPromesaCommand(
                 contratoId, body.fechaPromesa(), body.monto(), body.observaciones(),
@@ -220,7 +224,7 @@ public class CobranzaController {
     // ASIGNAR AGENTE
     // =========================================================================
 
-    @PostMapping("/api/cobranzas/{contratoId}/asignar-agente")
+    @PostMapping("/api/v1/cobranzas/{contratoId}/asignar-agente")
     public Mono<Map<String, Object>> asignarAgente(
             @PathVariable String contratoId,
             @RequestBody AsignarAgenteRequest body,
@@ -245,7 +249,7 @@ public class CobranzaController {
     // VOUCHERS
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/vouchers")
+    @GetMapping("/api/v1/cobranzas/vouchers")
     public Flux<VoucherDocument> getVouchers(
             @RequestParam(required = false) String estado,
             ServerWebExchange exchange) {
@@ -255,7 +259,7 @@ public class CobranzaController {
         return listarVouchersUseCase.ejecutar(storeId, estado);
     }
 
-    @PostMapping(value = "/api/cobranzas/vouchers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/api/v1/cobranzas/vouchers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<Map<String, Object>> recibirVoucher(
             @RequestParam(required = false) String contratoId,
@@ -280,7 +284,7 @@ public class CobranzaController {
                 ));
     }
 
-    @PostMapping("/api/cobranzas/vouchers/{id}/aprobar")
+    @PostMapping("/api/v1/cobranzas/vouchers/{id}/aprobar")
     public Mono<Map<String, Object>> aprobarVoucher(
             @PathVariable String id,
             @RequestBody AprobarVoucherRequest body,
@@ -312,7 +316,7 @@ public class CobranzaController {
                 ));
     }
 
-    @PostMapping("/api/cobranzas/vouchers/{id}/rechazar")
+    @PostMapping("/api/v1/cobranzas/vouchers/{id}/rechazar")
     public Mono<Map<String, Object>> rechazarVoucher(
             @PathVariable String id,
             @RequestBody RechazarVoucherRequest body,
@@ -336,19 +340,21 @@ public class CobranzaController {
     // COMPROBANTES
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/comprobantes")
+    @GetMapping("/api/v1/cobranzas/comprobantes")
     public Flux<ComprobantePagoDocument> getComprobantes(
             @RequestParam(required = false) String contratoId,
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String fechaDesde,
+            @RequestParam(required = false) String fechaHasta,
             ServerWebExchange exchange) {
 
         String storeId = (String) exchange.getAttributes().get("storeId");
         log.debug("GET /comprobantes storeId={} contratoId={} tipo={} estado={}", storeId, contratoId, tipo, estado);
-        return comprobantesService.listar(storeId, contratoId, tipo, estado);
+        return comprobantesService.listar(storeId, contratoId, tipo, estado, fechaDesde, fechaHasta);
     }
 
-    @GetMapping("/api/cobranzas/comprobantes/{id}")
+    @GetMapping("/api/v1/cobranzas/comprobantes/{id}")
     public Mono<ComprobantePagoDocument> getComprobante(
             @PathVariable String id,
             ServerWebExchange exchange) {
@@ -357,10 +363,10 @@ public class CobranzaController {
     }
 
     /**
-     * POST /api/cobranzas/comprobantes/generar
+     * POST /api/v1/cobranzas/comprobantes/generar
      * Genera un comprobante ejecutando el flujo de aprobación de un voucher existente.
      */
-    @PostMapping("/api/cobranzas/comprobantes/generar")
+    @PostMapping("/api/v1/cobranzas/comprobantes/generar")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<Map<String, Object>> generarComprobante(
             @RequestBody GenerarComprobanteRequest body,
@@ -385,7 +391,7 @@ public class CobranzaController {
                 ));
     }
 
-    @GetMapping("/api/cobranzas/comprobantes/{id}/pdf")
+    @GetMapping("/api/v1/cobranzas/comprobantes/{id}/pdf")
     public Mono<Map<String, Object>> getComprobantePdf(
             @PathVariable String id,
             ServerWebExchange exchange) {
@@ -397,7 +403,7 @@ public class CobranzaController {
                 ));
     }
 
-    @PostMapping("/api/cobranzas/comprobantes/{id}/anular")
+    @PostMapping("/api/v1/cobranzas/comprobantes/{id}/anular")
     public Mono<ComprobantePagoDocument> anularComprobante(
             @PathVariable String id,
             @RequestBody AnularComprobanteRequest body,
@@ -414,7 +420,7 @@ public class CobranzaController {
     // EVENTOS
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/{contratoId}/eventos")
+    @GetMapping("/api/v1/cobranzas/{contratoId}/eventos")
     public Flux<EventoCobranzaDocument> getEventos(
             @PathVariable String contratoId,
             ServerWebExchange exchange) {
@@ -422,7 +428,7 @@ public class CobranzaController {
         return eventoService.listar(contratoId);
     }
 
-    @PostMapping("/api/cobranzas/{contratoId}/eventos")
+    @PostMapping("/api/v1/cobranzas/{contratoId}/eventos")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<EventoCobranzaDocument> crearEvento(
             @PathVariable String contratoId,
@@ -441,7 +447,7 @@ public class CobranzaController {
     // MOVIMIENTOS
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/{contratoId}/movimientos")
+    @GetMapping("/api/v1/cobranzas/{contratoId}/movimientos")
     public Mono<MovimientosResumenDto> getMovimientos(
             @PathVariable String contratoId,
             ServerWebExchange exchange) {
@@ -453,7 +459,7 @@ public class CobranzaController {
     // ALERTAS — static sub-paths BEFORE path variable patterns
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/alertas/resumen")
+    @GetMapping("/api/v1/cobranzas/alertas/resumen")
     public Mono<AlertasResumenDto> getAlertasResumen(ServerWebExchange exchange) {
         String storeId = (String) exchange.getAttributes().get("storeId");
         String userId  = (String) exchange.getAttributes().get("userId");
@@ -462,19 +468,19 @@ public class CobranzaController {
         return dashboardService.getAlertasResumen(storeId, userId, rol);
     }
 
-    @PatchMapping("/api/cobranzas/alertas/leer-todas")
+    @PostMapping("/api/v1/cobranzas/alertas/marcar-todas-leidas")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> leerTodasAlertas(ServerWebExchange exchange) {
         String storeId = (String) exchange.getAttributes().get("storeId");
         String userId  = (String) exchange.getAttributes().get("userId");
         String rol     = (String) exchange.getAttributes().get("userRol");
-        log.debug("PATCH /alertas/leer-todas storeId={}", storeId);
+        log.debug("POST /alertas/marcar-todas-leidas storeId={}", storeId);
         return alertaService.ejecutar(storeId, "AGENTE".equalsIgnoreCase(rol) ? userId : null)
                 .flatMap(alerta -> alertaService.marcarLeida(alerta.getId()))
                 .then();
     }
 
-    @GetMapping("/api/cobranzas/alertas")
+    @GetMapping("/api/v1/cobranzas/alertas")
     public Flux<AlertaCobranzaDocument> getAlertas(
             @RequestParam(required = false) String nivel,
             ServerWebExchange exchange) {
@@ -488,7 +494,7 @@ public class CobranzaController {
                 .filter(a -> nivel == null || nivel.equalsIgnoreCase(a.getNivel()));
     }
 
-    @PatchMapping("/api/cobranzas/alertas/{id}/leer")
+    @PatchMapping("/api/v1/cobranzas/alertas/{id}/leer")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> leerAlerta(
             @PathVariable String id,
@@ -497,7 +503,7 @@ public class CobranzaController {
         return alertaService.marcarLeida(id);
     }
 
-    @DeleteMapping("/api/cobranzas/alertas/{id}")
+    @DeleteMapping("/api/v1/cobranzas/alertas/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> descartarAlerta(
             @PathVariable String id,
@@ -510,13 +516,13 @@ public class CobranzaController {
     // WHATSAPP — static sub-paths BEFORE path variable patterns
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/whatsapp/plantillas")
+    @GetMapping("/api/v1/cobranzas/whatsapp/plantillas")
     public Flux<PlantillaWhatsappDocument> getPlantillas(ServerWebExchange exchange) {
         log.debug("GET /whatsapp/plantillas");
         return whatsappService.listarPlantillas();
     }
 
-    @PostMapping("/api/cobranzas/whatsapp/preview")
+    @PostMapping("/api/v1/cobranzas/whatsapp/preview")
     public Mono<Map<String, Object>> previewWhatsapp(
             @RequestBody PreviewWhatsappRequest body,
             ServerWebExchange exchange) {
@@ -532,20 +538,19 @@ public class CobranzaController {
                 ));
     }
 
-    @PostMapping("/api/cobranzas/{contratoId}/whatsapp/enviar")
+    @PostMapping("/api/v1/cobranzas/whatsapp/enviar")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<Map<String, Object>> enviarWhatsapp(
-            @PathVariable String contratoId,
             @RequestBody EnviarWhatsappRequest body,
             ServerWebExchange exchange) {
 
         String storeId    = (String) exchange.getAttributes().get("storeId");
         String userId     = (String) exchange.getAttributes().get("userId");
         String userNombre = (String) exchange.getAttributes().get("userNombre");
-        log.debug("POST /{contratoId}/whatsapp/enviar contratoId={} plantillaId={}", contratoId, body.plantillaId());
+        log.debug("POST /whatsapp/enviar contratoId={} plantillaId={}", body.contratoId(), body.plantillaId());
 
         EnviarMensajeWhatsappCommand command = new EnviarMensajeWhatsappCommand(
-                contratoId, body.plantillaId(), body.variablesValores(),
+                body.contratoId(), body.plantillaId(), body.variablesValores(),
                 userId, userNombre, storeId, body.telefonoDestino());
 
         return enviarMensajeWhatsappUseCase.ejecutar(command)
@@ -556,11 +561,11 @@ public class CobranzaController {
                 ));
     }
 
-    @GetMapping("/api/cobranzas/{contratoId}/whatsapp/historial")
+    @GetMapping("/api/v1/cobranzas/casos/{contratoId}/whatsapp")
     public Flux<MensajeWhatsappDocument> getHistorialWhatsapp(
             @PathVariable String contratoId,
             ServerWebExchange exchange) {
-        log.debug("GET /{contratoId}/whatsapp/historial contratoId={}", contratoId);
+        log.debug("GET /casos/{contratoId}/whatsapp contratoId={}", contratoId);
         return whatsappService.listarMensajes(contratoId);
     }
 
@@ -568,7 +573,7 @@ public class CobranzaController {
     // LLAMADAS (stub)
     // =========================================================================
 
-    @PostMapping("/api/cobranzas/{contratoId}/llamar")
+    @PostMapping("/api/v1/cobranzas/{contratoId}/llamar")
     public Mono<Map<String, Object>> llamar(
             @PathVariable String contratoId,
             @RequestBody LlamarRequest body,
@@ -584,25 +589,45 @@ public class CobranzaController {
     // ESTRATEGIAS
     // =========================================================================
 
-    @GetMapping("/api/cobranzas/estrategias")
+    @GetMapping("/api/v1/cobranzas/estrategias")
     public Flux<EstrategiaDocument> getEstrategias(ServerWebExchange exchange) {
         log.debug("GET /estrategias");
         return estrategiaService.listar();
     }
 
-    @PatchMapping("/api/cobranzas/estrategias/{id}")
+    @PostMapping("/api/v1/cobranzas/estrategias")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<EstrategiaDocument> crearEstrategia(
+            @RequestBody EstrategiaDocument body,
+            ServerWebExchange exchange) {
+
+        log.debug("POST /estrategias nombre={}", body.getNombre());
+        return estrategiaService.crear(body);
+    }
+
+    @PutMapping("/api/v1/cobranzas/estrategias/{id}")
     public Mono<EstrategiaDocument> actualizarEstrategia(
             @PathVariable String id,
             @RequestBody ActualizarEstrategiaRequest body,
             ServerWebExchange exchange) {
 
         String userId = (String) exchange.getAttributes().get("userId");
-        log.debug("PATCH /estrategias/{id} id={} activo={}", id, body.activo());
+        log.debug("PUT /estrategias/{id} id={} activo={}", id, body.activo());
 
         return estrategiaService.actualizar(id, body.activo(), body.mensaje(), body.frecuenciaDias(), userId);
     }
 
-    @PostMapping("/api/cobranzas/estrategias/{id}/disparar-manual")
+    @DeleteMapping("/api/v1/cobranzas/estrategias/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> eliminarEstrategia(
+            @PathVariable String id,
+            ServerWebExchange exchange) {
+
+        log.debug("DELETE /estrategias/{id} id={}", id);
+        return estrategiaService.eliminar(id);
+    }
+
+    @PostMapping("/api/v1/cobranzas/estrategias/{id}/disparar-manual")
     public Mono<Map<String, Object>> dispararEstrategia(
             @PathVariable String id,
             @RequestBody DispararEstrategiaRequest body,
@@ -624,32 +649,65 @@ public class CobranzaController {
     // =========================================================================
 
     /**
-     * POST /webhooks/twilio/whatsapp/status
-     * Twilio envía el callback como application/x-www-form-urlencoded.
+     * POST /webhooks/whatsapp
+     * Meta Cloud API envía status updates como JSON.
+     * Payload ejemplo:
+     * { "entry": [{ "changes": [{ "value": { "statuses": [{ "id": "wamid.xxx", "status": "delivered" }] } }] }] }
      */
-    @PostMapping(value = "/webhooks/twilio/whatsapp/status",
-                 consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public Mono<Map<String, Object>> twilioWhatsappStatus(ServerWebExchange exchange) {
-        return exchange.getFormData()
-                .flatMap(form -> {
-                    String messageSid    = form.getFirst("MessageSid");
-                    String messageStatus = form.getFirst("MessageStatus");
+    @PostMapping(value = "/webhooks/whatsapp",
+                 consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<Map<String, Object>> metaWhatsappWebhook(
+            @RequestBody Map<String, Object> payload) {
 
-                    String estado = mapTwilioStatus(messageStatus);
-                    Date timestamp = new Date();
+        log.debug("Meta WA webhook received");
 
-                    log.debug("Twilio WA webhook sid={} status={} -> estado={}", messageSid, messageStatus, estado);
+        try {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> entries = (List<Map<String, Object>>) payload.get("entry");
+            if (entries == null || entries.isEmpty()) {
+                return Mono.just(Map.of("status", "OK"));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> changes = (List<Map<String, Object>>) entries.get(0).get("changes");
+            if (changes == null || changes.isEmpty()) {
+                return Mono.just(Map.of("status", "OK"));
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> value = (Map<String, Object>) changes.get(0).get("value");
+            if (value == null) {
+                return Mono.just(Map.of("status", "OK"));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> statuses = (List<Map<String, Object>>) value.get("statuses");
+            if (statuses == null || statuses.isEmpty()) {
+                return Mono.just(Map.of("status", "OK"));
+            }
 
-                    return actualizarEstadoMensajeUseCase.ejecutar(messageSid, estado, timestamp)
-                            .thenReturn(Map.<String, Object>of("status", "OK"));
-                });
+            Map<String, Object> statusEntry = statuses.get(0);
+            String wamid  = (String) statusEntry.get("id");
+            String status = (String) statusEntry.get("status");
+            String estado = mapMetaStatus(status);
+            Date timestamp = new Date();
+
+            log.debug("Meta WA webhook wamid={} status={} -> estado={}", wamid, status, estado);
+
+            return actualizarEstadoMensajeUseCase.ejecutar(wamid, estado, timestamp)
+                    .thenReturn(Map.<String, Object>of("status", "OK"));
+        } catch (Exception e) {
+            log.warn("Error procesando Meta webhook: {}", e.getMessage());
+            return Mono.just(Map.of("status", "OK"));
+        }
     }
 
-    /** POST /webhooks/twilio/voz/estado — stub */
-    @PostMapping(value = "/webhooks/twilio/voz/estado")
-    public Mono<Map<String, Object>> twilioVozEstado(ServerWebExchange exchange) {
-        log.debug("Twilio VOZ webhook — stub");
-        return Mono.just(Map.of("status", "OK"));
+    /** GET /webhooks/whatsapp — verificación del webhook Meta (challenge) */
+    @GetMapping("/webhooks/whatsapp")
+    public Mono<String> metaWhatsappVerify(
+            @RequestParam("hub.mode") String mode,
+            @RequestParam("hub.verify_token") String verifyToken,
+            @RequestParam("hub.challenge") String challenge) {
+
+        log.debug("Meta WA webhook verify mode={}", mode);
+        return Mono.just(challenge);
     }
 
     /** POST /webhooks/sunat/cdr — stub */
@@ -663,17 +721,14 @@ public class CobranzaController {
     // Helpers
     // =========================================================================
 
-    private String mapTwilioStatus(String twilioStatus) {
-        if (twilioStatus == null) return "ENVIADO";
-        return switch (twilioStatus.toLowerCase()) {
-            case "delivered"    -> "ENTREGADO";
-            case "read"         -> "LEIDO";
-            case "sent",
-                 "queued",
-                 "accepted"     -> "ENVIADO";
-            case "failed",
-                 "undelivered"  -> "FALLIDO";
-            default             -> "ENVIADO";
+    private String mapMetaStatus(String metaStatus) {
+        if (metaStatus == null) return "ENVIADO";
+        return switch (metaStatus.toLowerCase()) {
+            case "delivered" -> "ENTREGADO";
+            case "read"      -> "LEIDO";
+            case "sent"      -> "ENVIADO";
+            case "failed"    -> "FALLIDO";
+            default          -> "ENVIADO";
         };
     }
 
@@ -707,6 +762,7 @@ public class CobranzaController {
     ) {}
 
     public record EnviarWhatsappRequest(
+            String contratoId,
             String plantillaId,
             Map<String, String> variablesValores,
             String telefonoDestino

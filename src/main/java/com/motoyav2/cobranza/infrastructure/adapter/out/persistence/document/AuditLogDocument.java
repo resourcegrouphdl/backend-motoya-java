@@ -18,7 +18,7 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "audit_log")
+@Document(collectionName = "cobranzas-audit-log")
 public class AuditLogDocument {
 
     @DocumentId

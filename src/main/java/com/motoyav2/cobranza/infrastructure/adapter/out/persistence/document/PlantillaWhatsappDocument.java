@@ -19,7 +19,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "plantillas_whatsapp")
+@Document(collectionName = "cobranzas-plantillas-whatsapp")
 public class PlantillaWhatsappDocument {
 
     @DocumentId

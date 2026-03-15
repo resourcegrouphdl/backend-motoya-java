@@ -17,7 +17,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "mensajes_whatsapp")
+@Document(collectionName = "cobranzas-mensajes-whatsapp")
 public class MensajeWhatsappDocument {
 
     @DocumentId

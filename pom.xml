@@ -135,12 +135,7 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- Twilio SDK -->
-		<dependency>
-			<groupId>com.twilio.sdk</groupId>
-			<artifactId>twilio</artifactId>
-			<version>9.14.1</version>
-		</dependency>
+		<!-- Meta WhatsApp Business Cloud API — usa WebClient de WebFlux, sin SDK externo -->
 
 		<!-- Email: JavaMail para envío de notificaciones por correo -->
 		<dependency>

@@ -19,7 +19,7 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "eventos")
+@Document(collectionName = "cobranzas-eventos")
 public class EventoCobranzaDocument {
 
     @DocumentId

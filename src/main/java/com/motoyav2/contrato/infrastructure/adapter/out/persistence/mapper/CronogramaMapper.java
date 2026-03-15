@@ -15,15 +15,11 @@ public class CronogramaMapper {
 
     String monto = PEN_FORMAT.format(contrato.datosFinancieros().cuotaMensual());
     String titular = contrato.titular().nombreCompleto().toUpperCase();
-    String fiador = contrato.fiador().nombreCompleto().toUpperCase() ;
+    String fiador = contrato.fiador().nombreCompleto().toUpperCase();
 
     CronogramaRequest request = new CronogramaRequest();
 
-
-
-    request.setNombreCliente(
-        titular + " " + monto
-    );
+    request.setNombreCliente(titular + " " + monto);
 
     request.setDescripcion(
               titular + " "
@@ -32,6 +28,9 @@ public class CronogramaMapper {
             + contrato.fiador().telefono()
     );
 
+    request.setEstado("PENDIENTE");
+    request.setContratoId(contrato.id());
+    request.setStoreId(contrato.tienda().tiendaId());
     request.setCuotas(mapCuotas(contrato.cuotas()));
 
     return request;

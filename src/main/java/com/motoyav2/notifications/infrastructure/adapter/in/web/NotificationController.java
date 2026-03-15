@@ -2,15 +2,15 @@ package com.motoyav2.notifications.infrastructure.adapter.in.web;
 
 import com.motoyav2.contrato.domain.port.out.StoragePort;
 import com.motoyav2.notifications.domain.events.BusinessEventType;
+import com.motoyav2.notifications.domain.model.NotificationChannel;
 import com.motoyav2.notifications.domain.model.NotificationRequest;
 import com.motoyav2.notifications.domain.ports.in.PublishBusinessEventUseCase;
 import com.motoyav2.notifications.domain.ports.in.SendNotificationUseCase;
-import com.motoyav2.notifications.domain.model.NotificationChannel;
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendEmailRequest;
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendMediaRequest;
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendNotificationRequest;
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendNotificationResponse;
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaWhatsAppNotificationAdapter;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppNotificationAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,27 +24,26 @@ import reactor.core.publisher.Mono;
  * Endpoint público de notificaciones.
  * Protegido por Firebase Auth (aplica el filtro global de la app).
  *
- * POST /api/v1/notifications/send       → envío síncrono (cualquier canal)
- * POST /api/v1/notifications/async      → envío asíncrono vía Outbox (recomendado)
- * POST /api/v1/notifications/email      → email síncrono (canal dedicado con validación @Email)
+ * POST /api/v1/notifications/send        → envío síncrono (cualquier canal)
+ * POST /api/v1/notifications/async       → envío asíncrono vía Outbox (recomendado)
+ * POST /api/v1/notifications/email       → email síncrono
  * POST /api/v1/notifications/email/async → email asíncrono vía Outbox
+ * POST /api/v1/notifications/send/media  → envío de archivo por WhatsApp (Meta API)
  */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/notifications")
-@Tag(name = "Notificaciones", description = "Envío de notificaciones por WhatsApp, Email y SMS")
+@Tag(name = "Notificaciones", description = "Envío de notificaciones por WhatsApp (Meta) y Email")
 public class NotificationController {
 
     private final SendNotificationUseCase sendNotificationUseCase;
     private final PublishBusinessEventUseCase publishBusinessEventUseCase;
-    private final FactilizaWhatsAppNotificationAdapter factilizaAdapter;
+    private final MetaWhatsAppNotificationAdapter metaAdapter;
     private final StoragePort storagePort;
 
     /**
      * Envío SÍNCRONO: llama al canal directamente y espera la respuesta.
-     * Úsalo cuando necesitas confirmación inmediata del envío.
-     * ⚠ Si el proveedor externo (Factiliza, SMTP) falla, retorna error 500.
      */
     @PostMapping("/send")
     @ResponseStatus(HttpStatus.OK)
@@ -73,19 +72,13 @@ public class NotificationController {
 
     /**
      * Envío ASÍNCRONO vía Outbox: guarda el evento en Firestore y retorna inmediatamente.
-     * El trigger de Cloud Function procesará el envío en background.
-     *
-     * ✅ Recomendado para el frontend y microservicios:
-     *    - Respuesta rápida (no espera el envío real)
-     *    - Reintentos automáticos si el proveedor falla
-     *    - Trazabilidad completa en notification_events
+     * El trigger de Cloud Function procesará el envío en background con reintentos automáticos.
      */
     @PostMapping("/async")
     @ResponseStatus(HttpStatus.ACCEPTED)
     @Operation(
             summary = "Encolar notificación (asíncrono)",
-            description = "Guarda el evento en el Outbox y retorna 202 inmediatamente. " +
-                    "El envío real ocurre en background con reintentos automáticos.")
+            description = "Guarda el evento en el Outbox y retorna 202 inmediatamente.")
     public Mono<SendNotificationResponse> sendAsync(
             @Valid @RequestBody SendNotificationRequest req) {
 
@@ -107,10 +100,6 @@ public class NotificationController {
 
     // ─── Email dedicado ───────────────────────────────────────────────────────
 
-    /**
-     * Envío de email SÍNCRONO con validación de formato de correo.
-     * Simplifica la integración: no necesitas especificar el canal.
-     */
     @PostMapping("/email")
     @ResponseStatus(HttpStatus.OK)
     @Operation(
@@ -133,40 +122,6 @@ public class NotificationController {
                 .doOnSuccess(r -> log.info("[NOTIF-API] ✓ Email enviado | to={}", req.to()));
     }
 
-    // ─── WhatsApp Media ───────────────────────────────────────────────────────
-
-    /**
-     * Envía un archivo (imagen, documento, video, audio) por WhatsApp.
-     * El archivo debe estar previamente subido en Firebase Storage.
-     * Se obtiene la URL de descarga automáticamente y se envía vía Factiliza sendmedia.
-     */
-    @PostMapping("/send/media")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(
-            summary = "Enviar archivo por WhatsApp",
-            description = "Obtiene la URL de descarga de Firebase Storage y envía el archivo por WhatsApp usando Factiliza. " +
-                    "mediaType válidos: image, document, video, audio")
-    public Mono<SendNotificationResponse> sendMedia(
-            @Valid @RequestBody SendMediaRequest req) {
-
-        log.info("[NOTIF-API] Media WhatsApp | to={} path={} tipo={}",
-                req.recipient(), req.storagePath(), req.mediaType());
-
-        return storagePort.getDownloadUrl(req.storagePath())
-                .flatMap(url -> factilizaAdapter.sendMedia(
-                        req.recipient(),
-                        url,
-                        req.mediaType(),
-                        req.filename(),
-                        req.caption()))
-                .thenReturn(SendNotificationResponse.direct())
-                .doOnSuccess(r -> log.info("[NOTIF-API] ✓ Media enviado | to={}", req.recipient()));
-    }
-
-    /**
-     * Envío de email ASÍNCRONO vía Outbox.
-     * Retorna 202 inmediatamente. Recomendado para el frontend.
-     */
     @PostMapping("/email/async")
     @ResponseStatus(HttpStatus.ACCEPTED)
     @Operation(
@@ -187,5 +142,35 @@ public class NotificationController {
                 )
                 .thenReturn(SendNotificationResponse.async(null))
                 .doOnSuccess(r -> log.info("[NOTIF-API] ✓ Email encolado | to={}", req.to()));
+    }
+
+    // ─── WhatsApp Media (Meta API) ────────────────────────────────────────────
+
+    /**
+     * Envía un archivo (imagen, documento, video, audio) por WhatsApp vía Meta API.
+     * El archivo debe estar previamente subido en Firebase Storage.
+     * Se obtiene la URL de descarga automáticamente.
+     */
+    @PostMapping("/send/media")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(
+            summary = "Enviar archivo por WhatsApp",
+            description = "Obtiene la URL de Firebase Storage y envía el archivo por WhatsApp usando Meta API. " +
+                    "mediaType válidos: image, document, video, audio")
+    public Mono<SendNotificationResponse> sendMedia(
+            @Valid @RequestBody SendMediaRequest req) {
+
+        log.info("[NOTIF-API] Media WhatsApp | to={} path={} tipo={}",
+                req.recipient(), req.storagePath(), req.mediaType());
+
+        return storagePort.getDownloadUrl(req.storagePath())
+                .flatMap(url -> metaAdapter.sendMedia(
+                        req.recipient(),
+                        url,
+                        req.mediaType(),
+                        req.filename(),
+                        req.caption()))
+                .thenReturn(SendNotificationResponse.direct())
+                .doOnSuccess(r -> log.info("[NOTIF-API] ✓ Media enviado | to={}", req.recipient()));
     }
 }

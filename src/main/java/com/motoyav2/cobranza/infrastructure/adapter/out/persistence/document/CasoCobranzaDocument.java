@@ -20,7 +20,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "casos_cobranza")
+@Document(collectionName = "cobranzas-casos")
 public class CasoCobranzaDocument {
 
     @DocumentId

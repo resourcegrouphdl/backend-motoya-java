@@ -91,6 +91,13 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         String urlDocFact       = nvl(fv.urlDocumento());
         String fechaEmisionFact = fv.fechaEmision() != null ? fv.fechaEmision().toString() : null;
 
+        // Fecha base: cuándo se validó/aprobó la factura (no el día de ejecución)
+        LocalDate fechaBase = fv.fechaValidacion() != null
+                ? fv.fechaValidacion().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                : fv.fechaSubida() != null
+                        ? fv.fechaSubida().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                        : LocalDate.now();
+
         double montoTotal = contrato.datosFinancieros() != null
                 && contrato.datosFinancieros().precioVehiculo() != null
                 ? contrato.datosFinancieros().precioVehiculo().doubleValue() : 0.0;
@@ -101,10 +108,10 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
                 .setScale(2, RoundingMode.HALF_UP);
         BigDecimal montoP2 = total.subtract(montoP1);
 
-        // P1 INICIAL: fechaFactura + 2 días hábiles (simplificado = +2 días calendario)
-        String fechaP1 = LocalDate.now().plusDays(2).toString();
+        // P1 INICIAL: fechaFactura + 2 días calendario
+        String fechaP1 = fechaBase.plusDays(2).toString();
         // P2 SALDO: fechaFactura + condición (15 días por defecto)
-        String fechaP2 = LocalDate.now().plusDays(CONDICION_PAGO_DEFAULT).toString();
+        String fechaP2 = fechaBase.plusDays(CONDICION_PAGO_DEFAULT).toString();
 
         String ahora = Instant.now().toString();
 
@@ -126,7 +133,7 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         factura.put("urlDocumentoFactura",  urlDocFact);
         factura.put("fechaEmisionFactura",  fechaEmisionFact);
         factura.put("montoTotal",           montoTotal);
-        factura.put("fechaFactura",         hoy);
+        factura.put("fechaFactura",         fechaBase.toString());
         factura.put("condicionPago",        CONDICION_PAGO_DEFAULT);
         factura.put("estado",               "PENDIENTE");
         factura.put("creadoEn",             ahora);

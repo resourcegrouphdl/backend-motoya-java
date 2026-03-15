@@ -21,7 +21,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "comprobantes_pago")
+@Document(collectionName = "cobranzas-comprobantes")
 public class ComprobantePagoDocument {
 
     @DocumentId

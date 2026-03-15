@@ -17,7 +17,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "disparos_estrategia")
+@Document(collectionName = "cobranzas-disparos")
 public class DisparoEstrategiaDocument {
 
     @DocumentId

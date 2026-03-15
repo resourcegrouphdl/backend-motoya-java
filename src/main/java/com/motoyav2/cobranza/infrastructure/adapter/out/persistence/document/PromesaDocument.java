@@ -18,7 +18,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "promesas")
+@Document(collectionName = "cobranzas-promesas")
 public class PromesaDocument {
 
     @DocumentId

@@ -18,7 +18,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "numeradores")
+@Document(collectionName = "cobranzas-numeradores")
 public class NumeradorDocument {
 
     @DocumentId

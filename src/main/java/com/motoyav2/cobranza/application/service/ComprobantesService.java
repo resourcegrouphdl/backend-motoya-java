@@ -28,7 +28,8 @@ public class ComprobantesService {
     // -------------------------------------------------------------------------
 
     public Flux<ComprobantePagoDocument> listar(String storeId, String contratoId,
-                                                 String tipo, String estado) {
+                                                 String tipo, String estado,
+                                                 String fechaDesde, String fechaHasta) {
         Flux<ComprobantePagoDocument> base;
 
         if (contratoId != null) {
@@ -39,7 +40,9 @@ public class ComprobantesService {
 
         return base
                 .filter(c -> tipo == null || tipo.equalsIgnoreCase(c.getTipo()))
-                .filter(c -> estado == null || estado.equalsIgnoreCase(c.getEstado()));
+                .filter(c -> estado == null || estado.equalsIgnoreCase(c.getEstado()))
+                .filter(c -> fechaDesde == null || (c.getFechaEmision() != null && c.getFechaEmision().compareTo(fechaDesde) >= 0))
+                .filter(c -> fechaHasta == null || (c.getFechaEmision() != null && c.getFechaEmision().compareTo(fechaHasta) <= 0));
     }
 
     // -------------------------------------------------------------------------

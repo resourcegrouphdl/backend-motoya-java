@@ -20,7 +20,7 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Document(collectionName = "metricas")
+@Document(collectionName = "cobranzas-metricas")
 public class MetricasDocument {
 
     @DocumentId

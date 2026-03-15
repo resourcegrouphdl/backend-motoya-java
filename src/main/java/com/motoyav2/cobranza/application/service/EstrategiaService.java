@@ -56,6 +56,30 @@ public class EstrategiaService {
     }
 
     // -------------------------------------------------------------------------
+    // Crear nueva estrategia
+    // -------------------------------------------------------------------------
+
+    public Mono<EstrategiaDocument> crear(EstrategiaDocument estrategia) {
+        estrategia.setId(UUID.randomUUID().toString());
+        estrategia.setCreadoEn(new Date());
+        estrategia.setActualizadoEn(new Date());
+        if (estrategia.getActivo() == null) {
+            estrategia.setActivo(true);
+        }
+        return estrategiaPort.save(estrategia);
+    }
+
+    // -------------------------------------------------------------------------
+    // Eliminar estrategia
+    // -------------------------------------------------------------------------
+
+    public Mono<Void> eliminar(String id) {
+        return estrategiaPort.findById(id)
+                .switchIfEmpty(Mono.error(new NotFoundException("Estrategia no encontrada: " + id)))
+                .flatMap(e -> estrategiaPort.delete(id));
+    }
+
+    // -------------------------------------------------------------------------
     // Disparar estrategia manualmente para una lista de contratos
     // -------------------------------------------------------------------------
 

@@ -148,7 +148,6 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
     private Mono<Void> crearFacturaDesdeDoc(ContratoDocument doc) {
         String contratoId   = doc.getId();
         String ahora        = Instant.now().toString();
-        String hoy          = LocalDate.now().toString();
 
         // ── Datos de tienda (de tienda embedded) ──────────────────────────
         TiendaInfoEmbedded tienda = doc.getTienda();
@@ -169,6 +168,15 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         String fechaEmisionFact   = (fv != null && fv.getFechaEmision() != null)
                 ? fv.getFechaEmision().toString() : null;
 
+        // Fecha base para calcular vencimientos: cuándo se validó/aprobó la factura
+        LocalDate fechaBase = (fv != null && fv.getFechaValidacion() != null)
+                ? fv.getFechaValidacion().toDate().toInstant()
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                : (fv != null && fv.getFechaSubida() != null)
+                        ? fv.getFechaSubida().toDate().toInstant()
+                                .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                        : LocalDate.now();
+
         // ── Datos del titular ─────────────────────────────────────────────
         String clienteNombre = "";
         if (doc.getTitular() != null) {
@@ -182,13 +190,16 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
             montoTotal = doc.getDatosFinancieros().getPrecioVehiculo();
         }
 
-        // ── Cálculo P1 (20%) y P2 (80%) ──────────────────────────────────
-        BigDecimal total  = BigDecimal.valueOf(montoTotal);
-        BigDecimal montoP1 = total.multiply(BigDecimal.valueOf(doc.getDatosFinancieros().getCuotaInicial())).setScale(2, RoundingMode.HALF_UP);
+        // ── Cálculo P1 = cuota inicial, P2 = precio vehículo − cuota inicial ──
+        BigDecimal total   = BigDecimal.valueOf(montoTotal);
+        double cuotaInicial = (doc.getDatosFinancieros() != null
+                && doc.getDatosFinancieros().getCuotaInicial() != null)
+                ? doc.getDatosFinancieros().getCuotaInicial() : 0.0;
+        BigDecimal montoP1 = BigDecimal.valueOf(cuotaInicial).setScale(2, RoundingMode.HALF_UP);
         BigDecimal montoP2 = total.subtract(montoP1);
 
-        String fechaP1 = LocalDate.now().plusDays(2).toString();
-        String fechaP2 = LocalDate.now().plusDays(CONDICION_PAGO_DIAS).toString();
+        String fechaP1 = fechaBase.plusDays(2).toString();
+        String fechaP2 = fechaBase.plusDays(CONDICION_PAGO_DIAS).toString();
 
         // ── Documento factura ─────────────────────────────────────────────
         Map<String, Object> factura = new HashMap<>();
@@ -208,7 +219,7 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         factura.put("urlDocumentoFactura",  urlDocumentoFact);
         factura.put("fechaEmisionFactura",  fechaEmisionFact);
         factura.put("montoTotal",           montoTotal);
-        factura.put("fechaFactura",         hoy);
+        factura.put("fechaFactura",         fechaBase.toString());
         factura.put("condicionPago",        CONDICION_PAGO_DIAS);
         factura.put("estado",               "PENDIENTE");
         factura.put("creadoEn",             ahora);

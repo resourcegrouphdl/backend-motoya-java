@@ -11,4 +11,6 @@ public interface EstrategiaPort {
     Mono<EstrategiaDocument> findById(String id);
 
     Mono<EstrategiaDocument> save(EstrategiaDocument estrategia);
+
+    Mono<Void> delete(String id);
 }

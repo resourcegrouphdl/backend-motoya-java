@@ -28,4 +28,9 @@ public class EstrategiaPortAdapter implements EstrategiaPort {
     public Mono<EstrategiaDocument> save(EstrategiaDocument estrategia) {
         return repository.save(estrategia);
     }
+
+    @Override
+    public Mono<Void> delete(String id) {
+        return repository.deleteById(id);
+    }
 }

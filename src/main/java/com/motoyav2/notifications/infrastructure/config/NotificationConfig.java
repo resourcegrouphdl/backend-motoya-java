@@ -1,7 +1,6 @@
 package com.motoyav2.notifications.infrastructure.config;
 
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaProperties;
-import org.springframework.beans.factory.annotation.Qualifier;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -16,28 +15,26 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
  * Configuración del módulo de notificaciones.
  *
  * Define un TemplateEngine propio (notificationTemplateEngine) para no interferir
- * con el TemplateEngine autoconfigurdo por Spring Boot usado en la generación de PDFs.
+ * con el TemplateEngine autoconfigurado por Spring Boot usado en la generación de PDFs.
  *
  * Resolvedores configurados:
- *   1. TEXT resolver → notification-templates/whatsapp/*.txt  y  .../sms/*.txt
+ *   1. TEXT resolver → notification-templates/whatsapp/*.txt
  *   2. HTML resolver → notification-templates/email/*.html
- *
- * checkExistence=true permite que ambos resolvedores coexistan; el primero que
- * encuentre el archivo "gana".
  */
 @Configuration
 @EnableScheduling
 public class NotificationConfig {
 
     /**
-     * WebClient dedicado a la API de Factiliza WhatsApp.
-     * Nombre "factilizaWebClient" para evitar conflicto con otros WebClient beans del proyecto.
+     * WebClient dedicado a la Meta WhatsApp Business Cloud API.
+     * Base URL: https://graph.facebook.com — la versión y phoneNumberId se
+     * añaden en cada llamada vía variables de URI.
      */
-    @Bean("factilizaWebClient")
-    public WebClient factilizaWebClient(FactilizaProperties properties) {
+    @Bean("metaWhatsAppWebClient")
+    public WebClient metaWhatsAppWebClient(MetaWhatsAppProperties properties) {
         return WebClient.builder()
-                .baseUrl(properties.getBaseUrl())
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getToken())
+                .baseUrl("https://graph.facebook.com")
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getAccessToken())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .build();
@@ -52,7 +49,7 @@ public class NotificationConfig {
     }
 
     /**
-     * Resolver TEXT: para WhatsApp y SMS.
+     * Resolver TEXT: para WhatsApp.
      * Busca en classpath:/notification-templates/{path}.txt
      * Usa sintaxis Thymeleaf TEXT: [(${variable})]
      */
