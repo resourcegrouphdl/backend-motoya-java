@@ -45,4 +45,11 @@ public class GoogleCalendarProperties {
 
     /** ID del calendario destino (ej. primary o ID completo de Google Calendar) */
     private String calendarId;
+
+    /**
+     * ID del calendario de solo-lectura para migración.
+     * En motoyadigital@gmail.com el calendario primario se accede con el email como ID.
+     * Configurado via google.calendar.read-id en application.properties.
+     */
+    private String readId;
 }

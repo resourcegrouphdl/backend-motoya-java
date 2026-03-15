@@ -3,6 +3,7 @@ package com.motoyav2.migracion.infrastructure.adapter.out.calendar;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
+import com.motoyav2.calendar.config.GoogleCalendarProperties;
 import com.motoyav2.migracion.config.MigracionProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,13 +32,15 @@ public class MigracionCalendarService {
             Pattern.compile("^(\\d+)\\.\\s*(.+?)\\s+S/\\.?\\s*([\\d,\\.]+)$", Pattern.CASE_INSENSITIVE);
 
     private final MigracionProperties props;
+    private final GoogleCalendarProperties calendarProps;
 
     @Autowired(required = false)
     @Qualifier("provisionalCalendarApi")
     private Calendar calendarApi;
 
-    public MigracionCalendarService(MigracionProperties props) {
+    public MigracionCalendarService(MigracionProperties props, GoogleCalendarProperties calendarProps) {
         this.props = props;
+        this.calendarProps = calendarProps;
     }
 
     /**
@@ -51,10 +54,12 @@ public class MigracionCalendarService {
                     "Google Calendar no está configurado. Verificar credenciales en application.properties"));
         }
 
-        String calendarId = props.getCalendarId();
+        // Prioridad: google.calendar.read-id → migracion.calendar-id
+        String readId = calendarProps.getReadId();
+        String calendarId = (readId != null && !readId.isBlank()) ? readId : props.getCalendarId();
         if (calendarId == null || calendarId.isBlank()) {
             return Flux.error(new IllegalStateException(
-                    "migracion.calendar-id no configurado. Agregar MIGRACION_CALENDAR_ID al entorno."));
+                    "Calendario de migración no configurado. Definir google.calendar.read-id o MIGRACION_CALENDAR_ID."));
         }
 
         log.info("[Migracion-Calendar] Leyendo eventos del calendario: {}", calendarId);
