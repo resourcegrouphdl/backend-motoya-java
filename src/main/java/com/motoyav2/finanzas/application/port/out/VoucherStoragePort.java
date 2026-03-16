@@ -1,8 +1,10 @@
 package com.motoyav2.finanzas.application.port.out;
 
-import org.springframework.http.codec.multipart.FilePart;
-import reactor.core.publisher.Mono;
-
+/**
+ * @deprecated Reemplazado por {@link SignedUrlStoragePort}.
+ * La subida de archivos ahora ocurre directamente desde el frontend a GCS.
+ */
+@Deprecated
 public interface VoucherStoragePort {
-    Mono<String> upload(String facturaId, String pagoId, FilePart archivo);
+    // Vacío — mantenido para compatibilidad hasta cleanup
 }

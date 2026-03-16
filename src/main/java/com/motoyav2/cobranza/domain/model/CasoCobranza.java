@@ -16,6 +16,7 @@ public class CasoCobranza {
 
     private String contratoId;
     private DatosTitular titular;
+    private DatosFiador fiador;
     private String agenteId;
     private String storeId;
 

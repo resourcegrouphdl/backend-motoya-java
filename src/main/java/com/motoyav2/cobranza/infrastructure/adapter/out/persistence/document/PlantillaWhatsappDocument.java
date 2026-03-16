@@ -43,4 +43,6 @@ public class PlantillaWhatsappDocument {
 
     private Date creadoEn;
     private Date actualizadoEn;
+    private String creadoPor;
+    private String actualizadoPor;
 }

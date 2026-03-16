@@ -48,7 +48,17 @@ public class MigracionStagingDocument {
     private String clienteNombre;
     private String clienteDni;
     private String telefono;
+    private String email;
     private String moto;
+
+    // ── Datos del fiador (para migración asistida) ────────────────────────────
+    private String fiadorNombre;
+    private String fiadorApellidos;
+    private String fiadorTipoDocumento;
+    private String fiadorDni;
+    private String fiadorTelefono;
+    private String fiadorEmail;
+    private String fiadorParentesco;
 
     // ── Resultado de la migración ─────────────────────────────────────────────
 

@@ -15,4 +15,5 @@ public interface FacturaPort {
     Mono<Void> registrarPago(String facturaId, String pagoId, Map<String, Object> campos);
     Mono<Void> actualizarEstadoFactura(String facturaId, Map<String, Object> campos);
     Mono<Void> actualizarVoucherUrl(String facturaId, String pagoId, String url);
+    Mono<Void> actualizarDocumentAi(String facturaId, String pagoId, Map<String, Object> campos);
 }

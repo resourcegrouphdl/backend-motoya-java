@@ -55,4 +55,6 @@ public class EstrategiaDocument {
 
     private Date creadoEn;
     private Date actualizadoEn;
+    private String creadoPor;
+    private String actualizadoPor;
 }

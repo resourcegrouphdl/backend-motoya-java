@@ -75,7 +75,9 @@ public class ImportarCalendarioService {
                                         .build();
 
                                 IniciarCasoCommand command = new IniciarCasoCommand(
-                                        contratoId, storeId, titular, null,
+                                        contratoId, storeId, titular,
+                                        null,   // fiador — no disponible desde calendario
+                                        null,   // motoDescripcion — no disponible desde calendario
                                         saldoTotal, saldoTotal,
                                         "MORA_TEMPRANA", "EN_SEGUIMIENTO",
                                         agenteAsignadoId, agenteNombre,

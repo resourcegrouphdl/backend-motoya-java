@@ -7,9 +7,8 @@ import com.motoyav2.finanzas.application.port.in.command.SubirVoucherCommand;
 import com.motoyav2.finanzas.infrastructure.adapter.in.web.dto.request.RegistrarPagoRequest;
 import com.motoyav2.finanzas.infrastructure.adapter.in.web.dto.response.FinanzasActionResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -34,13 +33,43 @@ public class PagoController {
                 .thenReturn(FinanzasActionResponse.ok("Pago registrado correctamente"));
     }
 
-    @PostMapping(value = "/{pagoId}/voucher", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<FinanzasActionResponse> subirVoucher(
+    /**
+     * Asocia un voucher ya subido a GCS a un pago de factura.
+     *
+     * El frontend debe haber obtenido primero la URL firmada via:
+     *   POST /api/finanzas/storage/signed-upload-url
+     * y subido el archivo directamente a GCS.
+     *
+     * Body:
+     *   {
+     *     "facturaId":  "FAC-20240101-ABCD",
+     *     "voucherUrl": "https://storage.googleapis.com/motoya-form.appspot.com/finanzas/vouchers/...",
+     *     "gcsPath":    "finanzas/vouchers/FAC-001/P1_1710000000.jpg",  (opcional — para Document AI)
+     *     "mimeType":   "image/jpeg"                                    (opcional)
+     *   }
+     */
+    @PostMapping("/{pagoId}/voucher")
+    public Mono<FinanzasActionResponse> asociarVoucher(
             @PathVariable String pagoId,
-            @RequestParam String facturaId,
-            @RequestPart("voucher") FilePart archivo) {
-        SubirVoucherCommand command = new SubirVoucherCommand(facturaId, pagoId, archivo);
+            @Valid @RequestBody AsociarVoucherRequest body) {
+
+        SubirVoucherCommand command = new SubirVoucherCommand(
+                body.facturaId(),
+                pagoId,
+                body.voucherUrl(),
+                body.gcsPath(),
+                body.mimeType()
+        );
         return subirVoucher.ejecutar(command)
-                .thenReturn(FinanzasActionResponse.ok("Comprobante adjuntado correctamente"));
+                .thenReturn(FinanzasActionResponse.ok("Comprobante asociado correctamente"));
     }
+
+    // ── DTO inline ────────────────────────────────────────────────────────────
+
+    public record AsociarVoucherRequest(
+            @NotBlank String facturaId,
+            @NotBlank String voucherUrl,
+            String gcsPath,
+            String mimeType
+    ) {}
 }

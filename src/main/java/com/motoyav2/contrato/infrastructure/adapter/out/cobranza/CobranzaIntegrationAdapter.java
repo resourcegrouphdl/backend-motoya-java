@@ -3,9 +3,11 @@ package com.motoyav2.contrato.infrastructure.adapter.out.cobranza;
 import com.motoyav2.cobranza.application.port.in.IniciarCasoUseCase;
 import com.motoyav2.cobranza.application.port.in.command.IniciarCasoCommand;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
+import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosFiadorDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosTitularDocument;
 import com.motoyav2.contrato.domain.model.Contrato;
 import com.motoyav2.contrato.domain.model.CuotaCronograma;
+import com.motoyav2.contrato.domain.model.DatosFiador;
 import com.motoyav2.contrato.domain.model.DatosTitular;
 import com.motoyav2.contrato.domain.port.out.CobranzaIntegrationPort;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +61,7 @@ public class CobranzaIntegrationAdapter implements CobranzaIntegrationPort {
                 contrato.id(),
                 contrato.tienda().tiendaId(),
                 mapTitular(t),
+                mapFiador(contrato.fiador()),
                 descripcion,
                 capitalOriginal,
                 capitalOriginal,        // saldoActual = capitalOriginal al inicio
@@ -99,6 +102,19 @@ public class CobranzaIntegrationAdapter implements CobranzaIntegrationPort {
                 .distrito(t.distrito())
                 .provincia(t.provincia())
                 .departamento(t.departamento())
+                .build();
+    }
+
+    private DatosFiadorDocument mapFiador(DatosFiador f) {
+        if (f == null) return null;
+        return DatosFiadorDocument.builder()
+                .nombres(f.nombres())
+                .apellidos(f.apellidos())
+                .tipoDocumento(f.tipoDocumento())
+                .numeroDocumento(f.numeroDocumento())
+                .telefono(f.telefono())
+                .email(f.email())
+                .parentesco(f.parentesco())
                 .build();
     }
 }

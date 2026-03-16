@@ -88,6 +88,12 @@ public class FacturaPortAdapter implements FacturaPort {
                 .collection(COL_PAGOS).document(pagoId).update("voucherUrl", url)).then();
     }
 
+    @Override
+    public Mono<Void> actualizarDocumentAi(String facturaId, String pagoId, Map<String, Object> campos) {
+        return toMono(db.collection(COL_FACTURAS).document(facturaId)
+                .collection(COL_PAGOS).document(pagoId).update(campos)).then();
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private Mono<Factura> enrichWithPagos(FacturaDocument doc) {

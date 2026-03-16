@@ -3,6 +3,7 @@ package com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document;
 import com.google.cloud.firestore.annotation.DocumentId;
 import com.google.cloud.spring.data.firestore.Document;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
+import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosFiadorDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosTitularDocument;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,6 +33,8 @@ public class CasoCobranzaDocument {
     private String clienteDni;
     /** Datos completos del titular embebidos (módulo cobranzas, aislado de contratos) */
     private DatosTitularDocument titular;
+    /** Datos completos del fiador/garante embebidos para estrategias de cobro */
+    private DatosFiadorDocument fiador;
     private String motoDescripcion;
 
     // Organización
@@ -76,4 +79,5 @@ public class CasoCobranzaDocument {
     private Date creadoEn;
     private Date actualizadoEn;
     private String creadoPor;
+    private String actualizadoPor;
 }

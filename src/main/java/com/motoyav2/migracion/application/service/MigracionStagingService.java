@@ -49,7 +49,15 @@ public class MigracionStagingService {
                     doc.setClienteNombre(req.clienteNombre());
                     doc.setClienteDni(req.clienteDni());
                     doc.setTelefono(req.telefono());
+                    doc.setEmail(req.email());
                     doc.setMoto(req.moto());
+                    doc.setFiadorNombre(req.fiadorNombre());
+                    doc.setFiadorApellidos(req.fiadorApellidos());
+                    doc.setFiadorTipoDocumento(req.fiadorTipoDocumento());
+                    doc.setFiadorDni(req.fiadorDni());
+                    doc.setFiadorTelefono(req.fiadorTelefono());
+                    doc.setFiadorEmail(req.fiadorEmail());
+                    doc.setFiadorParentesco(req.fiadorParentesco());
                     doc.setErrorDetalle(null);
 
                     int completitud = calcularCompletitud(doc);

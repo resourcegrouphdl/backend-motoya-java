@@ -60,4 +60,7 @@ public class VoucherDocument {
 
     private Date creadoEn;
     private Date procesadoEn;
+    private Date actualizadoEn;
+    private String creadoPor;
+    private String actualizadoPor;
 }

@@ -51,6 +51,7 @@ public class EstrategiaService {
                         estrategia.setFrecuenciaDias(frecuenciaDias);
                     }
                     estrategia.setActualizadoEn(new Date());
+                    estrategia.setActualizadoPor(usuarioId);
                     return estrategiaPort.save(estrategia);
                 });
     }

@@ -3,6 +3,7 @@ package com.motoyav2.finanzas.application.service;
 import com.motoyav2.finanzas.application.port.in.*;
 import com.motoyav2.finanzas.application.port.in.command.CrearCuentaCommand;
 import com.motoyav2.finanzas.application.port.out.CuentaPorPagarPort;
+import com.motoyav2.finanzas.application.service.DocumentAiService;
 import com.motoyav2.finanzas.domain.enums.EstadoCuenta;
 import com.motoyav2.finanzas.domain.enums.TipoCuenta;
 import com.motoyav2.finanzas.domain.model.CuentaPorPagar;
@@ -32,6 +33,7 @@ public class CuentaPorPagarService implements ListarCuentasUseCase, CrearCuentaU
         PagarCuentaUseCase, PagarCuotaUseCase {
 
     private final CuentaPorPagarPort cuentaPort;
+    private final DocumentAiService documentAiService;
 
     // ── ListarCuentasUseCase ──────────────────────────────────────────────
 
@@ -68,7 +70,7 @@ public class CuentaPorPagarService implements ListarCuentasUseCase, CrearCuentaU
     // ── PagarCuentaUseCase (pago único) ───────────────────────────────────
 
     @Override
-    public Mono<Void> ejecutar(String cuentaId) {
+    public Mono<Void> ejecutar(String cuentaId, String voucherUrl, String gcsPath, String mimeType) {
         return cuentaPort.findCuotasByCuentaId(cuentaId)
                 .collectList()
                 .flatMap(cuotas -> {
@@ -81,22 +83,35 @@ public class CuentaPorPagarService implements ListarCuentasUseCase, CrearCuentaU
                         return Mono.empty();
                     }
                     String hoy = LocalDate.now().toString();
-                    return cuentaPort.actualizarCuota(cuentaId, cuota.getId(), Map.of(
-                                    "estado", EstadoCuenta.PAGADO.name(),
-                                    "fechaPago", hoy,
-                                    "actualizadoEn", Instant.now().toString()))
+                    Map<String, Object> camposCuota = new java.util.HashMap<>(Map.of(
+                            "estado", EstadoCuenta.PAGADO.name(),
+                            "fechaPago", hoy,
+                            "actualizadoEn", Instant.now().toString()
+                    ));
+                    if (voucherUrl != null) {
+                        camposCuota.put("voucherUrl", voucherUrl);
+                        camposCuota.put("documentAiStatus", "PENDIENTE");
+                    }
+                    if (gcsPath != null) camposCuota.put("voucherGcsPath", gcsPath);
+
+                    return cuentaPort.actualizarCuota(cuentaId, cuota.getId(), camposCuota)
                             .then(cuentaPort.actualizarCuenta(cuentaId, Map.of(
                                     "estado", EstadoCuenta.PAGADO.name(),
                                     "alertaActiva", false,
                                     "tieneVencidos", false,
-                                    "actualizadoEn", Instant.now().toString())));
+                                    "actualizadoEn", Instant.now().toString())))
+                            .doOnSuccess(v -> {
+                                if (gcsPath != null) {
+                                    documentAiService.extraerAsyncCuota(cuentaId, cuota.getId(), gcsPath, mimeType);
+                                }
+                            });
                 });
     }
 
     // ── PagarCuotaUseCase ─────────────────────────────────────────────────
 
     @Override
-    public Mono<Void> ejecutar(String cuentaId, String cuotaId) {
+    public Mono<Void> ejecutar(String cuentaId, String cuotaId, String voucherUrl, String gcsPath, String mimeType) {
         return cuentaPort.findCuotasByCuentaId(cuentaId)
                 .collectList()
                 .flatMap(cuotas -> {
@@ -132,11 +147,24 @@ public class CuentaPorPagarService implements ListarCuentasUseCase, CrearCuentaU
                         camposCuenta.put("fechaVencimiento", nuevaFechaVenc.toString());
                     }
 
-                    return cuentaPort.actualizarCuota(cuentaId, cuotaId, Map.of(
-                                    "estado", EstadoCuenta.PAGADO.name(),
-                                    "fechaPago", hoy,
-                                    "actualizadoEn", Instant.now().toString()))
-                            .then(cuentaPort.actualizarCuenta(cuentaId, camposCuenta));
+                    Map<String, Object> camposCuota = new java.util.HashMap<>(Map.of(
+                            "estado", EstadoCuenta.PAGADO.name(),
+                            "fechaPago", hoy,
+                            "actualizadoEn", Instant.now().toString()
+                    ));
+                    if (voucherUrl != null) {
+                        camposCuota.put("voucherUrl", voucherUrl);
+                        camposCuota.put("documentAiStatus", "PENDIENTE");
+                    }
+                    if (gcsPath != null) camposCuota.put("voucherGcsPath", gcsPath);
+
+                    return cuentaPort.actualizarCuota(cuentaId, cuotaId, camposCuota)
+                            .then(cuentaPort.actualizarCuenta(cuentaId, camposCuenta))
+                            .doOnSuccess(v -> {
+                                if (gcsPath != null) {
+                                    documentAiService.extraerAsyncCuota(cuentaId, cuotaId, gcsPath, mimeType);
+                                }
+                            });
                 });
     }
 

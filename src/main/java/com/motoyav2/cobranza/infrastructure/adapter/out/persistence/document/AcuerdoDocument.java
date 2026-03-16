@@ -47,4 +47,6 @@ public class AcuerdoDocument {
 
     private Date creadoEn;
     private Date actualizadoEn;
+    private String creadoPor;
+    private String actualizadoPor;
 }

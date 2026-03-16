@@ -36,6 +36,7 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                             .contratoId(command.contratoId())
                             .storeId(command.storeId())
                             .titular(command.titular())
+                            .fiador(command.fiador())
                             // Campos planos para queries (denormalizados)
                             .clienteNombre(command.titular() != null
                                     ? command.titular().nombreCompleto() : null)
@@ -57,6 +58,7 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                             .creadoEn(esNuevo ? new Date() : existente.getCreadoEn())
                             .actualizadoEn(new Date())
                             .creadoPor(esNuevo ? command.creadoPor() : existente.getCreadoPor())
+                            .actualizadoPor(command.creadoPor())
                             .build();
 
                     String tipoEvento = esNuevo ? "CASO_INICIADO" : "CASO_ACTUALIZADO";

@@ -1,5 +1,6 @@
 package com.motoyav2.cobranza.application.port.in.command;
 
+import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosFiadorDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosTitularDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
 
@@ -9,6 +10,7 @@ public record IniciarCasoCommand(
         String contratoId,
         String storeId,
         DatosTitularDocument titular,
+        DatosFiadorDocument fiador,
         String motoDescripcion,
         Double capitalOriginal,
         Double saldoActual,

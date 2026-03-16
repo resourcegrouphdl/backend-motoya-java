@@ -4,7 +4,7 @@ import com.motoyav2.finanzas.application.port.in.*;
 import com.motoyav2.finanzas.application.port.in.command.RegistrarPagoCommand;
 import com.motoyav2.finanzas.application.port.in.command.SubirVoucherCommand;
 import com.motoyav2.finanzas.application.port.out.FacturaPort;
-import com.motoyav2.finanzas.application.port.out.VoucherStoragePort;
+import com.motoyav2.finanzas.application.service.DocumentAiService;
 import com.motoyav2.finanzas.domain.enums.EstadoPago;
 import com.motoyav2.finanzas.domain.model.Factura;
 import com.motoyav2.finanzas.domain.model.PagoFactura;
@@ -28,7 +28,7 @@ public class FacturaService implements ListarFacturasUseCase, ObtenerFacturaUseC
         RegistrarPagoUseCase, SubirVoucherUseCase {
 
     private final FacturaPort facturaPort;
-    private final VoucherStoragePort voucherStoragePort;
+    private final DocumentAiService documentAiService;
 
     // ── ListarFacturasUseCase ──────────────────────────────────────────────
 
@@ -97,9 +97,24 @@ public class FacturaService implements ListarFacturasUseCase, ObtenerFacturaUseC
 
     @Override
     public Mono<String> ejecutar(SubirVoucherCommand command) {
-        return voucherStoragePort.upload(command.getFacturaId(), command.getPagoId(), command.getArchivo())
-                .flatMap(url -> facturaPort.actualizarVoucherUrl(
-                        command.getFacturaId(), command.getPagoId(), url
-                ).thenReturn(url));
+        Map<String, Object> camposVoucher = new java.util.HashMap<>();
+        camposVoucher.put("voucherUrl", command.getVoucherUrl());
+        camposVoucher.put("documentAiStatus", "PENDIENTE");
+        if (command.getGcsPath() != null) {
+            camposVoucher.put("voucherGcsPath", command.getGcsPath());
+        }
+
+        return facturaPort.registrarPago(command.getFacturaId(), command.getPagoId(), camposVoucher)
+                .doOnSuccess(v -> {
+                    if (command.getGcsPath() != null) {
+                        documentAiService.extraerAsync(
+                                command.getFacturaId(),
+                                command.getPagoId(),
+                                command.getGcsPath(),
+                                command.getMimeType()
+                        );
+                    }
+                })
+                .thenReturn(command.getVoucherUrl());
     }
 }

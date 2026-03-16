@@ -21,4 +21,10 @@ public class CuotaDocument {
     private String descripcion;
     private String tipo;
     private String actualizadoEn;
+    private String voucherUrl;
+    private String voucherGcsPath;
+    // ── Document AI ───────────────────────────────────────────────────────────
+    private String documentAiStatus;
+    private java.util.Map<String, String> documentAiCampos;
+    private String documentAiProcesadoEn;
 }

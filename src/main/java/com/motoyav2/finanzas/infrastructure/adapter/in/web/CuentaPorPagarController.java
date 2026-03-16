@@ -47,17 +47,42 @@ public class CuentaPorPagarController {
         return crearCuenta.ejecutar(command);
     }
 
+    /**
+     * Marca una cuenta de pago único como pagada.
+     * Body opcional: { "voucherUrl": "...", "gcsPath": "...", "mimeType": "..." }
+     */
     @PostMapping("/{id}/pagar")
-    public Mono<FinanzasActionResponse> pagar(@PathVariable String id) {
-        return pagarCuenta.ejecutar(id)
+    public Mono<FinanzasActionResponse> pagar(
+            @PathVariable String id,
+            @RequestBody(required = false) VoucherBody body) {
+        String voucherUrl = body != null ? body.voucherUrl() : null;
+        String gcsPath    = body != null ? body.gcsPath()    : null;
+        String mimeType   = body != null ? body.mimeType()   : null;
+        return pagarCuenta.ejecutar(id, voucherUrl, gcsPath, mimeType)
                 .thenReturn(FinanzasActionResponse.ok("Cuenta marcada como pagada"));
     }
 
+    /**
+     * Marca una cuota individual como pagada.
+     * Body opcional: { "voucherUrl": "...", "gcsPath": "...", "mimeType": "..." }
+     */
     @PostMapping("/{cuentaId}/pagar/cuotas/{cuotaId}")
     public Mono<FinanzasActionResponse> pagarCuotaIndividual(
             @PathVariable String cuentaId,
-            @PathVariable String cuotaId) {
-        return pagarCuota.ejecutar(cuentaId, cuotaId)
+            @PathVariable String cuotaId,
+            @RequestBody(required = false) VoucherBody body) {
+        String voucherUrl = body != null ? body.voucherUrl() : null;
+        String gcsPath    = body != null ? body.gcsPath()    : null;
+        String mimeType   = body != null ? body.mimeType()   : null;
+        return pagarCuota.ejecutar(cuentaId, cuotaId, voucherUrl, gcsPath, mimeType)
                 .thenReturn(FinanzasActionResponse.ok("Cuota pagada"));
     }
+
+    // ── DTO inline ────────────────────────────────────────────────────────────
+
+    public record VoucherBody(
+            String voucherUrl,
+            String gcsPath,
+            String mimeType
+    ) {}
 }

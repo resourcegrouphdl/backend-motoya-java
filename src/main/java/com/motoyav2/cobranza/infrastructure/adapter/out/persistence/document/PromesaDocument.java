@@ -45,4 +45,9 @@ public class PromesaDocument {
     private Double montoPagado;
     /** Solo si INCUMPLIDA o CANCELADA */
     private String motivoCierre;
+    private String cerradaPor;
+
+    // Auditoría
+    private Date actualizadoEn;
+    private String actualizadoPor;
 }

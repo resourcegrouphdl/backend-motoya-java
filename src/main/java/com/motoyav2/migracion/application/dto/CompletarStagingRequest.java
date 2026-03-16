@@ -23,5 +23,16 @@ public record CompletarStagingRequest(
 
         @NotBlank(message = "moto es requerida")
         @Size(min = 3, message = "moto debe tener al menos 3 caracteres")
-        String moto
+        String moto,
+
+        // Opcionales — enriquecen la migración pero no bloquean COMPLETO
+        String email,
+
+        String fiadorNombre,
+        String fiadorApellidos,
+        String fiadorTipoDocumento,
+        String fiadorDni,
+        String fiadorTelefono,
+        String fiadorEmail,
+        String fiadorParentesco
 ) {}

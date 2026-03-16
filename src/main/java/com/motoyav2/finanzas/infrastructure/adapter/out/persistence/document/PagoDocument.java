@@ -19,9 +19,17 @@ public class PagoDocument {
     private String fechaPago;
     private String estado;
     private String voucherUrl;
+    /** Ruta GCS del voucher (sin bucket) — usada por Document AI */
+    private String voucherGcsPath;
     private String metodoPago;
     private String tiendaId;
     private String tiendaNombre;
     private String clienteNombre;
     private String actualizadoEn;
+    // ── Document AI ───────────────────────────────────────────────────────────
+    /** PENDIENTE | PROCESANDO | COMPLETADO | COMPLETADO_SIN_CAMPOS | ERROR | OMITIDO */
+    private String documentAiStatus;
+    /** Campos extraídos: monto, fechaEmision, banco, numeroDocumento, etc. */
+    private java.util.Map<String, String> documentAiCampos;
+    private String documentAiProcesadoEn;
 }

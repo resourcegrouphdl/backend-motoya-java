@@ -58,6 +58,7 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
                             caso.setUltimaGestion(new Date());
                             caso.setUltimaGestionResumen("Promesa registrada: S/ " + command.monto());
                             caso.setActualizadoEn(new Date());
+                            caso.setActualizadoPor(command.agenteId());
 
                             EventoCobranzaDocument evento = EventoCobranzaDocument.builder()
                                     .contratoId(command.contratoId())
@@ -96,6 +97,9 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
                     }
                     promesa.setEstado(command.resultado());
                     promesa.setCerradaEn(new Date());
+                    promesa.setCerradaPor(command.usuarioId());
+                    promesa.setActualizadoEn(new Date());
+                    promesa.setActualizadoPor(command.usuarioId());
 
                     if ("CUMPLIDA".equals(command.resultado())) {
                         promesa.setMontoPagado(command.montoPagado());
@@ -111,6 +115,7 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
                                         caso.setUltimaGestion(new Date());
                                         caso.setUltimaGestionResumen("Promesa " + command.resultado().toLowerCase());
                                         caso.setActualizadoEn(new Date());
+                                        caso.setActualizadoPor(command.usuarioId());
 
                                         String tipoEvento = "PROMESA_" + command.resultado();
                                         Map<String, Object> payload = new HashMap<>();

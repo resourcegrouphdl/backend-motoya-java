@@ -84,6 +84,7 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
                     caso.setAgenteAsignadoId(command.agenteNuevoId());
                     caso.setAgenteAsignadoNombre(command.agenteNuevoNombre());
                     caso.setActualizadoEn(new Date());
+                    caso.setActualizadoPor(command.supervisorId());
 
                     EventoCobranzaDocument evento = EventoCobranzaDocument.builder()
                             .contratoId(command.contratoId())

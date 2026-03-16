@@ -7,6 +7,7 @@ import com.motoyav2.cobranza.application.port.in.query.ListarCasosQuery;
 import com.motoyav2.cobranza.application.service.*;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.*;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
+import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosFiadorDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosTitularDocument;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -126,6 +127,18 @@ public class CobranzaController {
                         .build()
                 : null;
 
+        DatosFiadorDocument fiador = request.fiador() != null
+                ? DatosFiadorDocument.builder()
+                        .nombres(request.fiador().nombres())
+                        .apellidos(request.fiador().apellidos())
+                        .tipoDocumento(request.fiador().tipoDocumento())
+                        .numeroDocumento(request.fiador().numeroDocumento())
+                        .telefono(request.fiador().telefono())
+                        .email(request.fiador().email())
+                        .parentesco(request.fiador().parentesco())
+                        .build()
+                : null;
+
         List<CuotaCronogramaDocument> cronograma = request.cronograma() != null
                 ? request.cronograma().stream()
                         .map(c -> CuotaCronogramaDocument.builder()
@@ -142,6 +155,7 @@ public class CobranzaController {
                 request.contratoId(),
                 storeId,
                 titular,
+                fiador,
                 request.motoDescripcion(),
                 request.capitalOriginal(),
                 request.saldoActual(),
@@ -824,9 +838,20 @@ public class CobranzaController {
             String estado
     ) {}
 
+    public record DatosFiadorRequest(
+            String nombres,
+            String apellidos,
+            String tipoDocumento,
+            String numeroDocumento,
+            String telefono,
+            String email,
+            String parentesco
+    ) {}
+
     public record IniciarCasoRequest(
             String contratoId,
             DatosTitularRequest titular,
+            DatosFiadorRequest fiador,
             String motoDescripcion,
             Double capitalOriginal,
             Double saldoActual,

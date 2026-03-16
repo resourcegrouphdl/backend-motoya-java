@@ -55,6 +55,7 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                 .thumbPath(command.thumbPath())
                 .montoDetectado(command.montoDetectado())
                 .creadoEn(new Date())
+                .creadoPor(command.subioPor())
                 .build();
 
         AlertaCobranzaDocument alerta = AlertaCobranzaDocument.builder()
@@ -191,6 +192,8 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                             voucher.setAprobadoPor(command.agenteId());
                             voucher.setAprobadoPorNombre(command.agenteNombre());
                             voucher.setProcesadoEn(new Date());
+                            voucher.setActualizadoEn(new Date());
+                            voucher.setActualizadoPor(command.agenteId());
                             voucher.setComprobanteId(comprobante.getId());
 
                             // Actualizar saldo del caso
@@ -200,6 +203,7 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                             caso.setUltimaGestion(new Date());
                             caso.setUltimaGestionResumen("Pago aplicado: S/ " + voucher.getMontoDetectado());
                             caso.setActualizadoEn(new Date());
+                            caso.setActualizadoPor(command.agenteId());
 
                             EventoCobranzaDocument eventoAprobado = EventoCobranzaDocument.builder()
                                     .contratoId(voucher.getContratoId())
@@ -260,6 +264,8 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                     voucher.setMotivoRechazo(command.motivoRechazo());
                     voucher.setObservacionesRechazo(command.observaciones());
                     voucher.setProcesadoEn(new Date());
+                    voucher.setActualizadoEn(new Date());
+                    voucher.setActualizadoPor(command.agenteId());
 
                     Mono<Void> registrarEvento = voucher.getContratoId() != null
                             ? eventoPort.append(voucher.getContratoId(), EventoCobranzaDocument.builder()
