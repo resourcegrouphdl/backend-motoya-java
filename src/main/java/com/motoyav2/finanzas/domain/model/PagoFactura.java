@@ -9,10 +9,11 @@ import lombok.Value;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 
 @Value
 @Builder
-@JsonInclude(JsonInclude.Include.ALWAYS)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class PagoFactura {
     String id;
     String facturaId;
@@ -24,4 +25,8 @@ public class PagoFactura {
     EstadoPago estado;
     String voucherUrl;
     MetodoPago metodoPago;
+    // Document AI
+    String documentAiStatus;
+    Map<String, String> documentAiCampos;
+    String documentAiProcesadoEn;
 }

@@ -115,6 +115,10 @@ public class CuentaPortAdapter implements CuentaPorPagarPort {
                 .fechaVencimiento(parseDate(doc.getFechaVencimiento()))
                 .fechaPago(parseDate(doc.getFechaPago()))
                 .estado(doc.getEstado() != null ? EstadoCuenta.valueOf(doc.getEstado()) : EstadoCuenta.PENDIENTE)
+                .voucherUrl(doc.getVoucherUrl())
+                .documentAiStatus(doc.getDocumentAiStatus())
+                .documentAiCampos(doc.getDocumentAiCampos())
+                .documentAiProcesadoEn(doc.getDocumentAiProcesadoEn())
                 .build();
     }
 

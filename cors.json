@@ -1,0 +1,12 @@
+[
+  {
+    "origin": [
+      "https://motoya-form-bf869.web.app",
+      "http://localhost:5173",
+      "http://localhost:3000"
+    ],
+    "method": ["PUT", "GET", "HEAD", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Content-Length", "Authorization"],
+    "maxAgeSeconds": 3600
+  }
+]

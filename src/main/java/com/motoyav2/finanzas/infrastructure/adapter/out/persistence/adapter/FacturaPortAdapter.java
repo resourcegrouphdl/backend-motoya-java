@@ -141,6 +141,9 @@ public class FacturaPortAdapter implements FacturaPort {
                 .estado(parseEstadoPago(doc.getEstado()))
                 .voucherUrl(doc.getVoucherUrl())
                 .metodoPago(doc.getMetodoPago() != null ? MetodoPago.valueOf(doc.getMetodoPago()) : null)
+                .documentAiStatus(doc.getDocumentAiStatus())
+                .documentAiCampos(doc.getDocumentAiCampos())
+                .documentAiProcesadoEn(doc.getDocumentAiProcesadoEn())
                 .build();
     }
 
