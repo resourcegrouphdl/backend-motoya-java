@@ -27,20 +27,6 @@ public class FirebaseConfig {
     @Value("${firebase.auth.enabled:true}")
     private boolean authEnabled;
 
-    /**
-     * Expone las GoogleCredentials como bean reutilizable (Firebase, GCS, Document AI, etc.).
-     * En dev usa el service account JSON si está configurado; en prod usa ADC (Cloud Run).
-     */
-    @Bean
-    public GoogleCredentials googleCredentials() throws IOException {
-        if (serviceAccountPath != null && !serviceAccountPath.isBlank()) {
-            log.info("GoogleCredentials: usando service account {}", serviceAccountPath);
-            return GoogleCredentials.fromStream(new FileInputStream(serviceAccountPath));
-        }
-        log.info("GoogleCredentials: usando Application Default Credentials");
-        return GoogleCredentials.getApplicationDefault();
-    }
-
     @PostConstruct
     public void init() {
         if (!authEnabled) {
