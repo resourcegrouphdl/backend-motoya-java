@@ -1,0 +1,233 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "notification_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "nextRetryAt", "order": "ASCENDING" },
+        { "fieldPath": "__name__",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "finanzas_facturas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tiendaId",    "order": "ASCENDING"  },
+        { "fieldPath": "fechaFactura","order": "DESCENDING" },
+        { "fieldPath": "__name__",    "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "finanzas_facturas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado",      "order": "ASCENDING"  },
+        { "fieldPath": "fechaFactura","order": "DESCENDING" },
+        { "fieldPath": "__name__",    "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "finanzas_facturas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tiendaId",    "order": "ASCENDING"  },
+        { "fieldPath": "estado",      "order": "ASCENDING"  },
+        { "fieldPath": "fechaFactura","order": "DESCENDING" },
+        { "fieldPath": "__name__",    "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "finanzas_comisiones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tiendaId",  "order": "ASCENDING"  },
+        { "fieldPath": "periodoFin","order": "DESCENDING" },
+        { "fieldPath": "__name__",  "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "finanzas_cuentas_pagar",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tipo",             "order": "ASCENDING" },
+        { "fieldPath": "fechaVencimiento", "order": "ASCENDING" },
+        { "fieldPath": "__name__",         "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "finanzas_cuentas_pagar",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado",           "order": "ASCENDING" },
+        { "fieldPath": "fechaVencimiento", "order": "ASCENDING" },
+        { "fieldPath": "__name__",         "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "finanzas_cuentas_pagar",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tipo",             "order": "ASCENDING" },
+        { "fieldPath": "estado",           "order": "ASCENDING" },
+        { "fieldPath": "fechaVencimiento", "order": "ASCENDING" },
+        { "fieldPath": "__name__",         "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pagos",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "estado",          "order": "ASCENDING" },
+        { "fieldPath": "fechaProgramada", "order": "ASCENDING" },
+        { "fieldPath": "__name__",        "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cuotas",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "estado",           "order": "ASCENDING" },
+        { "fieldPath": "fechaVencimiento", "order": "ASCENDING" },
+        { "fieldPath": "__name__",         "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-casos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId",     "order": "ASCENDING" },
+        { "fieldPath": "estadoCaso",  "order": "ASCENDING" },
+        { "fieldPath": "__name__",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-casos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId",         "order": "ASCENDING" },
+        { "fieldPath": "nivelEstrategia", "order": "ASCENDING" },
+        { "fieldPath": "__name__",        "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-casos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId",   "order": "ASCENDING" },
+        { "fieldPath": "cicloVida", "order": "ASCENDING" },
+        { "fieldPath": "__name__",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-casos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agenteAsignadoId", "order": "ASCENDING" },
+        { "fieldPath": "estadoCaso",       "order": "ASCENDING" },
+        { "fieldPath": "__name__",         "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-alertas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId",    "order": "ASCENDING" },
+        { "fieldPath": "descartada", "order": "ASCENDING" },
+        { "fieldPath": "__name__",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-alertas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agenteId",   "order": "ASCENDING" },
+        { "fieldPath": "descartada", "order": "ASCENDING" },
+        { "fieldPath": "__name__",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-vouchers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId",  "order": "ASCENDING" },
+        { "fieldPath": "estado",   "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-promesas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contratoId", "order": "ASCENDING" },
+        { "fieldPath": "estado",     "order": "ASCENDING" },
+        { "fieldPath": "__name__",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-acuerdos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contratoId", "order": "ASCENDING" },
+        { "fieldPath": "estado",     "order": "ASCENDING" },
+        { "fieldPath": "__name__",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-movimientos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contratoId", "order": "ASCENDING" },
+        { "fieldPath": "tipo",       "order": "ASCENDING" },
+        { "fieldPath": "__name__",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-eventos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contratoId", "order": "ASCENDING" },
+        { "fieldPath": "tipo",       "order": "ASCENDING" },
+        { "fieldPath": "__name__",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-comprobantes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId",  "order": "ASCENDING" },
+        { "fieldPath": "tipo",     "order": "ASCENDING" },
+        { "fieldPath": "estado",   "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-estrategias",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "activo",   "order": "ASCENDING" },
+        { "fieldPath": "nivel",    "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-plantillas-whatsapp",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "activa",          "order": "ASCENDING" },
+        { "fieldPath": "aprobadaPorMeta", "order": "ASCENDING" },
+        { "fieldPath": "__name__",        "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "migracion-staging",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clienteNombreCalendar", "order": "ASCENDING" },
+        { "fieldPath": "fechaInicio",           "order": "ASCENDING" },
+        { "fieldPath": "__name__",              "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
