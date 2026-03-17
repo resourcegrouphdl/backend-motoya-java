@@ -20,7 +20,7 @@ public class FirebaseCliente {
   private String documentNumber;
   private String nacionalidad;
   private String sexo;
-  private String fechaNacimiento;
+  private String fechaNacimiento;  // "YYYY-MM-DD" string, NOT Timestamp
   private String edad;
   private String estadoCivil;
   private String cargasFamiliares;
@@ -32,25 +32,55 @@ public class FirebaseCliente {
   private String distrito;
   private String direccion;
   private String tipoDeVivienda;
+  private String tipoVivienda;     // alias — Firestore may use either name
+  private String estadoResidenciaCE;   // vigente | vencido (para CE / Pasaporte)
+  private String estadoCarnetPlastico; // vigente | vencido
   private String antiguedadDomiciliaria;
   private String referenciaUbicacion;
   private String ubicacionGpsLat;
   private String ubicacionGpsLng;
+  private String ubicacionGPSCasa; // URL format used in newer records
   private String ocupacion;
   private String tipoTrabajo;
   private String nombreEmpresa;
+  private String nombreTrabajoEmpresa; // alias used in newer records
   private String direccionDelTrabajo;
   private String ubicacionDelTrabajoLat;
   private String ubicacionDelTrabajoLng;
   private String antiguedadDelTrabajo;
   private String ingresoMensual;
-  private String rangoIngresos;
+  private String rangoIngresos;       // "1500-2000" — parsed in scoring service
+  private String frecuenciaIngresos;
   private String licenciaDeConducir;
+  private String licenciaConducir;    // alias — Firestore may use either name
   private String numeroDeLicencia;
+  private String numeroLicencia;      // alias
   private String vencimientoLicencia;
   private String licenciaVigente;
-  private Map<String,String> archivos;
+  private Boolean reflejaLicenciaWebMTC;
+  private Boolean tienePapeletasPendientes;
+  private Double totalDeudaPapeletas;
+
+  // perfil financiero
+  private String perfilSentinel;      // 'verde - paga puntual' | 'amarillo - atraso moderado' | 'rojo - no paga'
+  private Double totalDeudaBancos;
+  private Double totalOtrasDeudas;
+
+  // estado de documentacion
+  private String estadoValidacionDocumentos;  // 'pendiente'|'aprobado'|'observado'|'rechazado'
+  private List<String> documentosObservados;
+  private Boolean datosVerificados;
+  private String observacionesEvaluador;
+
+  // evaluación de documentos: Map<TipoDocumento, {estado, observaciones, fechaEvaluacion, evaluador}>
+  private Map<String, Object> evaluacionDocumentos;
+
+  // evaluación de entrevista (embebida — NO es sub-colección)
+  private Map<String, Object> evaluacionEntrevista;
+
+  private Map<String, String> archivos;
   private String codigoDeSolicitud;
   private Timestamp createdAt;
   private Timestamp updatedAt;
+  private Timestamp fechaValidacionDocumentos;
 }

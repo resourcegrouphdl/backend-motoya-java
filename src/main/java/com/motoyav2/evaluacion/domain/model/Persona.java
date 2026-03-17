@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -14,7 +15,7 @@ import java.util.List;
 public class Persona {
 
   private String id;
-  private String tipo;
+  private String tipo;              // 'titular' | 'fiador'
 
   // datos personales
   private String nombres;
@@ -26,12 +27,15 @@ public class Persona {
   private String tipoDeDocumento;
   private String numeroDeDocumento;
   private String nacionalidad;
+  private String estadoResidenciaCE;    // vigente | vencido
+  private String estadoCarnetPlastico;  // vigente | vencido
 
   // datos demograficos
   private String sexo;
-  private String fechaNacimiento;
+  private String fechaNacimiento;       // "YYYY-MM-DD"
   private String edad;
   private String estadoCivil;
+  private Integer cargasFamiliaresNum; // parseado desde cargasFamiliares string
   private String cargasFamiliares;
 
   // contacto
@@ -50,6 +54,7 @@ public class Persona {
   private String referenciaUbicacion;
   private String ubicacionGpsLat;
   private String ubicacionGpsLng;
+  private String ubicacionGPSCasa;
 
   // datos laborales
   private String ocupacion;
@@ -60,13 +65,35 @@ public class Persona {
   private String ubicacionDelTrabajoLng;
   private String antiguedadDelTrabajo;
   private String ingresoMensual;
-  private String rangoIngresos;
+  private Double ingresoMensualNum;     // parseado para cálculos
+  private String rangoIngresos;         // "1500-2000"
+  private String frecuenciaIngresos;
 
   // licencia de conducir
-  private String licenciaDeConducir;
+  private String licenciaDeConducir;    // 'vigente' | 'vencida'
   private String numeroDeLicencia;
   private String vencimientoLicencia;
   private String licenciaVigente;
+  private Boolean reflejaLicenciaWebMTC;
+  private Boolean tienePapeletasPendientes;
+  private Double totalDeudaPapeletas;
+
+  // perfil financiero / sentinel
+  private String perfilSentinel;        // 'verde - paga puntual' | 'amarillo - atraso moderado' | 'rojo - no paga'
+  private Double totalDeudaBancos;
+  private Double totalOtrasDeudas;
+
+  // estado de validación de documentos
+  private String estadoValidacionDocumentos;
+  private List<String> documentosObservados;
+  private Boolean datosVerificados;
+  private String observacionesEvaluador;
+
+  // evaluación de documentos: TipoDocumento → {estado, observaciones, fechaEvaluacion, evaluador}
+  private Map<String, Map<String, Object>> evaluacionDocumentos;
+
+  // entrevista de evaluación (embebida en clientes_v1, NO sub-colección)
+  private EntrevistaCompleta evaluacionEntrevista;
 
   // archivos / documentos
   private List<Documentos> documentos;
@@ -74,5 +101,6 @@ public class Persona {
   // auditoria
   private String creadoEn;
   private String actualizadoEn;
+  private String fechaValidacionDocumentos;
 
 }

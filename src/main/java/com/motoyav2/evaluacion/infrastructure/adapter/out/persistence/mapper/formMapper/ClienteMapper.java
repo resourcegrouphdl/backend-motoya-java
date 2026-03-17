@@ -5,16 +5,34 @@ import com.motoyav2.evaluacion.domain.model.Persona;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.document.firebaseform.FirebaseCliente;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class ClienteMapper {
 
-  private ClienteMapper() {
-  }
+  private ClienteMapper() {}
 
+  @SuppressWarnings("unchecked")
   public static Persona toDomain(FirebaseCliente doc) {
     String tipoPersona = doc.getTipo() != null ? doc.getTipo().toUpperCase() : null;
+
+    // Resolver campos con nombres alternativos (Firestore legacy vs nuevo)
+    String tipoVivienda = doc.getTipoDeVivienda() != null ? doc.getTipoDeVivienda() : doc.getTipoVivienda();
+    String licencia     = doc.getLicenciaDeConducir() != null ? doc.getLicenciaDeConducir() : doc.getLicenciaConducir();
+    String numLicencia  = doc.getNumeroDeLicencia() != null ? doc.getNumeroDeLicencia() : doc.getNumeroLicencia();
+    String empresa      = doc.getNombreEmpresa() != null ? doc.getNombreEmpresa() : doc.getNombreTrabajoEmpresa();
+
+    // Parsear evaluacionDocumentos: Map<String, Object> → Map<String, Map<String, Object>>
+    Map<String, Map<String, Object>> evalDocs = null;
+    if (doc.getEvaluacionDocumentos() != null) {
+      evalDocs = new HashMap<>();
+      for (Map.Entry<String, Object> entry : doc.getEvaluacionDocumentos().entrySet()) {
+        if (entry.getValue() instanceof Map<?, ?> m) {
+          evalDocs.put(entry.getKey(), (Map<String, Object>) m);
+        }
+      }
+    }
 
     return Persona.builder()
         .id(doc.getId())
@@ -26,12 +44,15 @@ public final class ClienteMapper {
         .tipoDeDocumento(doc.getDocumentType())
         .numeroDeDocumento(doc.getDocumentNumber())
         .nacionalidad(doc.getNacionalidad())
+        .estadoResidenciaCE(doc.getEstadoResidenciaCE())
+        .estadoCarnetPlastico(doc.getEstadoCarnetPlastico())
         .sexo(doc.getSexo())
         .email(doc.getEmail())
         .telefono1(doc.getTelefono1())
         .telefono2(doc.getTelefono2())
         .estadoCivil(doc.getEstadoCivil())
         .cargasFamiliares(doc.getCargasFamiliares())
+        .cargasFamiliaresNum(parsearEntero(doc.getCargasFamiliares()))
         .fechaNacimiento(doc.getFechaNacimiento())
         .edad(doc.getEdad())
         .departamento(doc.getDepartamento())
@@ -39,27 +60,44 @@ public final class ClienteMapper {
         .distrito(doc.getDistrito())
         .direccion(doc.getDireccion())
         .direccionCompleta(buildDireccionCompleta(doc))
-        .tipoDeVivienda(doc.getTipoDeVivienda())
+        .tipoDeVivienda(tipoVivienda)
         .antiguedadDomiciliaria(doc.getAntiguedadDomiciliaria())
         .referenciaUbicacion(doc.getReferenciaUbicacion())
         .ubicacionGpsLat(doc.getUbicacionGpsLat())
         .ubicacionGpsLng(doc.getUbicacionGpsLng())
+        .ubicacionGPSCasa(doc.getUbicacionGPSCasa())
         .ocupacion(doc.getOcupacion())
         .tipoTrabajo(doc.getTipoTrabajo())
-        .nombreEmpresa(doc.getNombreEmpresa())
+        .nombreEmpresa(empresa)
         .direccionDelTrabajo(doc.getDireccionDelTrabajo())
         .ubicacionDelTrabajoLat(doc.getUbicacionDelTrabajoLat())
         .ubicacionDelTrabajoLng(doc.getUbicacionDelTrabajoLng())
         .antiguedadDelTrabajo(doc.getAntiguedadDelTrabajo())
         .ingresoMensual(doc.getIngresoMensual())
+        .ingresoMensualNum(parsearDouble(doc.getIngresoMensual()))
         .rangoIngresos(doc.getRangoIngresos())
-        .licenciaDeConducir(doc.getLicenciaDeConducir())
-        .numeroDeLicencia(doc.getNumeroDeLicencia())
+        .frecuenciaIngresos(doc.getFrecuenciaIngresos())
+        .licenciaDeConducir(licencia)
+        .numeroDeLicencia(numLicencia)
         .vencimientoLicencia(doc.getVencimientoLicencia())
         .licenciaVigente(doc.getLicenciaVigente())
+        .reflejaLicenciaWebMTC(doc.getReflejaLicenciaWebMTC())
+        .tienePapeletasPendientes(doc.getTienePapeletasPendientes())
+        .totalDeudaPapeletas(doc.getTotalDeudaPapeletas())
+        .perfilSentinel(doc.getPerfilSentinel())
+        .totalDeudaBancos(doc.getTotalDeudaBancos())
+        .totalOtrasDeudas(doc.getTotalOtrasDeudas())
+        .estadoValidacionDocumentos(doc.getEstadoValidacionDocumentos())
+        .documentosObservados(doc.getDocumentosObservados())
+        .datosVerificados(doc.getDatosVerificados())
+        .observacionesEvaluador(doc.getObservacionesEvaluador())
+        .evaluacionDocumentos(evalDocs)
+        .evaluacionEntrevista(EntrevistaMapper.fromMap(doc.getEvaluacionEntrevista()))
         .documentos(mapArchivosToDocumentos(doc.getArchivos(), tipoPersona))
         .creadoEn(doc.getCreatedAt() != null ? doc.getCreatedAt().toString() : null)
         .actualizadoEn(doc.getUpdatedAt() != null ? doc.getUpdatedAt().toString() : null)
+        .fechaValidacionDocumentos(doc.getFechaValidacionDocumentos() != null
+            ? doc.getFechaValidacionDocumentos().toString() : null)
         .build();
   }
 
@@ -93,4 +131,17 @@ public final class ClienteMapper {
     return lista;
   }
 
+  /** Parsea "1500" → 1500.0; null/blank → null */
+  private static Double parsearDouble(String valor) {
+    if (valor == null || valor.isBlank()) return null;
+    try { return Double.parseDouble(valor.replaceAll("[^0-9.]", "")); }
+    catch (NumberFormatException e) { return null; }
+  }
+
+  /** Parsea "2" → 2; null/blank/non-numeric → null */
+  private static Integer parsearEntero(String valor) {
+    if (valor == null || valor.isBlank()) return null;
+    try { return Integer.parseInt(valor.replaceAll("[^0-9]", "")); }
+    catch (NumberFormatException e) { return null; }
+  }
 }

@@ -17,8 +17,13 @@ public class TiendaProfileAdapter implements TiendaPort {
     public Mono<TiendaInfo> obtenerInfoTienda(String tiendaId) {
         return tiendaProfileFirebaseRepository.findById(tiendaId)
                 .map(doc -> new TiendaInfo(
+                        tiendaId,
                         doc.getBusinessName(),
-                        doc.getTaxId()
+                        doc.getTaxId(),
+                        doc.getAddress(),
+                        doc.getCity(),
+                        doc.getEmail(),
+                        doc.getPhone()
                 ));
     }
 }

@@ -28,12 +28,19 @@ public class ReferenciasDelTitular {
 
   // verificacion
   private Boolean verificada;
+  private String estadoVerificacion;      // pendiente|contactado|verificado|no_contactado|rechazado
+  private String resultadoContacto;       // positivo - ok | no contesta | negativo
   private ResultadoDeVerificacion resultadoDeVerificacion;
   private Instant fechaDeVerificacion;
   private String verificadoPor;
   private String nombreDelVerificador;
   private String observaciones;
+  private Double scoreDeVerificacionNum;  // numérico para cálculos
   private String scoreDeVerificacion;
+  private Double scoreMaximo;
+  private String calificacion;
+  private String actitudDuranteContacto;
+  private Boolean rechazada;
 
   // reagendamiento
   private String pospuesto;
