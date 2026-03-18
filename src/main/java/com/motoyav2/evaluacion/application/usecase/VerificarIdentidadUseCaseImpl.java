@@ -93,14 +93,17 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
         boolean apiOk = !docData.isEmpty();
 
         // ── Campos de identidad (DNI / CEE) ───────────────────────────────
-        String apiNombres    = str(docData, "nombres");
-        String apiApePaterno = str(docData, "apellido_paterno");
-        String apiApeMaterno = str(docData, "apellido_materno");
-        String apiDireccion  = str(docData, "direccion");
-        String apiUbigeo     = str(docData, "ubigeo");
-        String apiDpto       = str(docData, "departamento");
-        String apiProv       = str(docData, "provincia");
-        String apiDist       = str(docData, "distrito");
+        String apiNombres          = str(docData, "nombres");
+        String apiApePaterno       = str(docData, "apellido_paterno");
+        String apiApeMaterno       = str(docData, "apellido_materno");
+        String apiNombreCompleto   = str(docData, "nombre_completo");
+        String apiDireccion        = str(docData, "direccion");
+        String apiDireccionCompleta = str(docData, "direccion_completa");
+        String apiUbigeo           = str(docData, "ubigeo");       // puede ser array serializado
+        String apiUbigeoReniec     = str(docData, "ubigeo_reniec");
+        String apiDpto             = str(docData, "departamento");
+        String apiProv             = str(docData, "provincia");
+        String apiDist             = str(docData, "distrito");
 
         // ── Campos demográficos (presentes en DNI, ausentes en CEE) ──────
         String apiSexo           = blankToNull(str(docData, "sexo"));
@@ -115,6 +118,12 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
 
         boolean licVigente = "VIGENTE".equalsIgnoreCase(licEstado);
         boolean tieneConducir = tieneLicencia(cliente);
+
+        // Comparación entre el número de licencia almacenado en BD y el devuelto por la API
+        String clienteNumeroLicencia = blankToNull(cliente.getNumeroLicencia());
+        Boolean coincideLicencia = (licNumero != null && clienteNumeroLicencia != null)
+                ? normalize(licNumero).equals(normalize(clienteNumeroLicencia))
+                : null;
 
         // "SIN RESTRICCIONES" o vacío = sin restricción real
         boolean tieneRestriccion = licRestricciones != null
@@ -167,19 +176,24 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 .apiNombres(apiNombres)
                 .apiApellidoPaterno(apiApePaterno)
                 .apiApellidoMaterno(apiApeMaterno)
+                .apiNombreCompleto(apiNombreCompleto)
                 .apiDireccion(apiDireccion)
+                .apiDireccionCompleta(apiDireccionCompleta)
                 .apiUbigeo(apiUbigeo)
+                .apiUbigeoReniec(apiUbigeoReniec)
                 .apiDepartamento(apiDpto)
                 .apiProvincia(apiProv)
                 .apiDistrito(apiDist)
                 .apiSexo(apiSexo)
                 .apiFechaNacimiento(apiFechaNacimiento)
                 .licenciaNumero(licNumero)
+                .clienteNumeroLicencia(clienteNumeroLicencia)
                 .licenciaCategoria(licCategoria)
                 .licenciaEstado(licEstado)
                 .licenciaVencimiento(licVencimiento)
                 .licenciaRestricciones(licRestricciones)
                 .licenciaTieneRestricion(tieneConducir && !licData.isEmpty() ? tieneRestriccion : null)
+                .coincideLicencia(coincideLicencia)
                 .coincideNombres(coincideNombres)
                 .coincideApellidos(coincideApellidos)
                 .coincideSexo(coincideSexo)
@@ -204,17 +218,22 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
         verMap.put("apiNombres",              r.getApiNombres());
         verMap.put("apiApellidoPaterno",      r.getApiApellidoPaterno());
         verMap.put("apiApellidoMaterno",      r.getApiApellidoMaterno());
+        verMap.put("apiNombreCompleto",       r.getApiNombreCompleto());
         verMap.put("apiDireccion",            r.getApiDireccion());
+        verMap.put("apiDireccionCompleta",    r.getApiDireccionCompleta());
         verMap.put("apiUbigeo",               r.getApiUbigeo());
+        verMap.put("apiUbigeoReniec",         r.getApiUbigeoReniec());
         verMap.put("apiDepartamento",         r.getApiDepartamento());
         verMap.put("apiProvincia",            r.getApiProvincia());
         verMap.put("apiDistrito",             r.getApiDistrito());
         verMap.put("licenciaNumero",          r.getLicenciaNumero());
+        verMap.put("clienteNumeroLicencia",   r.getClienteNumeroLicencia());
         verMap.put("licenciaCategoria",       r.getLicenciaCategoria());
         verMap.put("licenciaEstado",          r.getLicenciaEstado());
         verMap.put("licenciaVencimiento",     r.getLicenciaVencimiento());
         verMap.put("licenciaRestricciones",   r.getLicenciaRestricciones());
         verMap.put("licenciaTieneRestricion", r.getLicenciaTieneRestricion());
+        verMap.put("coincideLicencia",        r.getCoincideLicencia());
         verMap.put("coincideNombres",         r.getCoincideNombres());
         verMap.put("coincideApellidos",       r.getCoincideApellidos());
         verMap.put("apiSexo",                 r.getApiSexo());

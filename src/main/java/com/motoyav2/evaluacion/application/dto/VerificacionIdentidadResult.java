@@ -19,19 +19,24 @@ public class VerificacionIdentidadResult {
     String apiNombres;
     String apiApellidoPaterno;
     String apiApellidoMaterno;
+    String apiNombreCompleto;       // "APELLIDO PATERNO APELLIDO MATERNO, NOMBRES"
     String apiDireccion;
+    String apiDireccionCompleta;    // "CALLE X, DPTO - PROV - DIST"
     String apiUbigeo;
+    String apiUbigeoReniec;
     String apiDepartamento;
     String apiProvincia;
     String apiDistrito;
 
     // ── respuesta licencia (solo DNI) ─────────────────────────────────────
-    String licenciaNumero;
+    String licenciaNumero;          // número devuelto por la API
+    String clienteNumeroLicencia;   // número almacenado en BD (campo numeroLicencia)
     String licenciaCategoria;
     String licenciaEstado;          // "VIGENTE" | "VENCIDA" | ...
     String licenciaVencimiento;     // "dd/MM/yyyy"
     String licenciaRestricciones;   // "SIN RESTRICCIONES" o descripción
     Boolean licenciaTieneRestricion; // true si hay restricción real
+    Boolean coincideLicencia;        // API numero == BD numeroLicencia
 
     // ── datos demográficos (solo DNI — CEE no los incluye) ────────────────
     String apiSexo;

@@ -6,6 +6,7 @@ import com.motoyav2.evaluacion.domain.model.AlertaEntrevista;
 import com.motoyav2.evaluacion.domain.model.Cliente;
 import com.motoyav2.evaluacion.domain.model.EvaluacionDocumento;
 import com.motoyav2.evaluacion.domain.model.EvaluacionEntrevista;
+import com.motoyav2.evaluacion.domain.model.VerificacionIdentidadSnapshot;
 
 import java.util.HashMap;
 import java.util.List;
@@ -68,6 +69,7 @@ public final class ClienteMapper {
                 .datosVerificados(bool(data, "datosVerificados"))
                 .observacionesEvaluador(str(data, "observacionesEvaluador"))
                 .evaluacionEntrevista(mapEntrevista(data.get("evaluacionEntrevista")))
+                .verificacionIdentidad(mapVerificacionSnapshot(data.get("verificacionIdentidad")))
                 .createdAt(timestamp(data, "createdAt"))
                 .updatedAt(timestamp(data, "updatedAt"))
                 .fechaValidacionDocumentos(timestamp(data, "fechaValidacionDocumentos"))
@@ -156,6 +158,20 @@ public final class ClienteMapper {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private static VerificacionIdentidadSnapshot mapVerificacionSnapshot(Object raw) {
+        if (!(raw instanceof Map)) return null;
+        Map<String, Object> m = (Map<String, Object>) raw;
+        Object exitosoRaw = m.get("exitoso");
+        boolean exitoso = exitosoRaw instanceof Boolean b ? b
+                : exitosoRaw != null && Boolean.parseBoolean(exitosoRaw.toString());
+        return new VerificacionIdentidadSnapshot(
+                exitoso,
+                str(m, "apiNombres"),
+                str(m, "apiApellidoPaterno"),
+                str(m, "apiApellidoMaterno")
+        );
     }
 
     // ── helpers ────────────────────────────────────────────────────────────

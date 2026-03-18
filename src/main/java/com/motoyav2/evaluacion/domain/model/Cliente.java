@@ -55,6 +55,8 @@ public class Cliente {
     Boolean datosVerificados;
     String observacionesEvaluador;
     EvaluacionEntrevista evaluacionEntrevista;
+    /** Snapshot de la verificación de identidad — null si aún no se verificó. */
+    VerificacionIdentidadSnapshot verificacionIdentidad;
     Timestamp createdAt;
     Timestamp updatedAt;
     Timestamp fechaValidacionDocumentos;
