@@ -46,6 +46,7 @@ public class EvaluacionController {
     private final ObtenerHistorialUseCase obtenerHistorialUseCase;
     private final VerificarReferenciaUseCase verificarReferenciaUseCase;
     private final RechazarReferenciaUseCase rechazarReferenciaUseCase;
+    private final AjustarFinanciamientoUseCase ajustarFinanciamientoUseCase;
 
     // ── GET /expediente/{solicitudId} ──────────────────────────────────────
     @GetMapping("/expediente/{solicitudId}")
@@ -272,6 +273,26 @@ public class EvaluacionController {
             @PathVariable String referenciaId,
             @RequestParam(required = false) String solicitudId) {
         return rechazarReferenciaUseCase.ejecutar(referenciaId, solicitudId);
+    }
+
+    // ── PUT /solicitudes/{solicitudId}/financiamiento ─────────────────────
+    @PutMapping("/solicitudes/{solicitudId}/financiamiento")
+    public Mono<Map<String, Object>> ajustarFinanciamiento(
+            @PathVariable String solicitudId,
+            @Valid @RequestBody AjustarFinanciamientoRequest request,
+            @AuthenticationPrincipal FirebaseUserDetails principal) {
+
+        String uid    = principal != null ? principal.uid()   : "sistema";
+        String nombre = principal != null ? principal.email() : "sistema";
+
+        return ajustarFinanciamientoUseCase.ejecutar(new AjustarFinanciamientoCommand(
+                solicitudId,
+                request.nuevaInicial(),
+                request.nuevoPlazo(),
+                uid,
+                nombre))
+                .onErrorMap(com.motoyav2.shared.exception.BadRequestException.class,
+                        e -> new com.motoyav2.shared.exception.BadRequestException(e.getMessage()));
     }
 
     // ── Inner response type ───────────────────────────────────────────────
