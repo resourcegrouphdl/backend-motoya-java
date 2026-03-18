@@ -251,7 +251,6 @@ public class EvaluacionController {
 
     // ── POST /clientes/{clienteId}/verificar-identidad ───────────────────
     @PostMapping("/clientes/{clienteId}/verificar-identidad")
-    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
     public Mono<VerificacionIdentidadResult> verificarIdentidad(
             @PathVariable String clienteId,
             @AuthenticationPrincipal FirebaseUserDetails principal) {
