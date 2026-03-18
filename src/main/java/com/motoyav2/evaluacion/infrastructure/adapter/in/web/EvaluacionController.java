@@ -9,6 +9,7 @@ import com.motoyav2.evaluacion.domain.model.HistorialEstado;
 import com.motoyav2.evaluacion.domain.port.in.*;
 import com.motoyav2.evaluacion.infrastructure.adapter.in.web.request.*;
 import com.motoyav2.evaluacion.infrastructure.adapter.in.web.response.ExpedienteCompletoResponse;
+import com.motoyav2.evaluacion.application.dto.VerificacionIdentidadResult;
 import com.motoyav2.evaluacion.shared.exception.RecursoNoEncontradoException;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.NotFoundException;
@@ -37,6 +38,8 @@ public class EvaluacionController {
     private final CambiarEstadoUseCase cambiarEstadoUseCase;
     private final AsignarAsesorUseCase asignarAsesorUseCase;
     private final EvaluarDocumentosUseCase evaluarDocumentosUseCase;
+    private final EvaluarEntrevistaUseCase evaluarEntrevistaUseCase;
+    private final VerificarIdentidadUseCase verificarIdentidadUseCase;
     private final RegistrarDecisionFinalUseCase registrarDecisionFinalUseCase;
     private final GenerarCertificadoUseCase generarCertificadoUseCase;
     private final GenerarContratoUseCase generarContratoUseCase;
@@ -208,6 +211,58 @@ public class EvaluacionController {
                         "estadoVerificacion", r.getEstadoVerificacion(),
                         "estaVerificada", r.estaVerificada(),
                         "message", "Referencia actualizada"));
+    }
+
+    // ── PUT /clientes/{clienteId}/entrevista ──────────────────────────────
+    @PutMapping("/clientes/{clienteId}/entrevista")
+    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
+    public Mono<ResponseEntity<Void>> evaluarEntrevista(
+            @PathVariable String clienteId,
+            @RequestBody EvaluarEntrevistaRequest request,
+            @AuthenticationPrincipal FirebaseUserDetails principal) {
+
+        String uid    = principal != null ? principal.uid()   : "sistema";
+        String nombre = principal != null ? principal.email() : "sistema";
+
+        return evaluarEntrevistaUseCase.ejecutar(new EvaluarEntrevistaCommand(
+                clienteId,
+                request.solicitudId(),
+                request.modalidad(),
+                request.plataforma(),
+                request.puntualidad(),
+                request.presentacionPersonal(),
+                request.actitudColaboracion(),
+                request.coherenciaRespuestas(),
+                request.nivelConfianza(),
+                request.scoreEntrevista(),
+                request.observacionesCliente(),
+                request.observacionesFiador(),
+                request.observacionesDomicilio(),
+                request.observacionesCapacidadPago(),
+                request.hallazgosPositivos(),
+                request.hallazgosNegativos(),
+                request.recomendacion(),
+                request.motivoRecomendacion(),
+                request.condiciones(),
+                request.esBorrador(),
+                uid, nombre))
+                .thenReturn(ResponseEntity.noContent().<Void>build());
+    }
+
+    // ── POST /clientes/{clienteId}/verificar-identidad ───────────────────
+    @PostMapping("/clientes/{clienteId}/verificar-identidad")
+    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
+    public Mono<VerificacionIdentidadResult> verificarIdentidad(
+            @PathVariable String clienteId,
+            @AuthenticationPrincipal FirebaseUserDetails principal) {
+
+        String uid    = principal != null ? principal.uid()   : "sistema";
+        String nombre = principal != null ? principal.email() : "sistema";
+
+        return verificarIdentidadUseCase.ejecutar(
+                new VerificarIdentidadCommand(clienteId, uid, nombre))
+                .onErrorMap(RecursoNoEncontradoException.class,
+                        e -> new NotFoundException(e.getMessage()));
     }
 
     // ── DELETE /referencias/{referenciaId} ────────────────────────────────
