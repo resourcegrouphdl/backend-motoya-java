@@ -1,0 +1,335 @@
+{
+  "info": {
+    "name": "Motoya v2 - Evaluaciones",
+    "_postman_id": "motoya-evaluaciones-v1",
+    "description": "Colección completa del módulo de Evaluaciones de crédito — Motoya v2 Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "PEGA_TU_FIREBASE_ID_TOKEN_AQUI",
+      "type": "string"
+    },
+    {
+      "key": "solicitudId",
+      "value": "SOL-001",
+      "type": "string"
+    },
+    {
+      "key": "evaluacionId",
+      "value": "SOL-001",
+      "type": "string"
+    },
+    {
+      "key": "clienteId",
+      "value": "CLI-001",
+      "type": "string"
+    },
+    {
+      "key": "referenciaId",
+      "value": "ref-001",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Gestión de Evaluaciones",
+      "item": [
+        {
+          "name": "Crear Expediente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/evaluacion/creacion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "evaluacion", "creacion"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoDeSolicitud\": \"{{solicitudId}}\",\n  \"formularioId\": \"FORM-001\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Crea un nuevo expediente de evaluación a partir de una solicitud de crédito."
+          }
+        },
+        {
+          "name": "Listar Evaluaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/evaluacion?pagina=1&porPagina=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "evaluacion"],
+              "query": [
+                { "key": "pagina", "value": "1", "description": "Número de página (desde 1)" },
+                { "key": "porPagina", "value": "20", "description": "Registros por página" }
+              ]
+            },
+            "description": "Lista todas las evaluaciones de forma paginada."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Expediente",
+      "item": [
+        {
+          "name": "Obtener Expediente (v1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{evaluacionId}}/expediente",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{evaluacionId}}", "expediente"]
+            },
+            "description": "Obtiene el expediente de evaluación por evaluacionId."
+          }
+        },
+        {
+          "name": "Obtener Expediente Completo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expediente/{{solicitudId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expediente", "{{solicitudId}}"]
+            },
+            "description": "Retorna el expediente completo: datos del titular, fiador, vehículo, referencias, entrevista, scores y perfil de riesgo."
+          }
+        },
+        {
+          "name": "Pre-Contrato",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expediente/{{solicitudId}}/pre-contrato",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expediente", "{{solicitudId}}", "pre-contrato"]
+            },
+            "description": "Retorna los datos pre-llenados para generar el contrato (titular, fiador, tienda, datos financieros). Indica si puede crearse el contrato."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Pipeline / Estados",
+      "item": [
+        {
+          "name": "Ver Transiciones Posibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/pipeline/transiciones?estado=pendiente",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "pipeline", "transiciones"],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "pendiente",
+                  "description": "Estado actual. Valores: pendiente | en_revision_inicial | evaluacion_documental | documentos_observados | documentos_completos | documentos_incompletos | cliente_aprobado | cliente_rechazado | evaluacion_garantes | fiador_aprobado | fiador_rechazado | referencias_aprobadas | referencias_rechazadas | vehiculo_aprobado | vehiculo_rechazado | datos_verificados | datos_no_verificados | entrevista_programada | entrevista_en_curso | entrevista_completada | en_revision_final | aprobado | rechazado | condicional | certificado_generado | esperando_inicial | contrato_generado | contrato_firmado | entrega_completada | cancelado"
+                }
+              ]
+            },
+            "description": "Retorna las transiciones posibles desde un estado dado. Responde con: estadoActual, esTerminal, transicionesPosibles."
+          }
+        },
+        {
+          "name": "Transicionar Estado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/pipeline/transicionar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "pipeline", "transicionar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nuevoEstado\": \"en_revision_inicial\",\n  \"usuarioId\": \"USR-001\",\n  \"usuarioNombre\": \"Juan Asesor\",\n  \"motivo\": \"Solicitud revisada y lista para evaluación\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Transiciona la solicitud a un nuevo estado del pipeline. Registra auditoría en `cambios_estado_solicitud`.\n\nEstados disponibles:\npendiente → en_revision_inicial → evaluacion_documental → documentos_completos/documentos_incompletos/documentos_observados → ... → aprobado/rechazado/condicional → ... → entrega_completada"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Documentos",
+      "item": [
+        {
+          "name": "Evaluar Documentos",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/documentos/evaluar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "documentos", "evaluar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteId}}\",\n  \"evaluadorId\": \"USR-001\",\n  \"evaluadorNombre\": \"María Analista\",\n  \"evaluaciones\": {\n    \"dni\": {\n      \"estado\": \"aprobado\",\n      \"observaciones\": \"\"\n    },\n    \"recibo_sueldo\": {\n      \"estado\": \"aprobado\",\n      \"observaciones\": \"\"\n    },\n    \"licencia_conducir\": {\n      \"estado\": \"observado\",\n      \"observaciones\": \"Licencia próxima a vencer, solicitar renovación\"\n    },\n    \"contrato_trabajo\": {\n      \"estado\": \"aprobado\",\n      \"observaciones\": \"\"\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Evalúa los documentos de la solicitud. Estado por documento: `aprobado` | `observado` | `rechazado`.\n\nRetorna scoreDocumental y estadoValidacionDocumentos."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Referencias",
+      "item": [
+        {
+          "name": "Verificar Referencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/referencias/{{referenciaId}}/verificar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "referencias", "{{referenciaId}}", "verificar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoVerificacion\": \"verificado\",\n  \"resultadoContacto\": \"Contacto exitoso por llamada telefónica\",\n  \"scoreVerificacion\": 85.0,\n  \"scoreMaximo\": 100.0,\n  \"calificacion\": \"bueno\",\n  \"actitudDuranteContacto\": \"Colaborativo y con buenas referencias del solicitante\",\n  \"observaciones\": \"La referencia conoce al solicitante desde hace 5 años\",\n  \"rechazada\": false,\n  \"respuestasPreguntas\": {\n    \"conoce_solicitante\": true,\n    \"tiempo_conocido\": \"5 años\",\n    \"recomendaria\": true,\n    \"puntualidad_pagos\": \"siempre puntual\"\n  },\n  \"verificadorId\": \"USR-002\",\n  \"verificadorNombre\": \"Carlos Verificador\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Registra la verificación de una referencia personal/laboral.\n\n`estadoVerificacion`: verificado | rechazado | no_contactado\n`calificacion`: excelente | bueno | regular | malo\n\nRetorna scoreReferencias recalculado."
+          }
+        },
+        {
+          "name": "Verificar Referencia (no contactado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/referencias/{{referenciaId}}/verificar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "referencias", "{{referenciaId}}", "verificar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoVerificacion\": \"no_contactado\",\n  \"resultadoContacto\": \"No se pudo contactar después de 3 intentos\",\n  \"scoreVerificacion\": 0.0,\n  \"scoreMaximo\": 100.0,\n  \"calificacion\": \"regular\",\n  \"actitudDuranteContacto\": \"\",\n  \"observaciones\": \"Teléfono no disponible\",\n  \"rechazada\": false,\n  \"respuestasPreguntas\": {},\n  \"verificadorId\": \"USR-002\",\n  \"verificadorNombre\": \"Carlos Verificador\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Decisión Final",
+      "item": [
+        {
+          "name": "Decisión Automática (motor IA)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/decision",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "decision"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivoDecision\": \"Evaluación completa del expediente\",\n  \"fortalezasCaso\": \"Buen historial, referencias positivas, documentos completos\",\n  \"debilidadesCaso\": \"Capacidad de pago ajustada\",\n  \"usuarioId\": \"USR-001\",\n  \"usuarioNombre\": \"Juan Asesor\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Ejecuta la decisión final usando el motor automático. Si no se envía `decisionManual`, el motor calcula la decisión en base a los scores.\n\nRetorna: decisionFinal (APROBADO|RECHAZADO|CONDICIONAL), scoreFinal, nivelRiesgo, montoAprobado."
+          }
+        },
+        {
+          "name": "Decisión Manual — Aprobado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/decision",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "decision"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decisionManual\": \"aprobado\",\n  \"montoAprobadoManual\": 15000.00,\n  \"motivoDecision\": \"Aprobación manual por comité de crédito\",\n  \"fortalezasCaso\": \"Excelente historial de pagos, referencias sólidas\",\n  \"debilidadesCaso\": \"Ninguna relevante\",\n  \"usuarioId\": \"USR-GERENTE\",\n  \"usuarioNombre\": \"Gerente Créditos\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Decisión manual de aprobación. `decisionManual`: aprobado | rechazado | condicional"
+          }
+        },
+        {
+          "name": "Decisión Manual — Rechazado",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/decision",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "decision"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decisionManual\": \"rechazado\",\n  \"motivoDecision\": \"Rechazo por insuficiencia de ingresos\",\n  \"motivoRechazo\": \"Los ingresos declarados no cubren la cuota mínima requerida\",\n  \"fortalezasCaso\": \"Documentos completos\",\n  \"debilidadesCaso\": \"Capacidad de pago insuficiente, referencias no verificadas\",\n  \"usuarioId\": \"USR-GERENTE\",\n  \"usuarioNombre\": \"Gerente Créditos\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Decisión Manual — Condicional",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evaluaciones/{{solicitudId}}/decision",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "evaluaciones", "{{solicitudId}}", "decision"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decisionManual\": \"condicional\",\n  \"montoAprobadoManual\": 10000.00,\n  \"motivoDecision\": \"Aprobación condicional sujeta a requisitos adicionales\",\n  \"condicionesAprobacion\": [\n    \"Presentar aval adicional\",\n    \"Actualizar recibo de sueldo del último mes\",\n    \"Firmar pagaré notarial\"\n  ],\n  \"fortalezasCaso\": \"Historial crediticio positivo\",\n  \"debilidadesCaso\": \"Documentación incompleta en algunos ítems\",\n  \"usuarioId\": \"USR-GERENTE\",\n  \"usuarioNombre\": \"Gerente Créditos\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -102,10 +102,12 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
                 && contrato.datosFinancieros().precioVehiculo() != null
                 ? contrato.datosFinancieros().precioVehiculo().doubleValue() : 0.0;
 
-        // ── Cálculo de pagos (regla de negocio) ───────────────────────────
+        // ── Cálculo de pagos: P1 = cuotaInicial real, P2 = precio − P1 ───
         BigDecimal total = BigDecimal.valueOf(montoTotal);
-        BigDecimal montoP1 = total.multiply(BigDecimal.valueOf(0.20))
-                .setScale(2, RoundingMode.HALF_UP);
+        double cuotaInicialRaw = contrato.datosFinancieros() != null
+                && contrato.datosFinancieros().cuotaInicial() != null
+                ? contrato.datosFinancieros().cuotaInicial().doubleValue() : 0.0;
+        BigDecimal montoP1 = BigDecimal.valueOf(cuotaInicialRaw).setScale(2, RoundingMode.HALF_UP);
         BigDecimal montoP2 = total.subtract(montoP1);
 
         // P1 INICIAL: fechaFactura + 2 días calendario
