@@ -28,8 +28,10 @@ public class VerificacionIdentidadResult {
     // ── respuesta licencia (solo DNI) ─────────────────────────────────────
     String licenciaNumero;
     String licenciaCategoria;
-    String licenciaEstado;
-    String licenciaVencimiento;
+    String licenciaEstado;          // "VIGENTE" | "VENCIDA" | ...
+    String licenciaVencimiento;     // "dd/MM/yyyy"
+    String licenciaRestricciones;   // "SIN RESTRICCIONES" o descripción
+    Boolean licenciaTieneRestricion; // true si hay restricción real
 
     // ── comparaciones con datos del cliente ───────────────────────────────
     Boolean coincideNombres;

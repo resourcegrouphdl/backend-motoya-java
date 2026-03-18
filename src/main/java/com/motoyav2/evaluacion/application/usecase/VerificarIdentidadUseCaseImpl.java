@@ -2,10 +2,10 @@ package com.motoyav2.evaluacion.application.usecase;
 
 import com.google.cloud.Timestamp;
 import com.motoyav2.evaluacion.application.command.VerificarIdentidadCommand;
+import com.motoyav2.evaluacion.application.dto.VerificacionIdentidadResult;
 import com.motoyav2.evaluacion.domain.model.Cliente;
 import com.motoyav2.evaluacion.domain.port.in.VerificarIdentidadUseCase;
 import com.motoyav2.evaluacion.domain.port.out.ClienteRepository;
-import com.motoyav2.evaluacion.application.dto.VerificacionIdentidadResult;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.external.FactilizaApiClient;
 import com.motoyav2.evaluacion.shared.exception.RecursoNoEncontradoException;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +17,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Verifica la identidad del cliente consultando la API de Factiliza.
+ *
+ * Estructura real de respuestas Factiliza:
+ *   DNI/CEE → { status, data: { nombres, apellido_paterno, apellido_materno,
+ *                                direccion, ubigeo, departamento, provincia, distrito } }
+ *   Licencia → { status, data: { numero_documento, nombre_completo,
+ *                                licencia: { numero, categoria, fecha_expedicion,
+ *                                            fecha_vencimiento, estado, restricciones } } }
+ */
 @Service
 @RequiredArgsConstructor
 public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase {
@@ -32,19 +42,19 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 .flatMap(cliente -> verificar(cliente, cmd));
     }
 
+    // ── Orquestación ──────────────────────────────────────────────────────
     private Mono<VerificacionIdentidadResult> verificar(Cliente cliente, VerificarIdentidadCommand cmd) {
         String docType   = cliente.getDocumentType();
         String docNumber = cliente.getDocumentNumber();
 
         if (docNumber == null || docNumber.isBlank()) {
-            VerificacionIdentidadResult result = VerificacionIdentidadResult.builder()
+            return persistResult(cmd.clienteId(), VerificacionIdentidadResult.builder()
                     .documentType(docType)
                     .documentNumber(docNumber)
                     .exitoso(false)
                     .observaciones("Número de documento vacío")
                     .verificadoPor(cmd.usuarioId())
-                    .build();
-            return persistResult(cmd.clienteId(), result);
+                    .build());
         }
 
         boolean esDni = "DNI".equalsIgnoreCase(docType);
@@ -54,51 +64,60 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 ? factilizaApiClient.consultarDni(docNumber)
                 : esCee ? factilizaApiClient.consultarCee(docNumber) : Mono.empty();
 
-        Mono<Map<String, Object>> licQuery = esDni
+        // Licencia solo aplica a titulares con DNI que declaran tener licencia
+        boolean tieneConducir = tieneLicencia(cliente);
+        Mono<Map<String, Object>> licQuery = (esDni && tieneConducir)
                 ? factilizaApiClient.consultarLicencia(docNumber)
                 : Mono.empty();
 
         return Mono.zip(
                 docQuery.defaultIfEmpty(Map.of()),
                 licQuery.defaultIfEmpty(Map.of())
-        ).flatMap(tuple -> {
-            Map<String, Object> docData = tuple.getT1();
-            Map<String, Object> licData = tuple.getT2();
-
-            VerificacionIdentidadResult result = buildResult(cliente, docData, licData, cmd.usuarioId());
-            return persistResult(cmd.clienteId(), result);
-        });
+        ).flatMap(tuple ->
+                persistResult(cmd.clienteId(),
+                        buildResult(cliente, tuple.getT1(), tuple.getT2(), cmd.usuarioId())));
     }
 
-    // ── Build result comparing API data with stored client data ──────────
+    // ── Construcción del resultado ────────────────────────────────────────
+    @SuppressWarnings("unchecked")
     private VerificacionIdentidadResult buildResult(
             Cliente cliente,
-            Map<String, Object> docData,
-            Map<String, Object> licData,
+            Map<String, Object> docResponse,   // respuesta cruda DNI/CEE
+            Map<String, Object> licResponse,   // respuesta cruda Licencia
             String verificadoPor) {
+
+        // Factiliza envuelve los datos en "data" — extraemos ese nivel
+        Map<String, Object> docData = extractData(docResponse);
+        Map<String, Object> licData = extractLicencia(licResponse); // navega data.licencia
 
         boolean apiOk = !docData.isEmpty();
 
-        // Extract API fields (Factiliza returns them in the root map)
-        String apiNombres   = str(docData, "nombres");
+        // ── Campos de identidad (DNI / CEE) ───────────────────────────────
+        String apiNombres    = str(docData, "nombres");
         String apiApePaterno = str(docData, "apellido_paterno");
         String apiApeMaterno = str(docData, "apellido_materno");
-        String apiDireccion = str(docData, "direccion");
-        String apiUbigeo    = str(docData, "ubigeo");
-        String apiDpto      = str(docData, "departamento");
-        String apiProv      = str(docData, "provincia");
-        String apiDist      = str(docData, "distrito");
+        String apiDireccion  = str(docData, "direccion");
+        String apiUbigeo     = str(docData, "ubigeo");
+        String apiDpto       = str(docData, "departamento");
+        String apiProv       = str(docData, "provincia");
+        String apiDist       = str(docData, "distrito");
 
-        // Licence fields
-        String licNumero   = str(licData, "numero");
-        String licCategoria = str(licData, "categoria");
-        String licEstado   = str(licData, "estado");
-        String licVencim   = str(licData, "fecha_hasta");
+        // ── Campos de licencia (data.licencia) ────────────────────────────
+        String licNumero      = str(licData, "numero");
+        String licCategoria   = str(licData, "categoria");
+        String licEstado      = str(licData, "estado");
+        String licVencimiento = str(licData, "fecha_vencimiento");
+        String licRestricciones = str(licData, "restricciones");
+
         boolean licVigente = "VIGENTE".equalsIgnoreCase(licEstado);
-        boolean tieneConducir = "si".equalsIgnoreCase(cliente.getLicenciaConducir())
-                || Boolean.parseBoolean(cliente.getLicenciaConducir());
+        boolean tieneConducir = tieneLicencia(cliente);
 
-        // Compare names (case-insensitive, trimmed)
+        // "SIN RESTRICCIONES" o vacío = sin restricción real
+        boolean tieneRestriccion = licRestricciones != null
+                && !licRestricciones.isBlank()
+                && !licRestricciones.equalsIgnoreCase("SIN RESTRICCIONES");
+
+        // ── Comparaciones de identidad ────────────────────────────────────
         Boolean coincideNombres = apiOk
                 ? normalize(apiNombres).equals(normalize(cliente.getNombres()))
                 : null;
@@ -108,16 +127,19 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 && normalize(apiApeMaterno).equals(normalize(cliente.getApellidoMaterno()))
                 : null;
 
-        // Nota: NO se compara dirección — la del documento puede diferir de la
-        // residencia actual declarada (cliente puede estar alquilando o haberse mudado).
-        // Se almacena como referencia informativa solamente.
-
-        // Build observations (solo identidad y licencia)
+        // ── Observaciones relevantes para evaluación ──────────────────────
+        // La dirección NO se compara (puede ser antigua por mudanza/alquiler)
         List<String> obs = new ArrayList<>();
-        if (!apiOk)               obs.add("No se obtuvo respuesta de la API");
-        if (Boolean.FALSE.equals(coincideNombres))   obs.add("Nombres no coinciden con el documento");
-        if (Boolean.FALSE.equals(coincideApellidos)) obs.add("Apellidos no coinciden con el documento");
-        if (tieneConducir && !licVigente && !licData.isEmpty()) obs.add("Licencia no vigente");
+        if (!apiOk)
+            obs.add("No se obtuvo respuesta de la API para el documento");
+        if (Boolean.FALSE.equals(coincideNombres))
+            obs.add("Nombres no coinciden con el documento");
+        if (Boolean.FALSE.equals(coincideApellidos))
+            obs.add("Apellidos no coinciden con el documento");
+        if (tieneConducir && !licData.isEmpty() && !licVigente)
+            obs.add("Licencia de conducir VENCIDA o no encontrada");
+        if (tieneConducir && tieneRestriccion)
+            obs.add("Licencia con restricción: " + licRestricciones);
 
         return VerificacionIdentidadResult.builder()
                 .documentType(cliente.getDocumentType())
@@ -133,10 +155,12 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 .licenciaNumero(licNumero)
                 .licenciaCategoria(licCategoria)
                 .licenciaEstado(licEstado)
-                .licenciaVencimiento(licVencim)
+                .licenciaVencimiento(licVencimiento)
+                .licenciaRestricciones(licRestricciones)
+                .licenciaTieneRestricion(tieneConducir && !licData.isEmpty() ? tieneRestriccion : null)
                 .coincideNombres(coincideNombres)
                 .coincideApellidos(coincideApellidos)
-                .licenciaVigente(licData.isEmpty() ? null : licVigente)
+                .licenciaVigente(tieneConducir && !licData.isEmpty() ? licVigente : null)
                 .tieneConducir(tieneConducir)
                 .verificadoPor(verificadoPor)
                 .observaciones(obs.isEmpty() ? null : String.join("; ", obs))
@@ -144,43 +168,74 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 .build();
     }
 
-    // ── Persist result under clientes_v1/{id}.verificacionIdentidad ───────
+    // ── Persistencia ─────────────────────────────────────────────────────
     private Mono<VerificacionIdentidadResult> persistResult(
-            String clienteId, VerificacionIdentidadResult result) {
+            String clienteId, VerificacionIdentidadResult r) {
 
         Map<String, Object> verMap = new HashMap<>();
-        verMap.put("documentType",       result.getDocumentType());
-        verMap.put("documentNumber",     result.getDocumentNumber());
-        verMap.put("apiNombres",         result.getApiNombres());
-        verMap.put("apiApellidoPaterno", result.getApiApellidoPaterno());
-        verMap.put("apiApellidoMaterno", result.getApiApellidoMaterno());
-        verMap.put("apiDireccion",       result.getApiDireccion());
-        verMap.put("apiUbigeo",          result.getApiUbigeo());
-        verMap.put("apiDepartamento",    result.getApiDepartamento());
-        verMap.put("apiProvincia",       result.getApiProvincia());
-        verMap.put("apiDistrito",        result.getApiDistrito());
-        verMap.put("licenciaNumero",     result.getLicenciaNumero());
-        verMap.put("licenciaCategoria",  result.getLicenciaCategoria());
-        verMap.put("licenciaEstado",     result.getLicenciaEstado());
-        verMap.put("licenciaVencimiento",result.getLicenciaVencimiento());
-        verMap.put("coincideNombres",    result.getCoincideNombres());
-        verMap.put("coincideApellidos",  result.getCoincideApellidos());
-        verMap.put("licenciaVigente",    result.getLicenciaVigente());
-        verMap.put("tieneConducir",      result.getTieneConducir());
-        verMap.put("observaciones",      result.getObservaciones());
-        verMap.put("exitoso",            result.isExitoso());
-        verMap.put("verificadoPor",      result.getVerificadoPor());
-        verMap.put("fechaVerificacion",  Timestamp.now());
+        verMap.put("documentType",            r.getDocumentType());
+        verMap.put("documentNumber",          r.getDocumentNumber());
+        verMap.put("apiNombres",              r.getApiNombres());
+        verMap.put("apiApellidoPaterno",      r.getApiApellidoPaterno());
+        verMap.put("apiApellidoMaterno",      r.getApiApellidoMaterno());
+        verMap.put("apiDireccion",            r.getApiDireccion());
+        verMap.put("apiUbigeo",               r.getApiUbigeo());
+        verMap.put("apiDepartamento",         r.getApiDepartamento());
+        verMap.put("apiProvincia",            r.getApiProvincia());
+        verMap.put("apiDistrito",             r.getApiDistrito());
+        verMap.put("licenciaNumero",          r.getLicenciaNumero());
+        verMap.put("licenciaCategoria",       r.getLicenciaCategoria());
+        verMap.put("licenciaEstado",          r.getLicenciaEstado());
+        verMap.put("licenciaVencimiento",     r.getLicenciaVencimiento());
+        verMap.put("licenciaRestricciones",   r.getLicenciaRestricciones());
+        verMap.put("licenciaTieneRestricion", r.getLicenciaTieneRestricion());
+        verMap.put("coincideNombres",         r.getCoincideNombres());
+        verMap.put("coincideApellidos",       r.getCoincideApellidos());
+        verMap.put("licenciaVigente",         r.getLicenciaVigente());
+        verMap.put("tieneConducir",           r.getTieneConducir());
+        verMap.put("observaciones",           r.getObservaciones());
+        verMap.put("exitoso",                 r.isExitoso());
+        verMap.put("verificadoPor",           r.getVerificadoPor());
+        verMap.put("fechaVerificacion",       Timestamp.now());
 
-        Map<String, Object> clienteUpdates = new HashMap<>();
-        clienteUpdates.put("verificacionIdentidad", verMap);
-        clienteUpdates.put("updatedAt", Timestamp.now());
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("verificacionIdentidad", verMap);
+        updates.put("updatedAt", Timestamp.now());
 
-        return clienteRepository.updateFields(clienteId, clienteUpdates)
-                .thenReturn(result);
+        return clienteRepository.updateFields(clienteId, updates).thenReturn(r);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Helpers de extracción de la respuesta Factiliza ───────────────────
+
+    /**
+     * Factiliza envuelve todos los datos en "data".
+     * { status, message, data: { ... } } → devuelve el mapa interno.
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> extractData(Map<String, Object> response) {
+        if (response == null || response.isEmpty()) return Map.of();
+        Object data = response.get("data");
+        if (data instanceof Map<?, ?> map) return (Map<String, Object>) map;
+        return Map.of();
+    }
+
+    /**
+     * La licencia viene anidada: { data: { licencia: { numero, estado, ... } } }
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> extractLicencia(Map<String, Object> response) {
+        Map<String, Object> data = extractData(response);
+        if (data.isEmpty()) return Map.of();
+        Object licencia = data.get("licencia");
+        if (licencia instanceof Map<?, ?> map) return (Map<String, Object>) map;
+        return Map.of();
+    }
+
+    private static boolean tieneLicencia(Cliente c) {
+        return "si".equalsIgnoreCase(c.getLicenciaConducir())
+                || Boolean.parseBoolean(c.getLicenciaConducir());
+    }
+
     private static String str(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString().trim() : null;
