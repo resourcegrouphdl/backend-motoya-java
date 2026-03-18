@@ -29,9 +29,20 @@ public class StorageController {
 
     private final SignedUrlStoragePort signedUrlStoragePort;
 
+    private static final java.util.Set<String> MIME_PERMITIDOS = java.util.Set.of(
+            "image/jpeg", "image/jpg", "image/png", "image/webp",
+            "image/tiff", "application/pdf"
+    );
+
     @PostMapping("/signed-upload-url")
     public Mono<SignedUrlResponse> generarUrlCarga(
             @Valid @RequestBody SignedUrlRequest request) {
+
+        if (!MIME_PERMITIDOS.contains(request.contentType().toLowerCase())) {
+            return Mono.error(new com.motoyav2.shared.exception.BadRequestException(
+                    "Formato no permitido: " + request.contentType()
+                    + ". Use: JPG, PNG, WEBP, TIFF o PDF."));
+        }
 
         String gcsPath = buildGcsPath(request);
 

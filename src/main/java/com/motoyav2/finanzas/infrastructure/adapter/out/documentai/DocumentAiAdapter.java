@@ -64,7 +64,10 @@ public class DocumentAiAdapter implements DocumentAiPort {
     private boolean enabled;
 
     public DocumentAiAdapter(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl(DOCAI_BASE).build();
+        this.webClient = webClientBuilder
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(10 * 1024 * 1024)) // 10 MB
+                .baseUrl(DOCAI_BASE)
+                .build();
     }
 
     @Override
