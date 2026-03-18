@@ -111,6 +111,7 @@ public class ExpedienteCompletoResponse {
         String ubicacionGPSCasa;
         String tipoVivienda;
         String licenciaConducir;
+        String numeroLicencia;
         String ocupacion;
         Double ingresoMensual;
         String rangoIngresos;
@@ -307,7 +308,8 @@ public class ExpedienteCompletoResponse {
                 .departamento(c.getDepartamento()).provincia(c.getProvincia())
                 .distrito(c.getDistrito()).direccion(c.getDireccion())
                 .ubicacionGPSCasa(c.getUbicacionGPSCasa()).tipoVivienda(c.getTipoVivienda())
-                .licenciaConducir(c.getLicenciaConducir()).ocupacion(c.getOcupacion())
+                .licenciaConducir(c.getLicenciaConducir()).numeroLicencia(c.getNumeroLicencia())
+                .ocupacion(c.getOcupacion())
                 .ingresoMensual(c.getIngresoMensual()).rangoIngresos(c.getRangoIngresos())
                 .perfilSentinel(c.getPerfilSentinel()).archivos(c.getArchivos())
                 .evaluacionDocumentos(evalDocs)
