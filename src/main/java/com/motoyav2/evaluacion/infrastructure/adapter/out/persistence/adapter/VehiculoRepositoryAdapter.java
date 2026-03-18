@@ -1,22 +1,25 @@
 package com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.adapter;
 
-import com.motoyav2.evaluacion.application.port.out.VehiculoPort;
+import com.google.cloud.firestore.Firestore;
 import com.motoyav2.evaluacion.domain.model.Vehiculo;
-import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.mapper.formMapper.VehiculoFirebaseMapper;
-import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.repository.formulario.FirebaseVehiculoRepository;
+import com.motoyav2.evaluacion.domain.port.out.VehiculoRepository;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.mapper.VehiculoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
+import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toMono;
+
 @Component
 @RequiredArgsConstructor
-public class VehiculoRepositoryAdapter implements VehiculoPort {
+public class VehiculoRepositoryAdapter implements VehiculoRepository {
 
-    private final FirebaseVehiculoRepository firebaseVehiculoRepository;
+    private static final String COL = "vehiculos";
+    private final Firestore db;
 
     @Override
-    public Mono<Vehiculo> buscarPorId(String vehiculoId) {
-        return firebaseVehiculoRepository.findById(vehiculoId)
-                .map(VehiculoFirebaseMapper::toDomain);
+    public Mono<Vehiculo> findById(String id) {
+        return toMono(db.collection(COL).document(id).get())
+                .mapNotNull(VehiculoMapper::toDomain);
     }
 }

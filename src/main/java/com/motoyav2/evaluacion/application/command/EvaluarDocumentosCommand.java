@@ -1,0 +1,12 @@
+package com.motoyav2.evaluacion.application.command;
+
+import com.motoyav2.evaluacion.domain.enums.EstadoSolicitud;
+
+public record EvaluarDocumentosCommand(
+        String solicitudId,
+        Double scoreDocumental,
+        String observaciones,
+        EstadoSolicitud nuevoEstado,
+        String usuarioId,
+        String usuarioNombre
+) {}

@@ -1,32 +1,23 @@
 package com.motoyav2.evaluacion.domain.model;
 
-import lombok.AllArgsConstructor;
+import com.google.cloud.Timestamp;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Value;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
+@Value
 @Builder
 public class Vehiculo {
+    String id;
+    String marca;
+    String modelo;
+    String anio;            // ⚠️ string en Firestore
+    String color;
+    Double precioReferencial;
+    Double cilindrada;
+    Timestamp createdAt;
+    Timestamp updatedAt;
 
-  private String id;
-  private String marca;
-  private String modelo;
-  private String anio;
-  private String color;
-  private String cilindrada;
-  private String descripcionCompleta;
-
-  // precio
-  private String precioReferencial;
-
-  // metadata
-  private String firebaseVehiculoId;
-
-  // auditoria
-  private String creadoEn;
-  private String actualizadoEn;
-
+    public String getDescripcion() {
+        return marca + " " + modelo + " " + anio + " - " + color;
+    }
 }

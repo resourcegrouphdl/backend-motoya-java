@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; color: #333; margin: 40px; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1a5276; padding-bottom: 20px; }
+        .header h1 { color: #1a5276; font-size: 22px; margin-bottom: 4px; }
+        .header h2 { color: #2e86c1; font-size: 16px; font-weight: normal; }
+        .badge { display: inline-block; background: #27ae60; color: white; padding: 6px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; margin: 10px 0; }
+        .section { margin-bottom: 20px; }
+        .section h3 { color: #1a5276; border-bottom: 1px solid #d5d8dc; padding-bottom: 5px; font-size: 13px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 6px 8px; }
+        td:first-child { font-weight: bold; width: 40%; color: #555; }
+        .financiero-table td { border: 1px solid #d5d8dc; }
+        .financiero-table tr:nth-child(even) { background: #f8f9fa; }
+        .total-row { background: #1a5276 !important; color: white; font-weight: bold; }
+        .total-row td { color: white !important; }
+        .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #777; border-top: 1px solid #d5d8dc; padding-top: 15px; }
+        .numero { font-size: 18px; font-weight: bold; color: #1a5276; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>MOTOYA — Financiamiento de Motocicletas</h1>
+    <h2>CERTIFICADO DE APROBACIÓN DE CRÉDITO</h2>
+    <div class="badge">APROBADO</div>
+    <p class="numero" th:text="${solicitud?.numeroSolicitud}">N° SOLICITUD</p>
+</div>
+
+<div class="section">
+    <h3>Datos del Titular</h3>
+    <table>
+        <tr><td>Nombre Completo:</td><td th:text="${titular?.getNombreCompleto()}">—</td></tr>
+        <tr><td>Documento:</td><td th:text="${titular?.documentType + ': ' + titular?.documentNumber}">—</td></tr>
+        <tr><td>Teléfono:</td><td th:text="${titular?.telefono1}">—</td></tr>
+        <tr><td>Email:</td><td th:text="${titular?.email}">—</td></tr>
+        <tr><td>Domicilio:</td><td th:text="${titular?.direccion + ', ' + titular?.distrito + ', ' + titular?.provincia}">—</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h3>Vehículo Financiado</h3>
+    <table>
+        <tr><td>Descripción:</td><td th:text="${vehiculo?.getDescripcion()}">—</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h3>Condiciones del Financiamiento</h3>
+    <table class="financiero-table">
+        <tr><td>Precio de Compra:</td><td th:text="'S/ ' + ${solicitud?.precioCompraMoto}">—</td></tr>
+        <tr><td>Cuota Inicial:</td><td th:text="'S/ ' + ${solicitud?.inicial}">—</td></tr>
+        <tr><td>Plazo:</td><td th:text="${solicitud?.plazoQuincenas + ' quincenas'}">—</td></tr>
+        <tr><td>Monto de Cuota Quincenal:</td><td th:text="'S/ ' + ${solicitud?.montoCuota}">—</td></tr>
+        <tr class="total-row">
+            <td>Total a Pagar:</td>
+            <td th:text="${solicitud?.datosFinancieros != null ? 'S/ ' + solicitud?.datosFinancieros?.totalAPagar : '—'}">—</td>
+        </tr>
+    </table>
+</div>
+
+<div class="section">
+    <h3>Asesor Asignado</h3>
+    <table>
+        <tr><td>Nombre:</td><td th:text="${asesor?.nombre}">—</td></tr>
+    </table>
+</div>
+
+<div class="footer">
+    <p>Este certificado acredita la aprobación del crédito por parte de Motoya.</p>
+    <p>Documento generado automáticamente. Válido sin firma para consulta interna.</p>
+</div>
+</body>
+</html>

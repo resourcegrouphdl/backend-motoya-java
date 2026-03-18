@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; color: #333; margin: 40px; }
+        h1 { text-align: center; color: #1a5276; font-size: 18px; }
+        h2 { text-align: center; color: #2e86c1; font-size: 13px; font-weight: normal; }
+        .numero { text-align: center; font-size: 16px; font-weight: bold; color: #1a5276; margin: 10px 0; }
+        .section { margin: 20px 0; }
+        .section h3 { color: #1a5276; border-bottom: 1px solid #d5d8dc; padding-bottom: 4px; font-size: 12px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        td { padding: 5px 8px; border: 1px solid #e0e0e0; }
+        th { background: #1a5276; color: white; padding: 6px 8px; text-align: left; }
+        .label { font-weight: bold; background: #f5f6fa; width: 40%; }
+        .clausulas { margin-top: 20px; }
+        .clausulas p { text-align: justify; line-height: 1.5; margin-bottom: 10px; }
+        .firma-section { margin-top: 60px; display: flex; justify-content: space-between; }
+        .firma-box { text-align: center; border-top: 1px solid #333; padding-top: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+<h1>MOTOYA — Financiamiento de Motocicletas</h1>
+<h2>CONTRATO DE FINANCIAMIENTO</h2>
+<p class="numero" th:text="${solicitud?.numeroSolicitud}">N° SOLICITUD</p>
+
+<div class="section">
+    <h3>Partes del Contrato</h3>
+    <table>
+        <tr><th colspan="2">TITULAR DEL CRÉDITO</th></tr>
+        <tr><td class="label">Nombre:</td><td th:text="${titular?.getNombreCompleto()}">—</td></tr>
+        <tr><td class="label">Documento:</td><td th:text="${titular?.documentType + ': ' + titular?.documentNumber}">—</td></tr>
+        <tr><td class="label">Domicilio:</td><td th:text="${titular?.direccion + ', ' + titular?.distrito}">—</td></tr>
+        <tr><td class="label">Teléfono:</td><td th:text="${titular?.telefono1}">—</td></tr>
+        <tr><td class="label">Email:</td><td th:text="${titular?.email}">—</td></tr>
+    </table>
+
+    <br th:if="${fiador != null}"/>
+    <table th:if="${fiador != null}">
+        <tr><th colspan="2">FIADOR</th></tr>
+        <tr><td class="label">Nombre:</td><td th:text="${fiador?.getNombreCompleto()}">—</td></tr>
+        <tr><td class="label">Documento:</td><td th:text="${fiador?.documentType + ': ' + fiador?.documentNumber}">—</td></tr>
+        <tr><td class="label">Domicilio:</td><td th:text="${fiador?.direccion + ', ' + fiador?.distrito}">—</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h3>Objeto del Contrato — Vehículo</h3>
+    <table>
+        <tr><td class="label">Marca / Modelo:</td><td th:text="${vehiculo?.marca + ' ' + vehiculo?.modelo}">—</td></tr>
+        <tr><td class="label">Año:</td><td th:text="${vehiculo?.anio}">—</td></tr>
+        <tr><td class="label">Color:</td><td th:text="${vehiculo?.color}">—</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h3>Condiciones Financieras</h3>
+    <table>
+        <tr><td class="label">Precio Total Vehículo:</td><td th:text="'S/ ' + ${solicitud?.precioCompraMoto}">—</td></tr>
+        <tr><td class="label">Cuota Inicial:</td><td th:text="'S/ ' + ${solicitud?.inicial}">—</td></tr>
+        <tr><td class="label">Número de Cuotas Quincenales:</td><td th:text="${solicitud?.plazoQuincenas}">—</td></tr>
+        <tr><td class="label">Monto Cuota Quincenal:</td><td th:text="'S/ ' + ${solicitud?.montoCuota}">—</td></tr>
+        <tr style="background:#1a5276;color:white;"><td style="color:white;font-weight:bold;">TOTAL A PAGAR:</td>
+            <td style="color:white;font-weight:bold;" th:text="${solicitud?.datosFinancieros != null ? 'S/ ' + solicitud?.datosFinancieros?.totalAPagar : '—'}">—</td></tr>
+    </table>
+</div>
+
+<div class="clausulas">
+    <h3>Cláusulas</h3>
+    <p><strong>PRIMERA:</strong> El TITULAR se compromete a realizar los pagos de las cuotas quincenales pactadas en las fechas acordadas.</p>
+    <p><strong>SEGUNDA:</strong> En caso de incumplimiento de tres (3) cuotas consecutivas, MOTOYA podrá iniciar el proceso de recuperación del vehículo.</p>
+    <p><strong>TERCERA:</strong> El vehículo permanecerá como garantía del presente financiamiento hasta la cancelación total de la deuda.</p>
+    <p><strong>CUARTA:</strong> Las partes acuerdan resolver cualquier controversia derivada del presente contrato mediante conciliación extrajudicial.</p>
+</div>
+
+<div class="firma-section">
+    <div class="firma-box">
+        <p th:text="${titular?.getNombreCompleto()}">Nombre Titular</p>
+        <p>EL TITULAR</p>
+    </div>
+    <div class="firma-box" th:if="${asesor != null}">
+        <p th:text="${asesor?.nombre}">Nombre Asesor</p>
+        <p>ASESOR MOTOYA</p>
+    </div>
+    <div class="firma-box" th:if="${fiador != null}">
+        <p th:text="${fiador?.getNombreCompleto()}">Nombre Fiador</p>
+        <p>EL FIADOR</p>
+    </div>
+</div>
+</body>
+</html>

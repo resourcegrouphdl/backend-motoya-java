@@ -1,5 +1,8 @@
 package com.motoyav2.shared.exception;
 
+import com.motoyav2.evaluacion.domain.exception.DomainException;
+import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
+import com.motoyav2.evaluacion.domain.exception.TransicionInvalidaException;
 import com.motoyav2.shared.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.codec.DecodingException;
@@ -28,6 +31,40 @@ public class GlobalExceptionHandler {
                 .path(exchange.getRequest().getPath().value())
                 .build();
         return ResponseEntity.status(ex.getStatus()).body(response);
+    }
+
+    @ExceptionHandler(ExpedienteNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleExpedienteNotFound(ExpedienteNotFoundException ex, ServerWebExchange exchange) {
+        ErrorResponse response = ErrorResponse.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(exchange.getRequest().getPath().value())
+                .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(TransicionInvalidaException.class)
+    public ResponseEntity<ErrorResponse> handleTransicionInvalida(TransicionInvalidaException ex, ServerWebExchange exchange) {
+        ErrorResponse response = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(exchange.getRequest().getPath().value())
+                .build();
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<ErrorResponse> handleDomainException(DomainException ex, ServerWebExchange exchange) {
+        log.warn("DomainException: {}", ex.getMessage());
+        ErrorResponse response = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(exchange.getRequest().getPath().value())
+                .build();
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(WebExchangeBindException.class)

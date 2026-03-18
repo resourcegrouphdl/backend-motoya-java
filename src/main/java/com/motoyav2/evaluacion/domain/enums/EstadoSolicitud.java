@@ -1,55 +1,54 @@
 package com.motoyav2.evaluacion.domain.enums;
 
-/**
- * Los 30 estados del ciclo de vida de una solicitud de crédito.
- * Contrato TypeScript: EstadoSolicitud.
- * IMPORTANTE: los values en minúsculas con guiones bajos deben coincidir
- * EXACTAMENTE con los valores guardados en Firestore (colección solicitudes).
- */
+import java.util.Arrays;
+
 public enum EstadoSolicitud {
+    PENDIENTE("pendiente"),
+    EN_REVISION_INICIAL("en_revision_inicial"),
+    EVALUACION_DOCUMENTAL("evaluacion_documental"),
+    DOCUMENTOS_OBSERVADOS("documentos_observados"),
+    DOCUMENTOS_COMPLETOS("documentos_completos"),
+    DOCUMENTOS_INCOMPLETOS("documentos_incompletos"),
+    CLIENTE_APROBADO("cliente_aprobado"),
+    CLIENTE_RECHAZADO("cliente_rechazado"),
+    EVALUACION_GARANTES("evaluacion_garantes"),
+    FIADOR_APROBADO("fiador_aprobado"),
+    FIADOR_RECHAZADO("fiador_rechazado"),
+    REFERENCIAS_APROBADAS("referencias_aprobadas"),
+    REFERENCIAS_RECHAZADAS("referencias_rechazadas"),
+    VEHICULO_APROBADO("vehiculo_aprobado"),
+    VEHICULO_RECHAZADO("vehiculo_rechazado"),
+    DATOS_VERIFICADOS("datos_verificados"),
+    DATOS_NO_VERIFICADOS("datos_no_verificados"),
+    ENTREVISTA_PROGRAMADA("entrevista_programada"),
+    ENTREVISTA_EN_CURSO("entrevista_en_curso"),
+    ENTREVISTA_COMPLETADA("entrevista_completada"),
+    EN_REVISION_FINAL("en_revision_final"),
+    APROBADO("aprobado"),
+    RECHAZADO("rechazado"),
+    CONDICIONAL("condicional"),
+    CERTIFICADO_GENERADO("certificado_generado"),
+    ESPERANDO_INICIAL("esperando_inicial"),
+    CONTRATO_GENERADO("contrato_generado"),
+    CONTRATO_FIRMADO("contrato_firmado"),
+    ENTREGA_COMPLETADA("entrega_completada"),
+    CANCELADO("cancelado");
 
-    pendiente,
-    en_revision_inicial,
-    evaluacion_documental,
-    documentos_observados,
-    documentos_completos,
-    documentos_incompletos,
-    cliente_aprobado,
-    cliente_rechazado,
-    evaluacion_garantes,
-    fiador_aprobado,
-    fiador_rechazado,
-    referencias_aprobadas,
-    referencias_rechazadas,
-    vehiculo_aprobado,
-    vehiculo_rechazado,
-    datos_verificados,
-    datos_no_verificados,
-    entrevista_programada,
-    entrevista_en_curso,
-    entrevista_completada,
-    en_revision_final,
-    aprobado,
-    rechazado,
-    condicional,
-    certificado_generado,
-    esperando_inicial,
-    contrato_generado,
-    contrato_firmado,
-    entrega_completada,
-    cancelado;
+    private final String firestoreValue;
 
-    /** Parsea desde string Firestore (tolerante a null). */
-    public static EstadoSolicitud fromString(String valor) {
-        if (valor == null || valor.isBlank()) return pendiente;
-        try {
-            return EstadoSolicitud.valueOf(valor.trim().toLowerCase().replace(" ", "_"));
-        } catch (IllegalArgumentException e) {
-            return pendiente;
-        }
+    EstadoSolicitud(String firestoreValue) {
+        this.firestoreValue = firestoreValue;
     }
 
-    public boolean esTerminal() {
-        return this == aprobado || this == rechazado || this == entrega_completada || this == cancelado;
+    public String getFirestoreValue() {
+        return firestoreValue;
+    }
+
+    public static EstadoSolicitud fromFirestoreValue(String value) {
+        if (value == null) return PENDIENTE;
+        return Arrays.stream(values())
+                .filter(e -> e.firestoreValue.equals(value))
+                .findFirst()
+                .orElse(PENDIENTE);
     }
 }
