@@ -26,6 +26,7 @@ public final class SolicitudMapper {
         return Solicitud.builder()
                 .id(doc.getId())
                 .numeroSolicitud(str(data, "numeroSolicitud"))
+                .codigoDeSolicitud(str(data, "codigoDeSolicitud"))
                 .estado(EstadoSolicitud.fromFirestoreValue(str(data, "estado")))
                 .prioridad(str(data, "prioridad"))
                 .titularId(str(data, "titularId"))

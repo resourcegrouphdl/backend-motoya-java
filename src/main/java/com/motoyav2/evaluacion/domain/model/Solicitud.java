@@ -14,6 +14,7 @@ import java.util.List;
 public class Solicitud {
     String id;
     String numeroSolicitud;
+    String codigoDeSolicitud;
     EstadoSolicitud estado;
     String prioridad;           // Alta | Media | Baja
 

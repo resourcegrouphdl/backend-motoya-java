@@ -102,6 +102,10 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
         String apiProv       = str(docData, "provincia");
         String apiDist       = str(docData, "distrito");
 
+        // ── Campos demográficos (presentes en DNI, ausentes en CEE) ──────
+        String apiSexo           = blankToNull(str(docData, "sexo"));
+        String apiFechaNacimiento = blankToNull(str(docData, "fecha_nacimiento"));
+
         // ── Campos de licencia (data.licencia) ────────────────────────────
         String licNumero      = str(licData, "numero");
         String licCategoria   = str(licData, "categoria");
@@ -126,6 +130,22 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 ? normalize(apiApePaterno).equals(normalize(cliente.getApellidoPaterno()))
                 && normalize(apiApeMaterno).equals(normalize(cliente.getApellidoMaterno()))
                 : null;
+
+        // ── Comparaciones demográficas (solo cuando la API trae el dato) ──
+        String clienteSexo           = blankToNull(cliente.getSexo());
+        String clienteFechaNacimiento = blankToNull(cliente.getFechaNacimiento());
+
+        Boolean coincideSexo = (apiSexo != null && clienteSexo != null)
+                ? normalize(apiSexo).equals(normalize(clienteSexo))
+                : null;   // null = sin dato suficiente para comparar
+
+        Boolean coincideFechaNacimiento = (apiFechaNacimiento != null && clienteFechaNacimiento != null)
+                ? normalize(apiFechaNacimiento).equals(normalize(clienteFechaNacimiento))
+                : null;
+
+        // ── Auto-relleno: campo vacío en BD y API trae valor ─────────────
+        boolean autorellenoSexo           = apiSexo != null && clienteSexo == null;
+        boolean autorellenoFechaNacimiento = apiFechaNacimiento != null && clienteFechaNacimiento == null;
 
         // ── Observaciones relevantes para evaluación ──────────────────────
         // La dirección NO se compara (puede ser antigua por mudanza/alquiler)
@@ -152,6 +172,8 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 .apiDepartamento(apiDpto)
                 .apiProvincia(apiProv)
                 .apiDistrito(apiDist)
+                .apiSexo(apiSexo)
+                .apiFechaNacimiento(apiFechaNacimiento)
                 .licenciaNumero(licNumero)
                 .licenciaCategoria(licCategoria)
                 .licenciaEstado(licEstado)
@@ -160,8 +182,12 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
                 .licenciaTieneRestricion(tieneConducir && !licData.isEmpty() ? tieneRestriccion : null)
                 .coincideNombres(coincideNombres)
                 .coincideApellidos(coincideApellidos)
+                .coincideSexo(coincideSexo)
+                .coincideFechaNacimiento(coincideFechaNacimiento)
                 .licenciaVigente(tieneConducir && !licData.isEmpty() ? licVigente : null)
                 .tieneConducir(tieneConducir)
+                .autorellenoSexo(autorellenoSexo)
+                .autorellenoFechaNacimiento(autorellenoFechaNacimiento)
                 .verificadoPor(verificadoPor)
                 .observaciones(obs.isEmpty() ? null : String.join("; ", obs))
                 .exitoso(apiOk)
@@ -191,6 +217,12 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
         verMap.put("licenciaTieneRestricion", r.getLicenciaTieneRestricion());
         verMap.put("coincideNombres",         r.getCoincideNombres());
         verMap.put("coincideApellidos",       r.getCoincideApellidos());
+        verMap.put("apiSexo",                 r.getApiSexo());
+        verMap.put("apiFechaNacimiento",      r.getApiFechaNacimiento());
+        verMap.put("coincideSexo",            r.getCoincideSexo());
+        verMap.put("coincideFechaNacimiento", r.getCoincideFechaNacimiento());
+        verMap.put("autorellenoSexo",         r.getAutorellenoSexo());
+        verMap.put("autorellenoFechaNacimiento", r.getAutorellenoFechaNacimiento());
         verMap.put("licenciaVigente",         r.getLicenciaVigente());
         verMap.put("tieneConducir",           r.getTieneConducir());
         verMap.put("observaciones",           r.getObservaciones());
@@ -201,6 +233,15 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
         Map<String, Object> updates = new HashMap<>();
         updates.put("verificacionIdentidad", verMap);
         updates.put("updatedAt", Timestamp.now());
+
+        // Auto-relleno: escribir campos demográficos al nivel raíz del cliente
+        // solo cuando estaban vacíos y la API los trajo
+        if (Boolean.TRUE.equals(r.getAutorellenoSexo())) {
+            updates.put("sexo", r.getApiSexo());
+        }
+        if (Boolean.TRUE.equals(r.getAutorellenoFechaNacimiento())) {
+            updates.put("fechaNacimiento", r.getApiFechaNacimiento());
+        }
 
         return clienteRepository.updateFields(clienteId, updates).thenReturn(r);
     }
@@ -239,6 +280,11 @@ public class VerificarIdentidadUseCaseImpl implements VerificarIdentidadUseCase 
     private static String str(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString().trim() : null;
+    }
+
+    /** Converts a blank string (null, empty, or whitespace-only) to null. */
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
     }
 
     private static String normalize(String s) {

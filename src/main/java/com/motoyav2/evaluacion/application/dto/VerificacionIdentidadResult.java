@@ -33,13 +33,23 @@ public class VerificacionIdentidadResult {
     String licenciaRestricciones;   // "SIN RESTRICCIONES" o descripción
     Boolean licenciaTieneRestricion; // true si hay restricción real
 
+    // ── datos demográficos (solo DNI — CEE no los incluye) ────────────────
+    String apiSexo;
+    String apiFechaNacimiento;
+
     // ── comparaciones con datos del cliente ───────────────────────────────
     Boolean coincideNombres;
     Boolean coincideApellidos;
+    Boolean coincideSexo;
+    Boolean coincideFechaNacimiento;
     // coincideUbicacion eliminado: la dirección del documento puede diferir de la
     // residencia actual (alquiler, mudanza) — se muestra como referencia, no como alerta.
     Boolean licenciaVigente;
     Boolean tieneConducir;
+
+    // ── auto-relleno (campo vacío en BD → se llenó con dato de la API) ────
+    Boolean autorellenoSexo;
+    Boolean autorellenoFechaNacimiento;
 
     // ── metadata ──────────────────────────────────────────────────────────
     String verificadoPor;

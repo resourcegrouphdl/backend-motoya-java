@@ -9,17 +9,20 @@ import lombok.Value;
 public class SolicitudResumenDto {
     String id;
     String numeroSolicitud;
+    String codigoDeSolicitud;
     String estado;
     String prioridad;
     String titularNombre;
     String titularDocumento;
     String titularTelefono;
     String vehiculoDescripcion;
+    Double precioVehiculo;
     Double scoreFinal;
     Double scoreDocumental;
     String asesorAsignadoId;
     String vendedorNombre;
     String vendedorTienda;
+    Boolean certificadoGenerado;
     Timestamp createdAt;
     Timestamp updatedAt;
 }
