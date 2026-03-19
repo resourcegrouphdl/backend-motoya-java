@@ -59,10 +59,18 @@ public class VoucherExtractionService implements ExtraerVoucherUseCase {
             return Mono.just(VoucherExtraccion.omitido());
         }
 
+        log.info("[VoucherExtraction] Solicitando raw a DocumentAI — gcsPath={} mimeType={}", gcsPath, mimeType);
         return documentAiRawPort.obtenerRaw(gcsPath, mimeType)
+                .doOnNext(raw -> log.info("[VoucherExtraction] Raw recibido — textLen={} formFields={} entities={}",
+                        raw.fullText() != null ? raw.fullText().length() : 0,
+                        raw.formFields().size(), raw.entities().size()))
                 .flatMap(this::procesarRaw)
+                .doOnNext(result -> log.info("[VoucherExtraction] Resultado final — status={} banco={} campos={} llm={}",
+                        result.status(), result.banco(),
+                        result.campos() != null ? result.campos().size() : 0,
+                        result.enriquecidoConLlm()))
                 .onErrorResume(ex -> {
-                    log.error("[VoucherExtraction] Error procesando {} — {}", gcsPath, ex.getMessage());
+                    log.error("[VoucherExtraction] Error procesando {} — {}", gcsPath, ex.getMessage(), ex);
                     return Mono.just(VoucherExtraccion.error(ex.getMessage()));
                 });
     }

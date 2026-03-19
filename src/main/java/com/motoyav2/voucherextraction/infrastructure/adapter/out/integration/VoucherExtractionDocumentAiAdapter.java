@@ -30,6 +30,7 @@ public class VoucherExtractionDocumentAiAdapter implements DocumentAiPort {
 
     @Override
     public Mono<DocumentAiExtraccion> procesar(String gcsPath, String mimeType) {
+        log.info("[VoucherAdapter] procesar() invocado — gcsPath={} mimeType={}", gcsPath, mimeType);
         return extraerVoucherUseCase.extraer(gcsPath, mimeType)
                 .map(v -> DocumentAiExtraccion.builder()
                         .status(v.status())
@@ -38,8 +39,10 @@ public class VoucherExtractionDocumentAiAdapter implements DocumentAiPort {
                         .error(v.error())
                         .procesadoEn(v.procesadoEn())
                         .build())
-                .doOnSuccess(r -> log.debug("[VoucherAdapter] banco={} campos={}",
+                .doOnSuccess(r -> log.info("[VoucherAdapter] Conversión OK — status={} banco={} campos={}",
+                        r.status(),
                         r.campos() != null ? r.campos().get("banco") : "?",
-                        r.campos() != null ? r.campos().size() : 0));
+                        r.campos() != null ? r.campos().size() : 0))
+                .doOnError(e -> log.error("[VoucherAdapter] Error en procesar() — {}", e.getMessage(), e));
     }
 }

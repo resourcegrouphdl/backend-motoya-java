@@ -34,12 +34,25 @@ public class DocumentAiService {
      * para no bloquear el flujo principal.
      */
     public void extraerAsync(String facturaId, String pagoId, String gcsPath, String mimeType) {
-        documentAiPort.procesar(gcsPath, resolverMimeType(gcsPath, mimeType))
+        String mime = resolverMimeType(gcsPath, mimeType);
+        log.info("[DocumentAI] Iniciando extracción — facturaId={} pagoId={} gcsPath={} mime={}", facturaId, pagoId, gcsPath, mime);
+        documentAiPort.procesar(gcsPath, mime)
+                .doOnNext(e -> log.info("[DocumentAI] Extracción completada — facturaId={} pagoId={} status={} campos={}",
+                        facturaId, pagoId, e.status(), e.campos() != null ? e.campos().size() : 0))
                 .flatMap(extraccion -> persistirEnPago(facturaId, pagoId, extraccion))
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(
-                        v  -> log.info("[DocumentAI] Extracción completada — facturaId={} pagoId={}", facturaId, pagoId),
-                        ex -> log.error("[DocumentAI] Error en extracción — facturaId={} pagoId={}: {}", facturaId, pagoId, ex.getMessage())
+                        v  -> log.info("[DocumentAI] Persistido OK — facturaId={} pagoId={}", facturaId, pagoId),
+                        ex -> {
+                            log.error("[DocumentAI] Error en extracción — facturaId={} pagoId={}: {}", facturaId, pagoId, ex.getMessage(), ex);
+                            // Actualizar Firestore con ERROR para que el frontend no quede colgado
+                            persistirStatusError(facturaId, pagoId, ex.getMessage(), true)
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .subscribe(
+                                            v2 -> log.info("[DocumentAI] Status ERROR persistido — facturaId={} pagoId={}", facturaId, pagoId),
+                                            e2 -> log.error("[DocumentAI] No se pudo persistir ERROR — facturaId={} pagoId={}: {}", facturaId, pagoId, e2.getMessage())
+                                    );
+                        }
                 );
     }
 
@@ -47,12 +60,25 @@ public class DocumentAiService {
      * Dispara la extracción de un comprobante de cuota de cuenta por pagar.
      */
     public void extraerAsyncCuota(String cuentaId, String cuotaId, String gcsPath, String mimeType) {
-        documentAiPort.procesar(gcsPath, resolverMimeType(gcsPath, mimeType))
+        String mime = resolverMimeType(gcsPath, mimeType);
+        log.info("[DocumentAI] Iniciando extracción cuota — cuentaId={} cuotaId={} gcsPath={} mime={}", cuentaId, cuotaId, gcsPath, mime);
+        documentAiPort.procesar(gcsPath, mime)
+                .doOnNext(e -> log.info("[DocumentAI] Extracción completada — cuentaId={} cuotaId={} status={} campos={}",
+                        cuentaId, cuotaId, e.status(), e.campos() != null ? e.campos().size() : 0))
                 .flatMap(extraccion -> persistirEnCuota(cuentaId, cuotaId, extraccion))
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(
-                        v  -> log.info("[DocumentAI] Extracción completada — cuentaId={} cuotaId={}", cuentaId, cuotaId),
-                        ex -> log.error("[DocumentAI] Error en extracción — cuentaId={} cuotaId={}: {}", cuentaId, cuotaId, ex.getMessage())
+                        v  -> log.info("[DocumentAI] Persistido OK — cuentaId={} cuotaId={}", cuentaId, cuotaId),
+                        ex -> {
+                            log.error("[DocumentAI] Error en extracción — cuentaId={} cuotaId={}: {}", cuentaId, cuotaId, ex.getMessage(), ex);
+                            // Actualizar Firestore con ERROR para que el frontend no quede colgado
+                            persistirStatusError(cuentaId, cuotaId, ex.getMessage(), false)
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .subscribe(
+                                            v2 -> log.info("[DocumentAI] Status ERROR persistido — cuentaId={} cuotaId={}", cuentaId, cuotaId),
+                                            e2 -> log.error("[DocumentAI] No se pudo persistir ERROR — cuentaId={} cuotaId={}: {}", cuentaId, cuotaId, e2.getMessage())
+                                    );
+                        }
                 );
     }
 
@@ -64,7 +90,8 @@ public class DocumentAiService {
                 "documentAiCampos", extraccion.campos() != null ? extraccion.campos() : Map.of(),
                 "documentAiProcesadoEn", extraccion.procesadoEn() != null ? extraccion.procesadoEn() : ""
         );
-        return facturaPort.actualizarDocumentAi(facturaId, pagoId, campos);
+        return facturaPort.actualizarDocumentAi(facturaId, pagoId, campos)
+                .doOnError(e -> log.error("[DocumentAI] Fallo persistiendo en Firestore (pago) — facturaId={} pagoId={}: {}", facturaId, pagoId, e.getMessage()));
     }
 
     private Mono<Void> persistirEnCuota(String cuentaId, String cuotaId, DocumentAiExtraccion extraccion) {
@@ -73,7 +100,22 @@ public class DocumentAiService {
                 "documentAiCampos", extraccion.campos() != null ? extraccion.campos() : Map.of(),
                 "documentAiProcesadoEn", extraccion.procesadoEn() != null ? extraccion.procesadoEn() : ""
         );
-        return cuentaPort.actualizarCuota(cuentaId, cuotaId, campos);
+        return cuentaPort.actualizarCuota(cuentaId, cuotaId, campos)
+                .doOnError(e -> log.error("[DocumentAI] Fallo persistiendo en Firestore (cuota) — cuentaId={} cuotaId={}: {}", cuentaId, cuotaId, e.getMessage()));
+    }
+
+    /** Persiste status=ERROR en Firestore cuando la cadena reactiva falla inesperadamente. */
+    private Mono<Void> persistirStatusError(String id1, String id2, String errorMsg, boolean esPago) {
+        java.time.Instant ahora = java.time.Instant.now();
+        Map<String, Object> campos = Map.of(
+                "documentAiStatus", "ERROR",
+                "documentAiCampos", Map.of(),
+                "documentAiProcesadoEn", ahora.toString(),
+                "documentAiError", errorMsg != null ? errorMsg : "Error desconocido"
+        );
+        return esPago
+                ? facturaPort.actualizarDocumentAi(id1, id2, campos)
+                : cuentaPort.actualizarCuota(id1, id2, campos);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
