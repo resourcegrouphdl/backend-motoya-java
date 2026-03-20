@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -72,7 +71,6 @@ public class EvaluacionController {
 
     // ── PUT /solicitudes/{solicitudId}/estado ─────────────────────────────
     @PutMapping("/solicitudes/{solicitudId}/estado")
-    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
     public Mono<HistorialEstadoResponse> cambiarEstado(
             @PathVariable String solicitudId,
             @Valid @RequestBody CambiarEstadoRequest request,
@@ -95,7 +93,6 @@ public class EvaluacionController {
 
     // ── POST /solicitudes/{solicitudId}/asignar-asesor ────────────────────
     @PostMapping("/solicitudes/{solicitudId}/asignar-asesor")
-    @PreAuthorize("hasAnyRole('SUPERVISOR', 'ADMIN')")
     public Mono<Map<String, Object>> asignarAsesor(
             @PathVariable String solicitudId,
             @Valid @RequestBody AsignarAsesorRequest request,
@@ -116,7 +113,6 @@ public class EvaluacionController {
 
     // ── PUT /solicitudes/{solicitudId}/evaluacion-documental ──────────────
     @PutMapping("/solicitudes/{solicitudId}/evaluacion-documental")
-    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
     public Mono<ResponseEntity<Void>> evaluarDocumentos(
             @PathVariable String solicitudId,
             @RequestBody EvaluarDocumentosRequest request,
@@ -136,7 +132,6 @@ public class EvaluacionController {
 
     // ── PUT /solicitudes/{solicitudId}/decision-final ─────────────────────
     @PutMapping("/solicitudes/{solicitudId}/decision-final")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERVISOR')")
     public Mono<Map<String, Object>> registrarDecisionFinal(
             @PathVariable String solicitudId,
             @Valid @RequestBody DecisionFinalRequest request,
@@ -164,7 +159,6 @@ public class EvaluacionController {
 
     // ── GET /certificado/{numeroSolicitud} ────────────────────────────────
     @GetMapping("/certificado/{numeroSolicitud}")
-    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
     public Mono<Map<String, Object>> generarCertificado(
             @PathVariable String numeroSolicitud) {
         return generarCertificadoUseCase.ejecutar(numeroSolicitud)
@@ -174,7 +168,6 @@ public class EvaluacionController {
 
     // ── POST /contrato/{solicitudId} ──────────────────────────────────────
     @PostMapping("/contrato/{solicitudId}")
-    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
     public Mono<Map<String, Object>> generarContrato(
             @PathVariable String solicitudId,
             @RequestBody(required = false) ContratoRequest request,
@@ -198,7 +191,6 @@ public class EvaluacionController {
 
     // ── POST /referencias/{referenciaId}/verificar ────────────────────────
     @PostMapping("/referencias/{referenciaId}/verificar")
-    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
     public Mono<Map<String, Object>> verificarReferencia(
             @PathVariable String referenciaId,
             @Valid @RequestBody VerificarReferenciaRequest request) {
@@ -216,7 +208,6 @@ public class EvaluacionController {
 
     // ── PUT /clientes/{clienteId}/entrevista ──────────────────────────────
     @PutMapping("/clientes/{clienteId}/entrevista")
-    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
     public Mono<ResponseEntity<Void>> evaluarEntrevista(
             @PathVariable String clienteId,
             @RequestBody EvaluarEntrevistaRequest request,
@@ -267,7 +258,6 @@ public class EvaluacionController {
 
     // ── DELETE /referencias/{referenciaId} ────────────────────────────────
     @DeleteMapping("/referencias/{referenciaId}")
-    @PreAuthorize("hasAnyRole('EVALUADOR', 'SUPERVISOR', 'ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> rechazarReferencia(
             @PathVariable String referenciaId,
