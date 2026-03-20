@@ -35,6 +35,7 @@ public class ContratoController {
     private final ValidarEvidenciaFirmaUseCase validarEvidenciaFirmaUseCase;
     private final ConfirmarFirmaUseCase confirmarFirmaUseCase;
     private final CompletarContratoUseCase completarContratoUseCase;
+    private final EliminarContratoUseCase eliminarContratoUseCase;
 
     // ── Resolución de nombres verificados (RENIEC) ─────────────────────────
     private final NombreVerificadoResolver nombreVerificadoResolver;
@@ -297,5 +298,12 @@ public class ContratoController {
     ) {
         return completarContratoUseCase.completar(id, principal.uid())
                 .map(ContratoResponseMapper::toResponse);
+    }
+
+    @DeleteMapping("/contratos/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> eliminar(@PathVariable String id) {
+        log.info("Eliminando contrato id={}", id);
+        return eliminarContratoUseCase.eliminar(id);
     }
 }

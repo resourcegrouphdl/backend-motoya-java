@@ -40,4 +40,9 @@ public class ContratoRepositoryAdapter implements ContratoRepository {
         return firestoreRepository.save(ContratoDocumentMapper.toDocument(contrato))
                 .map(ContratoDocumentMapper::toDomain);
     }
+
+    @Override
+    public Mono<Void> deleteById(String id) {
+        return firestoreRepository.deleteById(id);
+    }
 }

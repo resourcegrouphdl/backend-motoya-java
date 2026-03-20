@@ -14,4 +14,6 @@ public interface ContratoRepository {
     Flux<ContratoListItem> findByTiendaId(String tiendaId);
 
     Mono<Contrato> save(Contrato contrato);
+
+    Mono<Void> deleteById(String id);
 }

@@ -48,6 +48,7 @@ public class ExpedienteCompletoResponse {
         Double scoreFinal;
         String decisionFinal;
         Double montoAprobado;
+        String motivoRechazo;
         String motivoDecision;
         Timestamp fechaDecisionFinal;
         List<String> condicionesAprobacion;
@@ -240,6 +241,7 @@ public class ExpedienteCompletoResponse {
                 .scoreFinal(s.getScoreFinal())
                 .decisionFinal(s.getDecisionFinal() != null ? s.getDecisionFinal().getFirestoreValue() : null)
                 .montoAprobado(s.getMontoAprobado() != null ? s.getMontoAprobado().doubleValue() : null)
+                .motivoRechazo(s.getMotivoRechazo())
                 .motivoDecision(s.getMotivoDecision())
                 .fechaDecisionFinal(s.getFechaDecisionFinal())
                 .condicionesAprobacion(s.getCondicionesAprobacion())

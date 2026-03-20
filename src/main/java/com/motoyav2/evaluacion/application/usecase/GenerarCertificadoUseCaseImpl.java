@@ -24,10 +24,13 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
     private final StoragePort storagePort;
 
     @Override
-    public Mono<String> ejecutar(String numeroSolicitud) {
-        return solicitudRepository.findByNumeroSolicitud(numeroSolicitud)
-                .switchIfEmpty(Mono.error(new ExpedienteNotFoundException(numeroSolicitud)))
+    public Mono<String> ejecutar(String solicitudIdOrNumero) {
+        // Acepta tanto el Firestore doc ID como el numeroSolicitud para compatibilidad con el frontend
+        return solicitudRepository.findById(solicitudIdOrNumero)
+                .switchIfEmpty(solicitudRepository.findByNumeroSolicitud(solicitudIdOrNumero))
+                .switchIfEmpty(Mono.error(new ExpedienteNotFoundException(solicitudIdOrNumero)))
                 .flatMap(solicitud -> obtenerExpedienteUseCase.ejecutar(solicitud.getId())
+
                         .flatMap(expediente -> {
                             byte[] pdf = certificadoPdfService.generar(expediente);
                             String path = "contratos/certificados/" + solicitud.getId();

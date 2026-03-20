@@ -14,10 +14,24 @@ import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class CambiarEstadoUseCaseImpl implements CambiarEstadoUseCase {
+
+    /** Estados donde el motivo se persiste como motivoRechazo en el documento principal */
+    private static final Set<EstadoSolicitud> ESTADOS_RECHAZO = Set.of(
+            EstadoSolicitud.RECHAZADO,
+            EstadoSolicitud.CANCELADO,
+            EstadoSolicitud.CLIENTE_RECHAZADO,
+            EstadoSolicitud.FIADOR_RECHAZADO,
+            EstadoSolicitud.REFERENCIAS_RECHAZADAS,
+            EstadoSolicitud.VEHICULO_RECHAZADO,
+            EstadoSolicitud.DATOS_NO_VERIFICADOS,
+            EstadoSolicitud.DOCUMENTOS_OBSERVADOS,
+            EstadoSolicitud.DOCUMENTOS_INCOMPLETOS
+    );
 
     private final SolicitudRepository solicitudRepository;
     private final HistorialEstadoRepository historialEstadoRepository;
@@ -33,6 +47,12 @@ public class CambiarEstadoUseCaseImpl implements CambiarEstadoUseCase {
                     Map<String, Object> updates = new HashMap<>();
                     updates.put("estado", command.nuevoEstado().getFirestoreValue());
                     updates.put("updatedAt", ahora);
+
+                    // Persistir motivoRechazo en el documento cuando la transición es a un estado de rechazo
+                    if (ESTADOS_RECHAZO.contains(command.nuevoEstado())
+                            && command.motivo() != null && !command.motivo().isBlank()) {
+                        updates.put("motivoRechazo", command.motivo());
+                    }
 
                     HistorialEstado historial = HistorialEstado.builder()
                             .solicitudId(command.solicitudId())
