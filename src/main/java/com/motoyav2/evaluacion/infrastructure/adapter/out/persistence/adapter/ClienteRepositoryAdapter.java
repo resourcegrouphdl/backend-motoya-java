@@ -10,6 +10,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
+import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toFlux;
 import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toMono;
 
 @Component
@@ -23,6 +24,21 @@ public class ClienteRepositoryAdapter implements ClienteRepository {
     public Mono<Cliente> findById(String id) {
         return toMono(db.collection(COL).document(id).get())
                 .mapNotNull(ClienteMapper::toDomain);
+    }
+
+    @Override
+    public Mono<Cliente> findByDocumentNumber(String documentNumber) {
+        return toFlux(db.collection(COL)
+                .whereEqualTo("documentNumber", documentNumber)
+                .limit(1).get())
+                .next()
+                .mapNotNull(ClienteMapper::toDomain);
+    }
+
+    @Override
+    public Mono<String> create(Map<String, Object> fields) {
+        return toMono(db.collection(COL).add(fields))
+                .map(ref -> ref.getId());
     }
 
     @Override

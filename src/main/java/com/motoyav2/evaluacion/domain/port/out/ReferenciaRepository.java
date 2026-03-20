@@ -10,5 +10,6 @@ import java.util.Map;
 public interface ReferenciaRepository {
     Mono<Referencia> findById(String id);
     Flux<Referencia> findByIds(List<String> ids);
+    Mono<String> create(Map<String, Object> fields);
     Mono<Void> updateFields(String id, Map<String, Object> fields);
 }

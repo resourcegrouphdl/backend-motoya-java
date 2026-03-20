@@ -1,7 +1,5 @@
 package com.motoyav2.voucherextraction.domain.model;
 
-import lombok.Builder;
-
 import java.util.Map;
 
 /**
@@ -9,7 +7,6 @@ import java.util.Map;
  * Contiene el texto OCR completo y los campos detectados sin procesar,
  * listos para ser enriquecidos por las estrategias de banco y el LLM.
  */
-@Builder
 public record VoucherRaw(
         String gcsPath,
         /** Texto OCR completo del documento — base para la extracción por regex. */

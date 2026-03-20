@@ -2,6 +2,7 @@ package com.motoyav2.evaluacion.application.usecase;
 
 import com.google.cloud.Timestamp;
 import com.motoyav2.evaluacion.application.command.CambiarEstadoCommand;
+import com.motoyav2.evaluacion.domain.enums.EstadoSolicitud;
 import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
 import com.motoyav2.evaluacion.domain.model.HistorialEstado;
 import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;

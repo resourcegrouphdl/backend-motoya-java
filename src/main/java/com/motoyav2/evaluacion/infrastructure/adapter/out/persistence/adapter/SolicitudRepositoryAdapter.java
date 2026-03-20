@@ -75,6 +75,29 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
     }
 
     @Override
+    public Flux<Solicitud> findByVendedorId(String vendedorId, int limit, int offset) {
+        return toFlux(db.collection(COL)
+                .whereEqualTo("vendedorId", vendedorId)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .offset(offset).limit(limit).get())
+                .mapNotNull(SolicitudMapper::toDomain);
+    }
+
+    @Override
+    public Mono<Long> countByVendedorId(String vendedorId) {
+        return toMono(db.collection(COL)
+                .whereEqualTo("vendedorId", vendedorId)
+                .count().get())
+                .map(agg -> agg.getCount());
+    }
+
+    @Override
+    public Mono<String> create(Map<String, Object> fields) {
+        return toMono(db.collection(COL).add(fields))
+                .map(ref -> ref.getId());
+    }
+
+    @Override
     public Mono<Void> updateFields(String id, Map<String, Object> fields) {
         return toMono(db.collection(COL).document(id).update(fields)).then();
     }

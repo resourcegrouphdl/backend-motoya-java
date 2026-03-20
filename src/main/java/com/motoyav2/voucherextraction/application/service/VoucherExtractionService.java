@@ -122,13 +122,7 @@ public class VoucherExtractionService implements ExtraerVoucherUseCase {
 
     private VoucherExtraccion buildExtraccion(Map<String, String> campos, String banco, boolean llmUsed) {
         String status = campos.isEmpty() ? "COMPLETADO_SIN_CAMPOS" : "COMPLETADO";
-        return VoucherExtraccion.builder()
-                .status(status)
-                .banco(banco)
-                .campos(Collections.unmodifiableMap(campos))
-                .enriquecidoConLlm(llmUsed)
-                .procesadoEn(Instant.now().toString())
-                .build();
+        return new VoucherExtraccion(status, banco, Collections.unmodifiableMap(campos), llmUsed, Instant.now().toString(), null);
     }
 
     /**

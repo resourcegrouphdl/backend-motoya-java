@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toMono;
 
 @Component
@@ -21,5 +23,11 @@ public class VehiculoRepositoryAdapter implements VehiculoRepository {
     public Mono<Vehiculo> findById(String id) {
         return toMono(db.collection(COL).document(id).get())
                 .mapNotNull(VehiculoMapper::toDomain);
+    }
+
+    @Override
+    public Mono<String> create(Map<String, Object> fields) {
+        return toMono(db.collection(COL).add(fields))
+                .map(ref -> ref.getId());
     }
 }

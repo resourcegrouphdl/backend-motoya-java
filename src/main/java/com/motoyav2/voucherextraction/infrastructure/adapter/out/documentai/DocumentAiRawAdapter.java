@@ -89,12 +89,7 @@ public class DocumentAiRawAdapter implements DocumentAiRawPort {
     @SuppressWarnings("unused")
     private Mono<VoucherRaw> fallbackObtenerRaw(String gcsPath, String mimeType, Throwable t) {
         log.warn("[DocAiRaw] Circuit breaker activo — {}", t.getMessage());
-        return Mono.just(VoucherRaw.builder()
-                .gcsPath(gcsPath)
-                .fullText("")
-                .formFields(Map.of())
-                .entities(Map.of())
-                .build());
+        return Mono.just(new VoucherRaw(gcsPath, "", Map.of(), Map.of()));
     }
 
     // ── Parsing ───────────────────────────────────────────────────────────────
@@ -104,7 +99,7 @@ public class DocumentAiRawAdapter implements DocumentAiRawPort {
         Map<?, ?> doc = (Map<?, ?>) response.get("document");
         if (doc == null) {
             log.warn("[DocAiRaw] Respuesta sin 'document' — path={}", gcsPath);
-            return VoucherRaw.builder().gcsPath(gcsPath).fullText("").formFields(Map.of()).entities(Map.of()).build();
+            return new VoucherRaw(gcsPath, "", Map.of(), Map.of());
         }
 
         Object textObj = doc.get("text");
@@ -143,12 +138,9 @@ public class DocumentAiRawAdapter implements DocumentAiRawPort {
             }
         }
 
-        return VoucherRaw.builder()
-                .gcsPath(gcsPath)
-                .fullText(fullText)
-                .formFields(Collections.unmodifiableMap(formFields))
-                .entities(Collections.unmodifiableMap(entities))
-                .build();
+        return new VoucherRaw(gcsPath, fullText,
+                Collections.unmodifiableMap(formFields),
+                Collections.unmodifiableMap(entities));
     }
 
     /**

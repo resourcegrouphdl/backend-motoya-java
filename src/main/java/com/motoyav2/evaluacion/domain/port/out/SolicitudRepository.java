@@ -12,5 +12,8 @@ public interface SolicitudRepository {
     Flux<Solicitud> findByEstado(String estado, int limit, int offset);
     Flux<Solicitud> findAll(String estado, String prioridad, String search, int limit, int offset);
     Mono<Long> countAll(String estado, String prioridad, String search);
+    Flux<Solicitud> findByVendedorId(String vendedorId, int limit, int offset);
+    Mono<Long> countByVendedorId(String vendedorId);
+    Mono<String> create(Map<String, Object> fields);
     Mono<Void> updateFields(String id, Map<String, Object> fields);
 }
