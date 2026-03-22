@@ -5,6 +5,7 @@ import com.google.cloud.firestore.Query;
 import com.motoyav2.evaluacion.domain.model.Solicitud;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.mapper.SolicitudMapper;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.FirestoreCollections;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,7 @@ import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.uti
 @RequiredArgsConstructor
 public class SolicitudRepositoryAdapter implements SolicitudRepository {
 
-    private static final String COL = "solicitudes";
+    private static final String COL = FirestoreCollections.SOLICITUDES;
     private final Firestore db;
 
     @Override

@@ -5,7 +5,9 @@ import com.motoyav2.evaluacion.application.command.AjustarFinanciamientoCommand;
 import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
 import com.motoyav2.evaluacion.domain.port.in.AjustarFinanciamientoUseCase;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
-import com.motoyav2.evaluacion.domain.service.CalculadoraFinanciamientoService;
+import com.motoyav2.financiamiento.domain.model.ResultadoSimulacion;
+import com.motoyav2.financiamiento.domain.model.SolicitudSimulacion;
+import com.motoyav2.financiamiento.domain.service.MotorFinancieroService;
 import com.motoyav2.shared.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -53,17 +55,32 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                     if (command.nuevoPlazo() < 4) {
                         return Mono.error(new BadRequestException("El plazo mínimo es 4 quincenas"));
                     }
-                    BigDecimal costoTotal = precio.add(CalculadoraFinanciamientoService.GASTOS_ADMINISTRATIVOS);
+                    BigDecimal costoTotal = precio.add(MotorFinancieroService.GASTOS_ADMINISTRATIVOS_DEFAULT);
                     if (command.nuevaInicial().compareTo(costoTotal) >= 0) {
-                        return Mono.error(new BadRequestException("La inicial no puede ser igual o mayor al costo total"));
+                        return Mono.error(new BadRequestException(
+                                "La inicial no puede ser igual o mayor al costo total"));
                     }
 
-                    // ── Recálculo ─────────────────────────────────────────────
-                    BigDecimal cuota = CalculadoraFinanciamientoService.calcularCuotaQuincenal(
-                            precio, command.nuevaInicial(), command.nuevoPlazo());
-                    BigDecimal total = CalculadoraFinanciamientoService.calcularTotalAPagar(
-                            command.nuevaInicial(), cuota, command.nuevoPlazo());
-                    BigDecimal montoFinanciar = costoTotal.subtract(command.nuevaInicial());
+                    // ── Recálculo con motor financiero (amortización francesa) ─
+                    BigDecimal tea = command.tea() != null
+                            ? command.tea()
+                            : MotorFinancieroService.TEA_DEFAULT;
+
+                    ResultadoSimulacion sim;
+                    try {
+                        sim = MotorFinancieroService.simular(SolicitudSimulacion.builder()
+                                .precioVehiculo(precio)
+                                .cuotaInicial(command.nuevaInicial())
+                                .numeroCuotas(command.nuevoPlazo())
+                                .tea(tea)
+                                .build());
+                    } catch (IllegalArgumentException e) {
+                        return Mono.error(new BadRequestException(e.getMessage()));
+                    }
+
+                    BigDecimal cuota         = sim.getCuotaQuincenal();
+                    BigDecimal montoFinanciar = sim.getMontoFinanciado();
+                    BigDecimal total          = sim.getTotalPagar();
                     BigDecimal pct = costoTotal.compareTo(BigDecimal.ZERO) > 0
                             ? command.nuevaInicial()
                                     .divide(costoTotal, 4, RoundingMode.HALF_UP)
@@ -86,6 +103,9 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                         df.put("montoFinanciar", montoFinanciar.doubleValue());
                         df.put("totalAPagar", total.doubleValue());
                         df.put("porcentajeInicial", pct.doubleValue());
+                        df.put("tea", tea.doubleValue());
+                        df.put("tcea", sim.getTcea().doubleValue());
+                        df.put("tasaQuincenal", sim.getTasaQuincenal().doubleValue());
                         updates.put("datosFinancieros", df);
                     }
 
@@ -95,7 +115,9 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                             "numeroCuotasQuincenales", command.nuevoPlazo(),
                             "montoCuotaQuincenal", cuota.doubleValue(),
                             "totalAPagar", total.doubleValue(),
-                            "porcentajeInicial", pct.doubleValue()
+                            "porcentajeInicial", pct.doubleValue(),
+                            "tea", tea.doubleValue(),
+                            "tcea", sim.getTcea().doubleValue()
                     );
 
                     return solicitudRepository.updateFields(command.solicitudId(), updates)

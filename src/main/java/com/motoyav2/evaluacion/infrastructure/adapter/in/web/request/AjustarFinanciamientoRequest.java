@@ -8,5 +8,10 @@ import java.math.BigDecimal;
 
 public record AjustarFinanciamientoRequest(
         @NotNull @DecimalMin(value = "0.01") BigDecimal nuevaInicial,
-        @NotNull @Min(4) Integer nuevoPlazo
+        @NotNull @Min(4) Integer nuevoPlazo,
+        /**
+         * TEA del crédito (decimal, ej: 0.60 = 60%).
+         * Opcional — usa el valor por defecto si no se envía.
+         */
+        BigDecimal tea
 ) {}

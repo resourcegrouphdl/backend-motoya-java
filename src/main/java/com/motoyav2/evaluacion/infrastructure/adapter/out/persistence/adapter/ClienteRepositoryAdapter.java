@@ -3,6 +3,7 @@ package com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.adapter;
 import com.google.cloud.firestore.Firestore;
 import com.motoyav2.evaluacion.domain.model.Cliente;
 import com.motoyav2.evaluacion.domain.port.out.ClienteRepository;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.FirestoreCollections;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.mapper.ClienteMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,7 @@ import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.uti
 @RequiredArgsConstructor
 public class ClienteRepositoryAdapter implements ClienteRepository {
 
-    private static final String COL = "clientes_v1";
+    private static final String COL = FirestoreCollections.CLIENTES;
     private final Firestore db;
 
     @Override

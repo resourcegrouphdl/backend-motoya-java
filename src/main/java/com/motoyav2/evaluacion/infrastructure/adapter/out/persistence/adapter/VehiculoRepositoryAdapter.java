@@ -3,6 +3,7 @@ package com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.adapter;
 import com.google.cloud.firestore.Firestore;
 import com.motoyav2.evaluacion.domain.model.Vehiculo;
 import com.motoyav2.evaluacion.domain.port.out.VehiculoRepository;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.FirestoreCollections;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.mapper.VehiculoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,7 +17,7 @@ import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.uti
 @RequiredArgsConstructor
 public class VehiculoRepositoryAdapter implements VehiculoRepository {
 
-    private static final String COL = "vehiculos";
+    private static final String COL = FirestoreCollections.VEHICULOS;
     private final Firestore db;
 
     @Override

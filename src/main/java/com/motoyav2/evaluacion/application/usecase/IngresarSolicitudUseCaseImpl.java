@@ -129,6 +129,9 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
         m.put("tipoVivienda", d.tipoVivienda());
         m.put("licenciaConducir", d.licenciaConducir());
         m.put("numeroLicencia", d.numeroLicencia());
+        if (d.archivos() != null && !d.archivos().isEmpty()) {
+            m.put("archivos", d.archivos());
+        }
         m.put("createdAt", ahora);
         m.put("updatedAt", ahora);
         return m;
@@ -174,6 +177,14 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
         m.put("estado", "pendiente");
         m.put("prioridad", "Media");
         m.put("titularId", titularId);
+        // Desnormalización para listados rápidos
+        String nombreCompleto = (cmd.titular().nombres() + " "
+                + cmd.titular().apellidoPaterno() + " "
+                + cmd.titular().apellidoMaterno()).trim();
+        m.put("titularNombreCompleto", nombreCompleto);
+        m.put("titularDni", cmd.titular().documentNumber());
+        m.put("titularTelefono", cmd.titular().telefono1());
+        m.put("titularEmail", cmd.titular().email());
         m.put("fiadorId", fiadorId);
         m.put("vehiculoId", vehiculoId);
         m.put("referenciasIds", referenciasIds);

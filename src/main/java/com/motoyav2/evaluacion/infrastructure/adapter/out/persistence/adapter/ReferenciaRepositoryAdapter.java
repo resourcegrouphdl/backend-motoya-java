@@ -3,6 +3,7 @@ package com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.adapter;
 import com.google.cloud.firestore.Firestore;
 import com.motoyav2.evaluacion.domain.model.Referencia;
 import com.motoyav2.evaluacion.domain.port.out.ReferenciaRepository;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.FirestoreCollections;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.mapper.ReferenciaMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,7 +19,7 @@ import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.uti
 @RequiredArgsConstructor
 public class ReferenciaRepositoryAdapter implements ReferenciaRepository {
 
-    private static final String COL = "referencias";
+    private static final String COL = FirestoreCollections.REFERENCIAS;
     private final Firestore db;
 
     @Override

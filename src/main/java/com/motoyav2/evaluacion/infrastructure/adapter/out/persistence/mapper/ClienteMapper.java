@@ -76,12 +76,24 @@ public final class ClienteMapper {
                 .build();
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ClienteMapper.class);
+
     private static Map<String, String> mapArchivos(Object raw) {
-        if (!(raw instanceof Map)) return null;
+        // --- DEBUG FIADOR ---
+        if (raw == null) {
+            log.info("[DEBUG ClienteMapper] archivos raw es NULL");
+            return null;
+        }
+        if (!(raw instanceof Map)) {
+            log.info("[DEBUG ClienteMapper] archivos raw NO es Map, es: {}", raw.getClass().getName());
+            return null;
+        }
+        // --- END DEBUG ---
         Map<String, String> result = new HashMap<>();
         ((Map<String, Object>) raw).forEach((k, v) -> {
             if (v != null) result.put(k, v.toString());
         });
+        log.info("[DEBUG ClienteMapper] archivos mapeados: keys={}", result.keySet());
         return result;
     }
 

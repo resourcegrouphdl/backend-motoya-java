@@ -38,4 +38,13 @@ public class ContratoDocument {
     private EvidenciaDocumentoEmbedded evidenciaSOAT;
     private EvidenciaDocumentoEmbedded evidenciaPlacaRodaje;
     private List<EvidenciaDocumentoEmbedded> actasDeEntrega;
+
+    /** Compatibilidad con documentos Firestore anteriores que guardaban el campo en singular. */
+    public void setActaDeEntrega(Object legacy) {
+        if (legacy instanceof java.util.List<?> list && this.actasDeEntrega == null) {
+            @SuppressWarnings("unchecked")
+            var casted = (List<EvidenciaDocumentoEmbedded>) list;
+            this.actasDeEntrega = casted;
+        }
+    }
 }

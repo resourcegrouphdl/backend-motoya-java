@@ -90,6 +90,9 @@ public class ReemplazarFiadorUseCaseImpl implements ReemplazarFiadorUseCase {
         m.put("tipoVivienda", d.tipoVivienda());
         m.put("licenciaConducir", d.licenciaConducir());
         m.put("numeroLicencia", d.numeroLicencia());
+        if (d.archivos() != null && !d.archivos().isEmpty()) {
+            m.put("archivos", d.archivos());
+        }
         m.put("createdAt", ahora);
         m.put("updatedAt", ahora);
         return m;

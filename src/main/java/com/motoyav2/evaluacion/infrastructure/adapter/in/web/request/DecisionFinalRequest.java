@@ -14,6 +14,11 @@ public record DecisionFinalRequest(
         List<String> condiciones,
         BigDecimal inicialAjustada,
         Integer plazoAjustado,
+        /**
+         * TEA del crédito ajustado (decimal, ej: 0.60 = 60%).
+         * Opcional — usa el valor por defecto si no se envía.
+         */
+        BigDecimal tea,
         String fortalezasCaso,
         String debilidadesCaso,
         @NotBlank(message = "evaluador es requerido")

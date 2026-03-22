@@ -10,16 +10,16 @@ import com.motoyav2.evaluacion.domain.model.Solicitud;
 import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.RegistrarDecisionFinalUseCase;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
-import com.motoyav2.evaluacion.domain.service.CalculadoraFinanciamientoService;
+import com.motoyav2.financiamiento.domain.model.ResultadoSimulacion;
+import com.motoyav2.financiamiento.domain.model.SolicitudSimulacion;
+import com.motoyav2.financiamiento.domain.service.MotorFinancieroService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -70,39 +70,58 @@ public class RegistrarDecisionFinalUseCaseImpl implements RegistrarDecisionFinal
 
         // Recalcular financieros si se ajustaron parámetros
         if (command.inicialAjustada() != null || command.plazoAjustado() != null) {
-            BigDecimal inicial = command.inicialAjustada() != null
-                    ? command.inicialAjustada()
-                    : (solicitud.getDatosFinancieros() != null ? solicitud.getDatosFinancieros().getInicial()
-                            : solicitud.getInicial());
-            int plazo = command.plazoAjustado() != null
-                    ? command.plazoAjustado()
-                    : solicitud.getPlazoQuincenas();
-
             BigDecimal precio = solicitud.getDatosFinancieros() != null
                     ? solicitud.getDatosFinancieros().getMontoVehiculo()
                     : solicitud.getPrecioCompraMoto();
 
-            BigDecimal cuota = CalculadoraFinanciamientoService.calcularCuotaQuincenal(precio, inicial, plazo);
-            BigDecimal total = CalculadoraFinanciamientoService.calcularTotalAPagar(inicial, cuota, plazo);
-            BigDecimal costoTotal = precio.add(CalculadoraFinanciamientoService.GASTOS_ADMINISTRATIVOS);
+            BigDecimal inicial = command.inicialAjustada() != null
+                    ? command.inicialAjustada()
+                    : (solicitud.getDatosFinancieros() != null
+                            ? solicitud.getDatosFinancieros().getInicial()
+                            : solicitud.getInicial());
 
-            updates.put("inicial", inicial.doubleValue());
-            updates.put("montoCuota", cuota.doubleValue());
-            updates.put("plazoQuincenas", plazo);
+            int plazo = command.plazoAjustado() != null
+                    ? command.plazoAjustado()
+                    : solicitud.getPlazoQuincenas();
 
-            if (solicitud.getDatosFinancieros() != null) {
-                Map<String, Object> df = new HashMap<>();
-                df.put("inicial", inicial.doubleValue());
-                df.put("montoCuotaQuincenal", cuota.doubleValue());
-                df.put("numeroCuotasQuincenales", plazo);
-                df.put("montoFinanciar", costoTotal.subtract(inicial).doubleValue());
-                df.put("totalAPagar", total.doubleValue());
+            BigDecimal tea = command.tea() != null
+                    ? command.tea()
+                    : MotorFinancieroService.TEA_DEFAULT;
+
+            try {
+                ResultadoSimulacion sim = MotorFinancieroService.simular(SolicitudSimulacion.builder()
+                        .precioVehiculo(precio)
+                        .cuotaInicial(inicial)
+                        .numeroCuotas(plazo)
+                        .tea(tea)
+                        .build());
+
+                BigDecimal costoTotal = precio.add(MotorFinancieroService.GASTOS_ADMINISTRATIVOS_DEFAULT);
                 BigDecimal pct = costoTotal.compareTo(BigDecimal.ZERO) > 0
                         ? inicial.divide(costoTotal, 4, RoundingMode.HALF_UP)
                                 .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)
                         : BigDecimal.ZERO;
-                df.put("porcentajeInicial", pct.doubleValue());
-                updates.put("datosFinancieros", df);
+
+                updates.put("inicial", inicial.doubleValue());
+                updates.put("montoCuota", sim.getCuotaQuincenal().doubleValue());
+                updates.put("plazoQuincenas", plazo);
+
+                if (solicitud.getDatosFinancieros() != null) {
+                    Map<String, Object> df = new HashMap<>();
+                    df.put("inicial", inicial.doubleValue());
+                    df.put("montoCuotaQuincenal", sim.getCuotaQuincenal().doubleValue());
+                    df.put("numeroCuotasQuincenales", plazo);
+                    df.put("montoFinanciar", sim.getMontoFinanciado().doubleValue());
+                    df.put("totalAPagar", sim.getTotalPagar().doubleValue());
+                    df.put("porcentajeInicial", pct.doubleValue());
+                    df.put("tea", tea.doubleValue());
+                    df.put("tcea", sim.getTcea().doubleValue());
+                    df.put("tasaQuincenal", sim.getTasaQuincenal().doubleValue());
+                    updates.put("datosFinancieros", df);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Si la validación falla por datos inconsistentes del sistema legado,
+                // no bloqueamos la decisión final — solo omitimos el recálculo financiero.
             }
         }
         return updates;

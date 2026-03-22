@@ -1,6 +1,7 @@
 package com.motoyav2.evaluacion.application.command;
 
 import java.util.List;
+import java.util.Map;
 
 public record IngresarSolicitudCommand(
         ClienteData titular,
@@ -31,7 +32,8 @@ public record IngresarSolicitudCommand(
             String rangoIngresos,
             String tipoVivienda,
             String licenciaConducir,
-            String numeroLicencia
+            String numeroLicencia,
+            Map<String, String> archivos
     ) {}
 
     public record ReferenciaData(

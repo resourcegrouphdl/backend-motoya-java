@@ -5,9 +5,11 @@ import com.motoyav2.evaluacion.domain.model.Expediente;
 import com.motoyav2.evaluacion.domain.port.in.ObtenerExpedienteUseCase;
 import com.motoyav2.evaluacion.domain.port.out.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ObtenerExpedienteUseCaseImpl implements ObtenerExpedienteUseCase {
@@ -48,14 +50,24 @@ public class ObtenerExpedienteUseCaseImpl implements ObtenerExpedienteUseCase {
                             vehiculoMono,
                             refsMono,
                             asesorMono.defaultIfEmpty(nullUsuario())
-                    ).map(tuple -> Expediente.builder()
-                            .solicitud(solicitud)
-                            .titular(tuple.getT1())
-                            .fiador(isNull(tuple.getT2()) ? null : tuple.getT2())
-                            .vehiculo(tuple.getT3())
-                            .referencias(tuple.getT4())
-                            .asesorAsignado(isNull(tuple.getT5()) ? null : tuple.getT5())
-                            .build());
+                    ).map(tuple -> {
+                        var fiadorCliente = isNull(tuple.getT2()) ? null : tuple.getT2();
+                        // --- DEBUG FIADOR ---
+                        log.info("[DEBUG] solicitud={} fiadorId={} fiadorEncontrado={} archivos={}",
+                                solicitudId,
+                                solicitud.getFiadorId(),
+                                fiadorCliente != null,
+                                fiadorCliente != null ? fiadorCliente.getArchivos() : "N/A");
+                        // --- END DEBUG ---
+                        return Expediente.builder()
+                                .solicitud(solicitud)
+                                .titular(tuple.getT1())
+                                .fiador(fiadorCliente)
+                                .vehiculo(tuple.getT3())
+                                .referencias(tuple.getT4())
+                                .asesorAsignado(isNull(tuple.getT5()) ? null : tuple.getT5())
+                                .build();
+                    });
                 });
     }
 

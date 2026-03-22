@@ -13,15 +13,23 @@ public record SolicitudTrackingDto(
         int progreso,
         String prioridad,
         String titularId,
+        String fiadorId,
+        String titularNombreCompleto,
+        String titularDni,
+        String titularTelefono,
+        String titularEmail,
         String vehiculoDescripcion,
         Double precioCompraMoto,
         Double montoCuota,
         Integer plazoQuincenas,
         String motivoRechazo,
+        /** Observaciones por documento del evaluador (ej: "dniFrente: foto borrosa; selfie: no coincide"). */
+        String observacionesDocumentales,
         Boolean certificadoGenerado,
         String urlCertificado,
         Boolean contratoGenerado,
-        Long createdAtEpoch
+        Long createdAtEpoch,
+        Long updatedAtEpoch
 ) {
     private static final java.util.Map<String, String> ESTADO_LABELS = java.util.Map.ofEntries(
             java.util.Map.entry("pendiente", "Pendiente"),
@@ -92,6 +100,7 @@ public record SolicitudTrackingDto(
     public static SolicitudTrackingDto from(Solicitud s) {
         String estadoVal = s.getEstado() != null ? s.getEstado().getFirestoreValue() : "pendiente";
         Long epoch = s.getCreatedAt() != null ? s.getCreatedAt().toDate().getTime() : null;
+        Long updatedEpoch = s.getUpdatedAt() != null ? s.getUpdatedAt().toDate().getTime() : epoch;
 
         Double precio = s.getDatosFinancieros() != null && s.getDatosFinancieros().getMontoVehiculo() != null
                 ? s.getDatosFinancieros().getMontoVehiculo().doubleValue()
@@ -114,15 +123,22 @@ public record SolicitudTrackingDto(
                 ESTADO_PROGRESO.getOrDefault(estadoVal, 0),
                 s.getPrioridad(),
                 s.getTitularId(),
+                s.getFiadorId(),
+                s.getTitularNombreCompleto(),
+                s.getTitularDni(),
+                s.getTitularTelefono(),
+                s.getTitularEmail(),
                 null, // vehiculoDescripcion se enriquece opcionalmente
                 precio,
                 cuota,
                 plazo,
                 s.getMotivoRechazo(),
+                s.getObservacionesGenerales(),
                 s.getCertificadoGenerado(),
                 s.getUrlCertificado(),
                 s.getContratoGenerado(),
-                epoch
+                epoch,
+                updatedEpoch
         );
     }
 }

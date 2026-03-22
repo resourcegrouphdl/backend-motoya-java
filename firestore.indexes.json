@@ -4,6 +4,7 @@
       "collectionGroup": "solicitudes",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "vendedorId", "order": "ASCENDING"  },
         { "fieldPath": "createdAt",  "order": "DESCENDING" },
         { "fieldPath": "__name__",   "order": "DESCENDING" }
       ]
@@ -38,6 +39,52 @@
     },
     {
       "collectionGroup": "cambios_estado_solicitud",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "solicitudId", "order": "ASCENDING"  },
+        { "fieldPath": "fechaCambio", "order": "DESCENDING" },
+        { "fieldPath": "__name__",    "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_dev",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vendedorId", "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" },
+        { "fieldPath": "__name__",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_dev",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado",     "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" },
+        { "fieldPath": "__name__",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_dev",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "prioridad",  "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" },
+        { "fieldPath": "__name__",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_dev",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado",     "order": "ASCENDING"  },
+        { "fieldPath": "prioridad",  "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" },
+        { "fieldPath": "__name__",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cambios_estado_solicitud_dev",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "solicitudId", "order": "ASCENDING"  },

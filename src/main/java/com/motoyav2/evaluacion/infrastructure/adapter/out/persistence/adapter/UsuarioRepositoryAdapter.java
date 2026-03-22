@@ -3,6 +3,7 @@ package com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.adapter;
 import com.google.cloud.firestore.Firestore;
 import com.motoyav2.evaluacion.domain.model.Usuario;
 import com.motoyav2.evaluacion.domain.port.out.UsuarioRepository;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.FirestoreCollections;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -15,7 +16,7 @@ import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.uti
 @RequiredArgsConstructor
 public class UsuarioRepositoryAdapter implements UsuarioRepository {
 
-    private static final String COL = "usuarios";
+    private static final String COL = FirestoreCollections.USUARIOS;
     private final Firestore db;
 
     @Override

@@ -41,6 +41,10 @@ public final class SolicitudMapper {
                 // Financiero nuevo
                 .datosFinancieros(mapDatosFinancieros(data.get("datosFinancieros")))
                 // Vendedor
+                .titularNombreCompleto(str(data, "titularNombreCompleto"))
+                .titularDni(str(data, "titularDni"))
+                .titularTelefono(str(data, "titularTelefono"))
+                .titularEmail(str(data, "titularEmail"))
                 .vendedor(mapVendedor(data.get("vendedor")))
                 .vendedorId(str(data, "vendedorId"))
                 .vendedorNombre(str(data, "vendedorNombre"))

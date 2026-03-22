@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
+import java.util.Map;
 
 public record IngresarSolicitudRequest(
 
@@ -38,7 +39,8 @@ public record IngresarSolicitudRequest(
             String rangoIngresos,
             String tipoVivienda,
             String licenciaConducir,
-            String numeroLicencia
+            String numeroLicencia,
+            Map<String, String> archivos
     ) {}
 
     public record ReferenciaRequest(
