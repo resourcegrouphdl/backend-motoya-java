@@ -7,6 +7,7 @@ import com.motoyav2.evaluacion.domain.enums.Decision;
 import com.motoyav2.evaluacion.domain.enums.EstadoSolicitud;
 import com.motoyav2.evaluacion.domain.model.HistorialEstado;
 import com.motoyav2.evaluacion.domain.port.in.*;
+import com.motoyav2.evaluacion.domain.port.in.CorregirNombreDesdeApiUseCase;
 import com.motoyav2.evaluacion.infrastructure.adapter.in.web.request.*;
 import com.motoyav2.evaluacion.infrastructure.adapter.in.web.response.ExpedienteCompletoResponse;
 import com.motoyav2.evaluacion.application.dto.VerificacionIdentidadResult;
@@ -46,6 +47,7 @@ public class EvaluacionController {
     private final VerificarReferenciaUseCase verificarReferenciaUseCase;
     private final RechazarReferenciaUseCase rechazarReferenciaUseCase;
     private final AjustarFinanciamientoUseCase ajustarFinanciamientoUseCase;
+    private final CorregirNombreDesdeApiUseCase corregirNombreDesdeApiUseCase;
 
     // ── GET /expediente/{solicitudId} ──────────────────────────────────────
     @GetMapping("/expediente/{solicitudId}")
@@ -125,8 +127,18 @@ public class EvaluacionController {
                 ? EstadoSolicitud.fromFirestoreValue(request.nuevoEstado())
                 : null;
 
+        java.util.Map<String, EvaluarDocumentosCommand.EvaluacionDocumentoData> evalDocs = null;
+        if (request.evaluacionDocumentos() != null) {
+            evalDocs = request.evaluacionDocumentos().entrySet().stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            java.util.Map.Entry::getKey,
+                            e -> new EvaluarDocumentosCommand.EvaluacionDocumentoData(
+                                    e.getValue().estado(), e.getValue().observaciones())));
+        }
+
         return evaluarDocumentosUseCase.ejecutar(new EvaluarDocumentosCommand(
-                solicitudId, request.scoreDocumental(), request.observaciones(), estado, uid, nombre))
+                solicitudId, request.scoreDocumental(), request.observaciones(), estado, uid, nombre, evalDocs,
+                request.clienteId()))
                 .thenReturn(ResponseEntity.noContent().<Void>build());
     }
 
@@ -148,6 +160,7 @@ public class EvaluacionController {
         return registrarDecisionFinalUseCase.ejecutar(new DecisionFinalCommand(
                 solicitudId, decision, request.motivo(), request.condiciones(),
                 request.inicialAjustada(), request.plazoAjustado(),
+                request.tea(),
                 request.fortalezasCaso(), request.debilidadesCaso(),
                 request.evaluador(), uid, nombre))
                 .map(s -> Map.of(
@@ -241,6 +254,15 @@ public class EvaluacionController {
                 .thenReturn(ResponseEntity.noContent().<Void>build());
     }
 
+    // ── POST /clientes/{clienteId}/corregir-nombre ───────────────────────
+    @PostMapping("/clientes/{clienteId}/corregir-nombre")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> corregirNombreDesdeApi(@PathVariable String clienteId) {
+        return corregirNombreDesdeApiUseCase.ejecutar(clienteId)
+                .onErrorMap(RecursoNoEncontradoException.class,
+                        e -> new NotFoundException(e.getMessage()));
+    }
+
     // ── POST /clientes/{clienteId}/verificar-identidad ───────────────────
     @PostMapping("/clientes/{clienteId}/verificar-identidad")
     public Mono<VerificacionIdentidadResult> verificarIdentidad(
@@ -279,6 +301,7 @@ public class EvaluacionController {
                 solicitudId,
                 request.nuevaInicial(),
                 request.nuevoPlazo(),
+                request.tea(),
                 uid,
                 nombre))
                 .onErrorMap(com.motoyav2.shared.exception.BadRequestException.class,

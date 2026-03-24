@@ -4,6 +4,7 @@ import com.motoyav2.evaluacion.application.command.IngresarSolicitudCommand;
 import com.motoyav2.evaluacion.application.dto.IngresarSolicitudResult;
 import com.motoyav2.evaluacion.application.dto.PagedResult;
 import com.motoyav2.evaluacion.application.dto.SolicitudTrackingDto;
+import com.motoyav2.evaluacion.domain.port.in.ActualizarDocumentosUseCase;
 import com.motoyav2.evaluacion.domain.port.in.IngresarSolicitudUseCase;
 import com.motoyav2.evaluacion.domain.port.in.ListarSolicitudesVendedorUseCase;
 import com.motoyav2.evaluacion.domain.port.in.ReemplazarFiadorUseCase;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,7 @@ public class SolicitudPublicaController {
     private final ListarSolicitudesVendedorUseCase listarSolicitudesVendedorUseCase;
     private final ReemplazarFiadorUseCase reemplazarFiadorUseCase;
     private final ReemplazarReferenciasUseCase reemplazarReferenciasUseCase;
+    private final ActualizarDocumentosUseCase actualizarDocumentosUseCase;
     private final SolicitudRepository solicitudRepository;
 
     // ── POST /ingreso ─────────────────────────────────────────────────────────
@@ -75,6 +78,18 @@ public class SolicitudPublicaController {
 
         log.info("Reemplazar fiador — solicitud={} DNI={}", solicitudId, body.documentNumber());
         return reemplazarFiadorUseCase.ejecutar(solicitudId, toClienteData(body));
+    }
+
+    // ── PUT /{solicitudId}/documentos ─────────────────────────────────────────
+    @PutMapping("/{solicitudId}/documentos")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> actualizarDocumentos(
+            @PathVariable String solicitudId,
+            @RequestParam(required = false) String clienteId,
+            @RequestBody Map<String, String> archivos) {
+
+        log.info("Actualizar documentos — solicitud={} clienteId={} tipos={}", solicitudId, clienteId, archivos.keySet());
+        return actualizarDocumentosUseCase.ejecutar(solicitudId, archivos, clienteId);
     }
 
     // ── PUT /{solicitudId}/referencias ────────────────────────────────────────
@@ -125,7 +140,8 @@ public class SolicitudPublicaController {
                 c.ubicacionGPSCasa(),
                 c.telefono1(), c.telefono2(),
                 c.ocupacion(), c.rangoIngresos(), c.tipoVivienda(),
-                c.licenciaConducir(), c.numeroLicencia()
+                c.licenciaConducir(), c.numeroLicencia(),
+                c.archivos()
         );
     }
 }

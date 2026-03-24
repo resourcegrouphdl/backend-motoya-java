@@ -4,6 +4,7 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.motoyav2.evaluacion.domain.model.HistorialEstado;
 import com.motoyav2.evaluacion.domain.port.out.HistorialEstadoRepository;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.FirestoreCollections;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.mapper.HistorialEstadoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,7 @@ import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.uti
 @RequiredArgsConstructor
 public class HistorialEstadoRepositoryAdapter implements HistorialEstadoRepository {
 
-    private static final String COL = "cambios_estado_solicitud";
+    private static final String COL = FirestoreCollections.HISTORIAL_ESTADOS;
     private final Firestore db;
 
     @Override

@@ -33,6 +33,12 @@ public class Solicitud {
     // Financiero nuevo
     DatosFinancieros datosFinancieros;
 
+    // Titular desnormalizado (para listados sin lookup extra)
+    String titularNombreCompleto;
+    String titularDni;
+    String titularTelefono;
+    String titularEmail;
+
     // Vendedor
     DatosVendedor vendedor;
     String vendedorId;

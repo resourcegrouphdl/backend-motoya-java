@@ -60,8 +60,12 @@ public class FirebaseAuthenticationFilter implements WebFilter {
                             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
                 })
                 .onErrorResume(e -> {
+                    // Token inválido → continúa sin autenticar.
+                    // Spring Security aplicará las reglas de la ruta:
+                    //   - permitAll() → pasa sin auth
+                    //   - authenticated() → rechaza con 401
                     log.warn("Firebase token verification failed: {}", e.getMessage());
-                    return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token"));
+                    return chain.filter(exchange);
                 });
     }
 

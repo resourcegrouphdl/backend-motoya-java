@@ -6,6 +6,7 @@ import com.motoyav2.evaluacion.application.command.EvaluarDocumentosCommand;
 import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
 import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.EvaluarDocumentosUseCase;
+import com.motoyav2.evaluacion.domain.port.out.ClienteRepository;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class EvaluarDocumentosUseCaseImpl implements EvaluarDocumentosUseCase {
 
     private final SolicitudRepository solicitudRepository;
+    private final ClienteRepository clienteRepository;
     private final CambiarEstadoUseCase cambiarEstadoUseCase;
 
     @Override
@@ -27,16 +29,42 @@ public class EvaluarDocumentosUseCaseImpl implements EvaluarDocumentosUseCase {
                 .switchIfEmpty(Mono.error(new ExpedienteNotFoundException(command.solicitudId())))
                 .flatMap(solicitud -> {
                     Timestamp ahora = Timestamp.now();
-                    Map<String, Object> updates = new HashMap<>();
+
+                    // ── Actualizar solicitud ───────────────────────────────
+                    Map<String, Object> solUpdates = new HashMap<>();
                     if (command.scoreDocumental() != null) {
-                        updates.put("scoreDocumental", command.scoreDocumental());
+                        solUpdates.put("scoreDocumental", command.scoreDocumental());
                     }
                     if (command.observaciones() != null) {
-                        updates.put("observacionesGenerales", command.observaciones());
+                        solUpdates.put("observacionesGenerales", command.observaciones());
                     }
-                    updates.put("updatedAt", ahora);
+                    solUpdates.put("updatedAt", ahora);
+                    Mono<Void> updateSolicitud = solicitudRepository.updateFields(command.solicitudId(), solUpdates);
 
-                    Mono<Void> updateMono = solicitudRepository.updateFields(command.solicitudId(), updates);
+                    // ── Persistir evaluación por documento en el cliente ───
+                    Mono<Void> updateCliente = Mono.empty();
+                    // Usa clienteId explícito si se proporcionó (caso fiador); si no, usa titularId
+                    String targetClienteId = command.clienteId() != null
+                            ? command.clienteId()
+                            : solicitud.getTitularId();
+                    if (command.evaluacionDocumentos() != null
+                            && !command.evaluacionDocumentos().isEmpty()
+                            && targetClienteId != null) {
+
+                        Map<String, Object> evalMap = new HashMap<>();
+                        command.evaluacionDocumentos().forEach((key, data) -> {
+                            Map<String, Object> item = new HashMap<>();
+                            item.put("estado", data.estado());
+                            item.put("observaciones", data.observaciones() != null ? data.observaciones() : "");
+                            item.put("fechaEvaluacion", ahora);
+                            item.put("evaluador", command.usuarioNombre());
+                            evalMap.put("evaluacionDocumentos." + key, item);
+                        });
+                        evalMap.put("updatedAt", ahora);
+                        updateCliente = clienteRepository.updateFields(targetClienteId, evalMap);
+                    }
+
+                    Mono<Void> allUpdates = updateSolicitud.then(updateCliente);
 
                     if (command.nuevoEstado() != null) {
                         CambiarEstadoCommand estadoCmd = new CambiarEstadoCommand(
@@ -46,9 +74,9 @@ public class EvaluarDocumentosUseCaseImpl implements EvaluarDocumentosUseCase {
                                 command.usuarioNombre(),
                                 "Evaluación documental — score: " + command.scoreDocumental()
                         );
-                        return updateMono.then(cambiarEstadoUseCase.ejecutar(estadoCmd)).then();
+                        return allUpdates.then(cambiarEstadoUseCase.ejecutar(estadoCmd)).then();
                     }
-                    return updateMono;
+                    return allUpdates;
                 });
     }
 }

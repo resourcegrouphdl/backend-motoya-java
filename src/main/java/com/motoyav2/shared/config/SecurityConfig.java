@@ -40,6 +40,8 @@ public class SecurityConfig {
                             .pathMatchers("/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
                             .pathMatchers("/api/cobranzas-provisional/whatsapp/webhook").permitAll()
                             .pathMatchers("/webhooks/**").permitAll()
+                            .pathMatchers("/api/v1/simulacion/**").permitAll()
+                            .pathMatchers("/api/v1/solicitudes-publicas/**").permitAll()
                             .anyExchange().authenticated()
                     )
                     .addFilterAt(firebaseAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);
