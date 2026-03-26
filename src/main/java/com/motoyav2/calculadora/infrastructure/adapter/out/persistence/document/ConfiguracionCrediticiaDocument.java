@@ -12,6 +12,17 @@ import java.util.Map;
 /**
  * Documento Firestore para la configuración crediticia.
  * Colección: configuracion_crediticia / Document ID: default
+ *
+ * Estructura de plazos (cada elemento):
+ *   periodos  (Long)   — número de cuotas
+ *   frecuencia (String) — "WEEKLY" | "MONTHLY"
+ *   tea       (Double)
+ *   etiqueta  (String)
+ *
+ * Estructura de comisionDefault:
+ *   tipo      (String)  — "FIXED" | "PERCENTAGE"
+ *   valor     (Double)
+ *   financiada (Boolean)
  */
 @Data
 @Builder
@@ -25,17 +36,9 @@ public class ConfiguracionCrediticiaDocument {
     private Double montoMaximoFinanciar;
     private Double montoMinimoFinanciar;
     private Double tasaSeguroDesgravamenMensual;
-    private Double comisionDesembolso;
+    private Map<String, Object> comisionDefault;
     private Double teaDefault;
-
-    /**
-     * Lista de plazos. Cada elemento es un Map con campos:
-     *   meses    (Long)
-     *   tea      (Double)
-     *   etiqueta (String)
-     */
     private List<Map<String, Object>> plazos;
-
     private Timestamp actualizadoEn;
     private String actualizadoPor;
 }

@@ -1,35 +1,45 @@
 package com.motoyav2.calculadora.infrastructure.adapter.in.web.dto;
 
+import com.motoyav2.calculadora.domain.model.FrequenciaPago;
 import com.motoyav2.calculadora.domain.model.ResultadoSimulacion;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 public record SimularCreditoResponse(
 
-        // Precio
+        // Frecuencia
+        FrequenciaPago frecuencia,
+        int            numeroCuotas,
+
+        // Capital
         BigDecimal precioVehiculo,
+        BigDecimal soat,
         BigDecimal gastosAdministrativos,
-        BigDecimal precioTotal,
+        BigDecimal capitalBase,
+
+        // Comisión
+        BigDecimal comisionMonto,
+        boolean    comisionFinanciada,
 
         // Financiamiento
         BigDecimal inicialMinima,
         BigDecimal inicialAplicada,
         BigDecimal montoFinanciar,
-        int        plazoMeses,
-        BigDecimal comisionDesembolso,
+        BigDecimal efectivoNeto,
 
         // Tasas (SBS)
         BigDecimal tea,
         BigDecimal teaPorcentaje,
-        BigDecimal tem,
-        BigDecimal temPorcentaje,
+        BigDecimal tasaPeriodica,
+        BigDecimal tasaPeriodicaPorcentaje,
         BigDecimal tcea,
         BigDecimal tceaPorcentaje,
 
         // Cuotas
-        BigDecimal cuotaBaseMensual,
-        BigDecimal cuotaTotalMensual,
+        BigDecimal cuotaBase,
+        BigDecimal cuotaTotalPromedio,
 
         // Totales
         BigDecimal totalIntereses,
@@ -45,22 +55,26 @@ public record SimularCreditoResponse(
 ) {
     public static SimularCreditoResponse from(ResultadoSimulacion r) {
         return new SimularCreditoResponse(
+                r.getFrecuencia(),
+                r.getNumeroCuotas(),
                 r.getPrecioVehiculo(),
+                r.getSoat(),
                 r.getGastosAdministrativos(),
-                r.getPrecioTotal(),
+                r.getCapitalBase(),
+                r.getComisionMonto(),
+                r.isComisionFinanciada(),
                 r.getInicialMinima(),
                 r.getInicialAplicada(),
                 r.getMontoFinanciar(),
-                r.getPlazoMeses(),
-                r.getComisionDesembolso(),
+                r.getEfectivoNeto(),
                 r.getTea(),
-                r.getTea().multiply(BigDecimal.valueOf(100)).setScale(2, java.math.RoundingMode.HALF_UP),
-                r.getTem(),
-                r.getTem().multiply(BigDecimal.valueOf(100)).setScale(4, java.math.RoundingMode.HALF_UP),
+                r.getTea().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP),
+                r.getTasaPeriodica(),
+                r.getTasaPeriodica().multiply(BigDecimal.valueOf(100)).setScale(4, RoundingMode.HALF_UP),
                 r.getTcea(),
-                r.getTcea().multiply(BigDecimal.valueOf(100)).setScale(2, java.math.RoundingMode.HALF_UP),
-                r.getCuotaBaseMensual(),
-                r.getCuotaTotalMensual(),
+                r.getTcea().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP),
+                r.getCuotaBase(),
+                r.getCuotaTotalPromedio(),
                 r.getTotalIntereses(),
                 r.getTotalSeguro(),
                 r.getTotalAPagar(),

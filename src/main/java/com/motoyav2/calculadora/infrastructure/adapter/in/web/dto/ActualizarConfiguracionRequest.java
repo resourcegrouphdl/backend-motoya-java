@@ -16,7 +16,7 @@ public record ActualizarConfiguracionRequest(
         @NotNull @DecimalMin("100.00") BigDecimal montoMaximoFinanciar,
         @NotNull @DecimalMin("100.00") BigDecimal montoMinimoFinanciar,
         @NotNull @DecimalMin("0.00") BigDecimal tasaSeguroDesgravamenMensual,
-        @NotNull @DecimalMin("0.00") BigDecimal comisionDesembolso,
+        @Valid ComisionConfigDto comisionDefault,
         @NotNull @DecimalMin("0.01") BigDecimal teaDefault,
 
         @NotEmpty @Valid List<PlazoTeaConfigDto> plazos
@@ -28,7 +28,7 @@ public record ActualizarConfiguracionRequest(
                 .montoMaximoFinanciar(montoMaximoFinanciar)
                 .montoMinimoFinanciar(montoMinimoFinanciar)
                 .tasaSeguroDesgravamenMensual(tasaSeguroDesgravamenMensual)
-                .comisionDesembolso(comisionDesembolso)
+                .comisionDefault(comisionDefault != null ? comisionDefault.toDomain() : null)
                 .teaDefault(teaDefault)
                 .plazos(plazos.stream().map(PlazoTeaConfigDto::toDomain).toList())
                 .build();
