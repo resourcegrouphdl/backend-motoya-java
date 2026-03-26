@@ -93,7 +93,8 @@ public class ConfiguracionRepositoryAdapter implements ConfiguracionCrediticiaRe
     private ComisionConfig readComisionDefault(DocumentSnapshot snap) {
         Object raw = snap.get("comisionDefault");
         if (raw instanceof Map<?, ?> map) {
-            String tipo = map.getOrDefault("tipo", "FIXED").toString();
+            Object tipoRaw = map.get("tipo");
+            String tipo = tipoRaw != null ? tipoRaw.toString() : "FIXED";
             double valor = FirestoreUtils.toDouble(map.get("valor"), 0.0);
             boolean financiada = Boolean.TRUE.equals(map.get("financiada"));
             return ComisionConfig.builder()
