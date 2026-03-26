@@ -14,34 +14,52 @@ import java.util.List;
 @Builder
 public class ResultadoSimulacion {
 
-    // ── Datos de precio ───────────────────────────────────────────────────────
-    BigDecimal precioVehiculo;
-    BigDecimal gastosAdministrativos;
-    BigDecimal precioTotal;
+    // ── Frecuencia ────────────────────────────────────────────────────────────
+    FrequenciaPago frecuencia;
+    int            numeroCuotas;
 
-    // ── Datos de financiamiento ───────────────────────────────────────────────
+    // ── Capital ───────────────────────────────────────────────────────────────
+    BigDecimal precioVehiculo;
+    BigDecimal soat;
+    BigDecimal gastosAdministrativos;
+    /** precioVehiculo + soat + gastosAdmin (antes de comisión y de la inicial) */
+    BigDecimal capitalBase;
+
+    // ── Comisión ──────────────────────────────────────────────────────────────
+    /** Monto de comisión calculado (S/) */
+    BigDecimal comisionMonto;
+    /** true → incluida en el capital; false → cobrada al desembolso */
+    boolean    comisionFinanciada;
+
+    // ── Financiamiento ────────────────────────────────────────────────────────
     BigDecimal inicialMinima;
     BigDecimal inicialAplicada;
+    /** Capital efectivamente financiado (capitalBase + comisión si financiada − inicial) */
     BigDecimal montoFinanciar;
-    int plazoMeses;
-    BigDecimal comisionDesembolso;
-
-    // ── Tasas (SBS obliga divulgar TEA y TCEA) ───────────────────────────────
-    /** Tasa Efectiva Anual (ratio, ej: 0.72 = 72%) */
-    BigDecimal tea;
-    /** Tasa Efectiva Mensual derivada de TEA */
-    BigDecimal tem;
     /**
-     * Tasa de Costo Efectivo Anual: incluye intereses + seguro + comisiones.
-     * Calculada por método TIR (Newton-Raphson).
+     * Efectivo neto recibido por el cliente.
+     * = montoFinanciar − comisionMonto (si no financiada).
+     * Usado como PV0 en el cálculo de TCEA (transparencia SBS).
+     */
+    BigDecimal efectivoNeto;
+
+    // ── Tasas (SBS obliga divulgar TEA y TCEA) ────────────────────────────────
+    /** Tasa Efectiva Anual aplicada (ratio, ej: 0.72 = 72%) */
+    BigDecimal tea;
+    /** Tasa periódica derivada de TEA (semanal o mensual según frecuencia) */
+    BigDecimal tasaPeriodica;
+    /**
+     * Tasa de Costo Efectivo Anual.
+     * Calculada por TIR Newton-Raphson sobre flujos reales (cuotas + seguro)
+     * descontados desde el efectivoNeto.
      */
     BigDecimal tcea;
 
     // ── Cuotas ────────────────────────────────────────────────────────────────
     /** Cuota fija de capital + interés (sin seguro) */
-    BigDecimal cuotaBaseMensual;
-    /** Cuota promedio total (incluyendo seguro en caso de saldo decreciente) */
-    BigDecimal cuotaTotalMensual;
+    BigDecimal cuotaBase;
+    /** Cuota promedio total (capital + interés + seguro decreciente) */
+    BigDecimal cuotaTotalPromedio;
 
     // ── Totales ───────────────────────────────────────────────────────────────
     BigDecimal totalIntereses;
@@ -51,7 +69,7 @@ public class ResultadoSimulacion {
     // ── Cronograma ────────────────────────────────────────────────────────────
     List<CuotaCronograma> cronograma;
 
-    // ── Metadata ─────────────────────────────────────────────────────────────
+    // ── Metadata ──────────────────────────────────────────────────────────────
     boolean inicialAjustadaPorTope;
-    String advertencia;
+    String  advertencia;
 }

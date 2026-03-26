@@ -12,21 +12,34 @@ import java.math.BigDecimal;
 @Builder
 public class ParametrosSimulacion {
 
-    /** Precio del vehículo en soles */
+    /** Precio del vehículo en soles (capital base) */
     BigDecimal precioVehiculo;
+
+    /** SOAT del vehículo en soles (costo financiable, puede ser 0) */
+    BigDecimal soat;
 
     /** Inicial del cliente (null o menor que la mínima → se usa la mínima calculada) */
     BigDecimal inicial;
 
-    /** Plazo en meses */
-    int plazoMeses;
+    /** Número de cuotas (semanas si WEEKLY, meses si MONTHLY) */
+    int numeroCuotas;
+
+    /** Frecuencia de pago: WEEKLY o MONTHLY */
+    FrequenciaPago frecuencia;
 
     /**
-     * TEA a aplicar como override (null → usa la configuración del plazo).
-     * Permite al administrador experimentar sin cambiar la config persistida.
+     * TEA override (null → usa la TEA del plazo configurado o teaDefault).
+     * Permite experimentar sin modificar la config persistida.
      */
     BigDecimal teaOverride;
 
-    /** Si true, incluye seguro de desgravamen en la cuota */
+    /** Si true, incluye seguro de desgravamen en cada cuota */
     boolean incluirSeguro;
+
+    /**
+     * Comisión de desembolso (null → sin comisión).
+     * Si financiada=true: se suma al capital.
+     * Si financiada=false: se descuenta del efectivo recibido → afecta TCEA.
+     */
+    ComisionConfig comision;
 }
