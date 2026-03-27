@@ -24,7 +24,8 @@ public class CorsConfig {
         "http://localhost:60252",
         "https://motoya-form-bf869.web.app",
         "https://motoya-form.web.app",
-        "https://motoya-admin-nube.firebaseapp.com"
+        "https://motoya-admin-nube.firebaseapp.com",
+        "https://pwa-motoya-notifications.web.app"
     ));
 
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
