@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.messaging.FirebaseMessaging;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,5 +60,11 @@ public class FirebaseConfig {
     @ConditionalOnProperty(name = "firebase.auth.enabled", havingValue = "true", matchIfMissing = true)
     public FirebaseAuth firebaseAuth() {
         return FirebaseAuth.getInstance();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "firebase.auth.enabled", havingValue = "true", matchIfMissing = true)
+    public FirebaseMessaging firebaseMessaging() {
+        return FirebaseMessaging.getInstance();
     }
 }

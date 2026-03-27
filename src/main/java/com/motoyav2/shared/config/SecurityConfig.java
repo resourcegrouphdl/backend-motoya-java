@@ -42,6 +42,7 @@ public class SecurityConfig {
                             .pathMatchers("/webhooks/**").permitAll()
                             .pathMatchers("/api/v1/simulacion/**").permitAll()
                             .pathMatchers("/api/v1/solicitudes-publicas/**").permitAll()
+                            .pathMatchers("/api/v1/alertas/evento").permitAll()
                             .anyExchange().authenticated()
                     )
                     .addFilterAt(firebaseAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);
