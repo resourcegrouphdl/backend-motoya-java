@@ -10,5 +10,9 @@ public interface VoucherRepository extends FirestoreReactiveRepository<VoucherDo
 
     Flux<VoucherDocument> findByStoreIdAndEstado(String storeId, String estado);
 
+    Flux<VoucherDocument> findByStoreId(String storeId);
+
+    Flux<VoucherDocument> findByEstado(String estado);
+
     Flux<VoucherDocument> findByContratoId(String contratoId);
 }

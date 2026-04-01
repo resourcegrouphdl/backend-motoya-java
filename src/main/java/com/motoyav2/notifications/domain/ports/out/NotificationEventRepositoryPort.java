@@ -16,10 +16,23 @@ import java.time.Instant;
 public interface NotificationEventRepositoryPort {
     Mono<NotificationEvent> save(NotificationEvent event);
     Mono<NotificationEvent> update(NotificationEvent event);
+    Mono<NotificationEvent> findById(String id);
 
     /**
      * Busca eventos PENDIENTE cuyo nextRetryAt sea <= now.
      * Usa query compuesto en Firestore: requiere índice compuesto (status, nextRetryAt ASC).
      */
     Flux<NotificationEvent> findPendingEventsReadyForRetry(Instant now);
+
+    /**
+     * Búsqueda paginada con filtros opcionales para el panel de administración.
+     *
+     * @param eventType  Filtro por tipo de evento (puede ser null)
+     * @param status     Filtro por estado (puede ser null)
+     * @param channel    Filtro por canal (puede ser null)
+     * @param contratoId Filtro por contrato (puede ser null)
+     * @param limit      Máximo de resultados por página
+     */
+    Flux<NotificationEvent> findByFilters(String eventType, String status,
+                                          String channel, String contratoId, int limit);
 }

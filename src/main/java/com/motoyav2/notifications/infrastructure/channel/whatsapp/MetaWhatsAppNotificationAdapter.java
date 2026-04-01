@@ -45,7 +45,7 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
     // ─── NotificationSenderPort ───────────────────────────────────────────────
 
     @Override
-    public Mono<Void> send(Notification notification) {
+    public Mono<String> send(Notification notification) {
         return sendText(notification.recipient(), notification.renderedContent());
     }
 
@@ -58,11 +58,12 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
 
     /**
      * Envía un mensaje de texto por WhatsApp.
+     * Retorna el wamid asignado por Meta (ej. "wamid.ABCDEF...").
      *
      * @param recipient Número destino (9 dígitos peruanos o con código de país)
      * @param body      Texto del mensaje
      */
-    public Mono<Void> sendText(String recipient, String body) {
+    public Mono<String> sendText(String recipient, String body) {
         String to = normalizePhone(recipient);
 
         Map<String, Object> request = Map.of(
@@ -72,11 +73,12 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
                 "text", Map.of("preview_url", false, "body", body)
         );
 
-        return post(to, request);
+        return postAndGetId(to, request);
     }
 
     /**
      * Envía un archivo adjunto por WhatsApp.
+     * Retorna el wamid asignado por Meta.
      *
      * @param recipient Número destino
      * @param mediaUrl  URL pública del archivo (Firebase Storage u otro host accesible)
@@ -84,8 +86,8 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
      * @param filename  Nombre del archivo con extensión (obligatorio para "document")
      * @param caption   Texto que acompaña al archivo (puede ser null)
      */
-    public Mono<Void> sendMedia(String recipient, String mediaUrl,
-                                String mediaType, String filename, String caption) {
+    public Mono<String> sendMedia(String recipient, String mediaUrl,
+                                  String mediaType, String filename, String caption) {
         String to = normalizePhone(recipient);
 
         Map<String, Object> mediaPayload = new HashMap<>();
@@ -99,12 +101,16 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
         request.put("type", mediaType);
         request.put(mediaType, mediaPayload);
 
-        return post(to, request);
+        return postAndGetId(to, request);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    private Mono<Void> post(String to, Object body) {
+    /**
+     * Ejecuta el POST a Meta API y retorna el wamid del mensaje enviado.
+     * Retorna "" si la respuesta no incluye ID (no debería ocurrir en producción).
+     */
+    private Mono<String> postAndGetId(String to, Object body) {
         return webClient.post()
                 .uri("/{version}/{phoneNumberId}/messages",
                         properties.getApiVersion(), properties.getPhoneNumberId())
@@ -115,12 +121,13 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
                                 .flatMap(err -> Mono.error(
                                         new MetaApiException("Meta API error: " + err))))
                 .bodyToMono(MetaMessageResponse.class)
-                .doOnSuccess(r -> {
-                    String messageId = (r != null && r.messages() != null && !r.messages().isEmpty())
-                            ? r.messages().get(0).id() : "?";
-                    log.info("[META] ✓ Mensaje enviado | to={} messageId={}", to, messageId);
+                .map(r -> {
+                    String wamid = (r != null && r.messages() != null && !r.messages().isEmpty())
+                            ? r.messages().get(0).id() : "";
+                    log.info("[META] ✓ Mensaje enviado | to={} wamid={}", to, wamid);
+                    return wamid;
                 })
-                .then();
+                .defaultIfEmpty("");
     }
 
     /**

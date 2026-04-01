@@ -34,11 +34,15 @@ public class NotificationRepositoryAdapter implements NotificationRepositoryPort
     }
 
     @Override
-    public Mono<Notification> updateStatus(String id, NotificationStatus status, String lastError) {
+    public Mono<Notification> updateStatus(String id, NotificationStatus status,
+                                           String externalMessageId, String lastError) {
         return repository.findById(id)
                 .flatMap(doc -> {
                     doc.setStatus(status.name());
                     doc.setLastError(lastError);
+                    if (externalMessageId != null && !externalMessageId.isBlank()) {
+                        doc.setExternalMessageId(externalMessageId);
+                    }
                     if (status == NotificationStatus.ENVIADO) {
                         doc.setSentAt(Timestamp.now());
                     }
@@ -48,6 +52,11 @@ public class NotificationRepositoryAdapter implements NotificationRepositoryPort
                     return repository.save(doc);
                 })
                 .map(this::toDomain);
+    }
+
+    @Override
+    public Flux<Notification> findByEventId(String eventId) {
+        return repository.findByEventId(eventId).map(this::toDomain);
     }
 
     // ─── Mappers ─────────────────────────────────────────────────────────────
@@ -65,6 +74,9 @@ public class NotificationRepositoryAdapter implements NotificationRepositoryPort
                 .lastError(n.lastError())
                 .createdAt(toTimestamp(n.createdAt() != null ? n.createdAt() : java.time.Instant.now()))
                 .sentAt(n.sentAt() != null ? toTimestamp(n.sentAt()) : null)
+                .eventId(n.eventId())
+                .externalMessageId(n.externalMessageId())
+                .providerResponse(n.providerResponse())
                 .build();
     }
 
@@ -80,7 +92,10 @@ public class NotificationRepositoryAdapter implements NotificationRepositoryPort
                 doc.getRetryCount(),
                 doc.getLastError(),
                 doc.getCreatedAt() != null ? doc.getCreatedAt().toDate().toInstant() : null,
-                doc.getSentAt() != null ? doc.getSentAt().toDate().toInstant() : null
+                doc.getSentAt() != null ? doc.getSentAt().toDate().toInstant() : null,
+                doc.getEventId(),
+                doc.getExternalMessageId(),
+                doc.getProviderResponse()
         );
     }
 

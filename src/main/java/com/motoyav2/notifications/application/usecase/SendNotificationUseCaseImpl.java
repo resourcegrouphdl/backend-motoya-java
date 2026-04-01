@@ -39,16 +39,20 @@ public class SendNotificationUseCaseImpl implements SendNotificationUseCase {
                             NotificationSenderPort sender = resolveSender(saved.channel());
 
                             return sender.send(withContent)
-                                    .then(notificationRepository.updateStatus(
-                                            saved.id(), NotificationStatus.ENVIADO, null))
+                                    .flatMap(externalMessageId ->
+                                            notificationRepository.updateStatus(
+                                                    saved.id(), NotificationStatus.ENVIADO,
+                                                    externalMessageId, null))
                                     .doOnSuccess(r -> log.info(
-                                            "[NOTIF] ✓ Enviado | canal={} plantilla={} destinatario={}",
-                                            saved.channel(), saved.template(), saved.recipient()))
+                                            "[NOTIF] ✓ Enviado | canal={} plantilla={} destinatario={} externalId={}",
+                                            saved.channel(), saved.template(), saved.recipient(),
+                                            r != null ? r.externalMessageId() : "-"))
                                     .onErrorResume(ex -> {
                                         log.error("[NOTIF] ✗ Error | canal={} plantilla={} destinatario={} error={}",
                                                 saved.channel(), saved.template(), saved.recipient(), ex.getMessage());
                                         return notificationRepository
-                                                .updateStatus(saved.id(), NotificationStatus.FALLIDO, ex.getMessage())
+                                                .updateStatus(saved.id(), NotificationStatus.FALLIDO,
+                                                        null, ex.getMessage())
                                                 .then(Mono.error(ex));
                                     });
                         })

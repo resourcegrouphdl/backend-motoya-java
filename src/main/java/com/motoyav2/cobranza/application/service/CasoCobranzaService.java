@@ -138,8 +138,14 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
     /** hoy - fechaVencimientoPrimerCuotaImpaga en días. */
     private int calcularDiasMora(Date fecha) {
         if (fecha == null) return 0;
-        long diffMs = System.currentTimeMillis() - fecha.getTime();
-        return Math.max(0, (int) (diffMs / 86_400_000L));
+        try {
+            java.time.LocalDate fechaLocal = fecha.toInstant()
+                    .atZone(java.time.ZoneId.of("America/Lima"))
+                    .toLocalDate();
+            return Math.max(0, (int) java.time.temporal.ChronoUnit.DAYS.between(fechaLocal, java.time.LocalDate.now()));
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /**

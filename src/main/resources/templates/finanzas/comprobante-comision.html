@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xml:lang="es">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <title>Comprobante de Pago de Comisión</title>
+  <style type="text/css">
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #1a1a1a; }
+    /* Header */
+    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 18pt; }
+    .header-logo { font-size: 22pt; font-weight: bold; color: #1C4D8D; }
+    .header-title { text-align: right; }
+    .header-title h1 { margin: 0; font-size: 14pt; color: #1C4D8D; }
+    .header-title p  { margin: 2pt 0 0; font-size: 9pt; color: #666; }
+    /* Divider */
+    hr.divider { border: none; border-top: 2pt solid #1C4D8D; margin: 8pt 0; }
+    /* Sección de datos */
+    .section-title { font-size: 9pt; font-weight: bold; color: #1C4D8D; text-transform: uppercase;
+                     letter-spacing: 0.5pt; margin: 12pt 0 4pt; border-bottom: 1pt solid #ddd; padding-bottom: 3pt; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 8pt; }
+    .info-table td { font-size: 9pt; padding: 2pt 4pt; vertical-align: top; }
+    .info-table .lbl { color: #666; width: 30%; }
+    .info-table .val { font-weight: bold; color: #222; }
+    /* Tabla de comisiones */
+    .data-table { width: 100%; border-collapse: collapse; margin-top: 6pt; font-size: 9pt; }
+    .data-table th { background-color: #1C4D8D; color: #fff; padding: 5pt 6pt; text-align: left; }
+    .data-table th.right { text-align: right; }
+    .data-table td { padding: 4pt 6pt; border-bottom: 0.5pt solid #e8e8e8; }
+    .data-table td.right { text-align: right; }
+    .data-table tr.alt td { background-color: #f7f9fc; }
+    /* Totales */
+    .total-row td { font-weight: bold; font-size: 10pt; border-top: 1.5pt solid #1C4D8D; padding-top: 6pt; }
+    /* Pago info */
+    .pago-box { border: 1pt solid #c8e6c9; background-color: #f1f8e9; padding: 8pt 12pt;
+                margin-top: 14pt; border-radius: 3pt; }
+    .pago-box .pago-title { font-weight: bold; color: #2e7d32; font-size: 10pt; margin-bottom: 4pt; }
+    .pago-box table { width: 100%; border-collapse: collapse; }
+    .pago-box table td { font-size: 9pt; padding: 2pt 0; }
+    .pago-box .lbl { color: #555; width: 40%; }
+    /* Footer */
+    .footer { margin-top: 18pt; font-size: 8pt; color: #999; text-align: center; border-top: 0.5pt solid #ddd; padding-top: 6pt; }
+    .monto-total { font-size: 16pt; font-weight: bold; color: #1C4D8D; }
+  </style>
+</head>
+<body>
+
+  <!-- ENCABEZADO -->
+  <table class="header-table">
+    <tr>
+      <td class="header-logo">MOTOYA</td>
+      <td class="header-title">
+        <h1>COMPROBANTE DE PAGO DE COMISIÓN</h1>
+        <p>Fecha de emisión: <span th:text="${fechaEmision}">01/01/2026</span></p>
+      </td>
+    </tr>
+  </table>
+  <hr class="divider"/>
+
+  <!-- DATOS DEL VENDEDOR -->
+  <div class="section-title">Datos del Vendedor</div>
+  <table class="info-table">
+    <tr>
+      <td class="lbl">Nombre:</td>
+      <td class="val" th:text="${pago.vendedorNombre}">—</td>
+      <td class="lbl">Documento:</td>
+      <td class="val">
+        <span th:text="${pago.vendedorTipoDocumento}">DNI</span>&#160;
+        <span th:text="${pago.vendedorDocumento}">—</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="lbl">Tienda:</td>
+      <td class="val" th:text="${pago.tiendaNombre}">—</td>
+      <td class="lbl">Correo:</td>
+      <td class="val" th:text="${pago.vendedorEmail}">—</td>
+    </tr>
+    <tr>
+      <td class="lbl">Período:</td>
+      <td class="val">
+        <span th:text="${pago.periodoDesde}">—</span> al <span th:text="${pago.periodoHasta}">—</span>
+      </td>
+      <td class="lbl">Tipo período:</td>
+      <td class="val" th:text="${pago.tipoPeriodo}">—</td>
+    </tr>
+  </table>
+
+  <!-- DETALLE DE COMISIONES -->
+  <div class="section-title">Detalle de Comisiones</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Contrato ID</th>
+        <th>Período inicio</th>
+        <th>Período fin</th>
+        <th class="right">Monto S/</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="c, stat : ${comisiones}" th:class="${stat.odd} ? 'alt' : ''">
+        <td th:text="${stat.count}">1</td>
+        <td th:text="${c.contratoId}">—</td>
+        <td th:text="${c.periodoInicio}">—</td>
+        <td th:text="${c.periodoFin}">—</td>
+        <td class="right" th:text="${#numbers.formatDecimal(c.montoComision, 1, 2)}">0.00</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="3">&#160;</td>
+        <td style="text-align:right">TOTAL</td>
+        <td class="right">
+          <span class="monto-total" th:text="${#numbers.formatDecimal(totalMonto, 1, 2)}">0.00</span>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- DATOS DEL PAGO -->
+  <div class="pago-box">
+    <div class="pago-title">✔ Pago Confirmado</div>
+    <table>
+      <tr>
+        <td class="lbl">Método de pago:</td>
+        <td th:text="${pago.metodoPago}">—</td>
+        <td class="lbl">N° Operación:</td>
+        <td th:text="${pago.numeroOperacion}">—</td>
+      </tr>
+      <tr th:if="${pago.entidadBancaria != null and !pago.entidadBancaria.empty}">
+        <td class="lbl">Entidad bancaria:</td>
+        <td th:text="${pago.entidadBancaria}">—</td>
+        <td class="lbl">Cuenta destino:</td>
+        <td th:text="${pago.cuentaDestino}">—</td>
+      </tr>
+      <tr>
+        <td class="lbl">Registrado por:</td>
+        <td th:text="${pago.registradoPor}">—</td>
+        <td class="lbl">Fecha pago:</td>
+        <td th:text="${pago.pagadoEn}">—</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    Documento generado automáticamente por el sistema Motoya &#183; ID: <span th:text="${pago.id}">—</span>
+  </div>
+
+</body>
+</html>

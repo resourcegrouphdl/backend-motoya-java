@@ -31,6 +31,9 @@ public class ComprobantePagoPortAdapter implements ComprobantePagoPort {
 
     @Override
     public Flux<ComprobantePagoDocument> findByStoreId(String storeId) {
+        if (storeId == null || storeId.isBlank()) {
+            return repository.findAll();
+        }
         return repository.findByStoreId(storeId);
     }
 }

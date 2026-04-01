@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Comprobante de Pago de Factura - Motoya Digital</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 30px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+    .header { background: #E63946; padding: 24px 32px; text-align: center; }
+    .header img { max-height: 50px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
+    .header h1 { margin: 0; font-size: 20px; color: #fff; }
+    .header p { margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,0.85); }
+    .body { padding: 28px 32px; }
+    .body p { color: #444; font-size: 15px; line-height: 1.6; }
+    .monto-box { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 16px 20px; border-radius: 6px; margin: 20px 0; }
+    .monto-box .label { font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: .5px; }
+    .monto-box .valor { font-size: 32px; font-weight: 700; color: #1b5e20; }
+    .monto-box .concepto { font-size: 14px; color: #388e3c; margin-top: 4px; }
+    .details { background: #f9fafb; border-radius: 6px; padding: 16px 20px; margin: 16px 0; }
+    .details .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; border-bottom: 1px solid #eee; }
+    .details .row:last-child { border-bottom: none; }
+    .details .key { color: #777; }
+    .details .val { font-weight: 600; color: #333; }
+    .info { background: #e8f4fd; border-left: 4px solid #2196F3; padding: 14px 18px; border-radius: 6px; margin-top: 20px; font-size: 13px; color: #444; }
+    .footer { background: #333333; padding: 16px 32px; text-align: center; font-size: 12px; color: #aaaaaa; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya Digital"/>
+    <h1>✅ Pago de Factura Registrado</h1>
+    <p>Motoya Digital — Área de Finanzas</p>
+  </div>
+  <div class="body">
+    <p>Estimados <strong th:text="${tiendaNombre}">Tienda</strong>,</p>
+    <p>
+      Les informamos que se ha registrado el siguiente pago correspondiente
+      a la factura de uno de sus contratos de financiamiento.
+    </p>
+
+    <div class="monto-box">
+      <div class="label">Monto abonado</div>
+      <div class="valor" th:text="${monto}">S/ 0.00</div>
+      <div class="concepto" th:text="${concepto}">Pago Inicial</div>
+    </div>
+
+    <div class="details">
+      <div class="row">
+        <span class="key">📄 Factura N°</span>
+        <span class="val" th:text="${numeroFactura}">—</span>
+      </div>
+      <div class="row">
+        <span class="key">👤 Cliente</span>
+        <span class="val" th:text="${clienteNombre}">—</span>
+      </div>
+      <div class="row">
+        <span class="key">📅 Fecha de pago</span>
+        <span class="val" th:text="${fechaPago}">—</span>
+      </div>
+      <div class="row">
+        <span class="key">🏦 Método de pago</span>
+        <span class="val" th:text="${metodoPago}">—</span>
+      </div>
+    </div>
+
+    <div class="info">
+      <strong>ℹ️ Comprobante</strong><br/>
+      El comprobante y el detalle completo de este pago están disponibles
+      en el portal de tiendas de <strong>Motoya Digital</strong>,
+      en la sección <em>Mis Pagos</em>.
+    </div>
+
+    <p style="margin-top: 24px; font-size: 13px; color: #888;">
+      Si tienen alguna consulta sobre este pago, comuníquense con el área de finanzas de Motoya Digital.
+    </p>
+  </div>
+  <div class="footer">
+    <p>Este correo ha sido enviado automáticamente por el sistema de Motoya Digital.</p>
+    <p>La información es tratada conforme a la <strong>Ley N° 29733 - Ley de Protección de Datos Personales del Perú</strong>.</p>
+    <p>© 2026 Motoya Digital. Todos los derechos reservados.</p>
+  </div>
+</div>
+</body>
+</html>

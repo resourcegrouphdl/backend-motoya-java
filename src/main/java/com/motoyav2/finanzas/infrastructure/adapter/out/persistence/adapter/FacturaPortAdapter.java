@@ -110,6 +110,8 @@ public class FacturaPortAdapter implements FacturaPort {
                 .numero(doc.getNumero())
                 .tiendaId(doc.getTiendaId())
                 .tiendaNombre(doc.getTiendaNombre())
+                .tiendaEmail(doc.getTiendaEmail())
+                .tiendaTelefono(doc.getTiendaTelefono())
                 .ventaId(doc.getVentaId())
                 .clienteNombre(doc.getClienteNombre())
                 .motoModelo(doc.getMotoModelo())

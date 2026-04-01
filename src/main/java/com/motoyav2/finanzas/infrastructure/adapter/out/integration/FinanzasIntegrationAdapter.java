@@ -34,13 +34,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
 
-    private static final String COL_FACTURAS     = "finanzas_facturas";
-    private static final String COL_PAGOS        = "pagos";
-    private static final String COL_KPIS         = "finanzas_kpis";
-    private static final String COL_COMISIONES   = "finanzas_comisiones";
-    private static final String COL_SOLICITUDES  = "solicitudes";
-    private static final String COL_USERS        = "users";
-    private static final int    CONDICION_PAGO_DEFAULT = 15;
+    private static final String COL_FACTURAS          = "finanzas_facturas";
+    private static final String COL_PAGOS             = "pagos";
+    private static final String COL_KPIS              = "finanzas_kpis";
+    private static final String COL_COMISIONES        = "finanzas_comisiones";
+    private static final String COL_SOLICITUDES       = "solicitudes";
+    private static final String COL_VENDEDOR_PROFILES = "vendedor_profiles";
+    private static final String COL_TIENDA_PROFILES   = "tienda_profiles";
+    private static final int    PLAZO_PAGO_DEFAULT    = 30;
 
     private final Firestore db;
 
@@ -69,14 +70,30 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
     // ── Creación atómica via WriteBatch ───────────────────────────────────
 
     private Mono<Void> crearFacturaConPagos(Contrato contrato) {
+        String tiendaId = contrato.tienda() != null ? contrato.tienda().tiendaId() : "";
+
+        // Primero leemos el plazo de pago configurado en tienda_profiles
+        return FirestoreReactiveUtils.toMono(
+                db.collection(COL_TIENDA_PROFILES).document(tiendaId).get())
+                .flatMap(tiendaSnap -> {
+                    int plazoFacturaDias = (tiendaSnap.exists() && tiendaSnap.contains("plazoFacturaDias"))
+                            ? tiendaSnap.getLong("plazoFacturaDias").intValue()
+                            : PLAZO_PAGO_DEFAULT;
+                    String tiendaEmail    = tiendaSnap.exists() ? nvl(tiendaSnap.getString("email")) : "";
+                    String tiendaTelefono = tiendaSnap.exists() ? nvl(tiendaSnap.getString("phone")) : "";
+                    return crearFacturaConPagosConPlazo(contrato, plazoFacturaDias, tiendaEmail, tiendaTelefono);
+                });
+    }
+
+    private Mono<Void> crearFacturaConPagosConPlazo(Contrato contrato, int plazoFacturaDias,
+                                                     String tiendaEmail, String tiendaTelefono) {
         String facturaId = contrato.id();
-        String hoy = LocalDate.now().toString();
 
         // ── Datos del contrato ────────────────────────────────────────────
-        String tiendaId     = contrato.tienda() != null ? contrato.tienda().tiendaId()     : "";
-        String tiendaNombre = contrato.tienda() != null ? contrato.tienda().nombreTienda() : "";
+        String tiendaId      = contrato.tienda() != null ? contrato.tienda().tiendaId()     : "";
+        String tiendaNombre  = contrato.tienda() != null ? contrato.tienda().nombreTienda() : "";
         String clienteNombre = buildNombreCliente(contrato);
-        String ventaId = contrato.evaluacionId() != null ? contrato.evaluacionId() : "";
+        String ventaId       = contrato.evaluacionId() != null ? contrato.evaluacionId() : "";
 
         // ── Datos completos de la factura del vehículo ────────────────────
         var fv = contrato.facturaVehiculo(); // ya garantizado no-null por el guard
@@ -110,10 +127,11 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         BigDecimal montoP1 = BigDecimal.valueOf(cuotaInicialRaw).setScale(2, RoundingMode.HALF_UP);
         BigDecimal montoP2 = total.subtract(montoP1);
 
-        // P1 INICIAL: fechaFactura + 2 días calendario
-        String fechaP1 = fechaBase.plusDays(2).toString();
-        // P2 SALDO: fechaFactura + condición (15 días por defecto)
-        String fechaP2 = fechaBase.plusDays(CONDICION_PAGO_DEFAULT).toString();
+        // P1 INICIAL: fechaBase + 2 días calendario
+        LocalDate fechaP1Date = fechaBase.plusDays(2);
+        String fechaP1 = fechaP1Date.toString();
+        // P2 SALDO: fechaP1 + plazo configurado en tienda_profiles (15 o 30 días)
+        String fechaP2 = fechaP1Date.plusDays(plazoFacturaDias).toString();
 
         String ahora = Instant.now().toString();
 
@@ -123,6 +141,8 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         factura.put("numero",               numeroFactura);
         factura.put("tiendaId",             tiendaId);
         factura.put("tiendaNombre",         tiendaNombre);
+        factura.put("tiendaEmail",          tiendaEmail);
+        factura.put("tiendaTelefono",       tiendaTelefono);
         factura.put("ventaId",              ventaId);
         factura.put("clienteNombre",        clienteNombre);
         factura.put("motoModelo",           motoModelo);
@@ -136,7 +156,7 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         factura.put("fechaEmisionFactura",  fechaEmisionFact);
         factura.put("montoTotal",           montoTotal);
         factura.put("fechaFactura",         fechaBase.toString());
-        factura.put("condicionPago",        CONDICION_PAGO_DEFAULT);
+        factura.put("condicionPago",        plazoFacturaDias);
         factura.put("estado",               "PENDIENTE");
         factura.put("creadoEn",             ahora);
         factura.put("actualizadoEn",        ahora);
@@ -226,7 +246,7 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
                 });
     }
 
-    /** Paso 1 → 2: solicitudes/{evaluacionId} → vendedorId → users/{vendedorId} */
+    /** Paso 1 → 2: solicitudes/{evaluacionId} → vendedorId → vendedor_profiles/{vendedorId} */
     private Mono<Map<String, Object>> resolverVendedor(String evaluacionId) {
         return FirestoreReactiveUtils.toMono(
                 db.collection(COL_SOLICITUDES).document(evaluacionId).get())
@@ -235,17 +255,21 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
                     String vendedorId = solicitudSnap.getString("vendedorId");
                     if (vendedorId == null || vendedorId.isBlank()) return Mono.empty();
                     return FirestoreReactiveUtils.toMono(
-                            db.collection(COL_USERS).document(vendedorId).get())
-                            .map(userSnap -> {
+                            db.collection(COL_VENDEDOR_PROFILES).document(vendedorId).get())
+                            .map(snap -> {
+                                Long commissionRateLong = snap.getLong("commissionRate");
+                                double commissionRate = commissionRateLong != null
+                                        ? commissionRateLong.doubleValue() : 100.0;
                                 Map<String, Object> v = new HashMap<>();
-                                v.put("vendedorId",           vendedorId);
-                                v.put("firstName",            nvl(userSnap.getString("firstName")));
-                                v.put("lastName",             nvl(userSnap.getString("lastName")));
-                                v.put("email",                nvl(userSnap.getString("email")));
-                                v.put("phone",                nvl(userSnap.getString("phone")));
-                                v.put("documentNumber",       nvl(userSnap.getString("documentNumber")));
-                                v.put("documentType",         nvl(userSnap.getString("documentType")));
-                                v.put("userType",             nvl(userSnap.getString("userType")));
+                                v.put("vendedorId",      vendedorId);
+                                v.put("firstName",       nvl(snap.getString("firstName")));
+                                v.put("lastName",        nvl(snap.getString("lastName")));
+                                v.put("email",           nvl(snap.getString("email")));
+                                v.put("phone",           nvl(snap.getString("phone")));
+                                v.put("documentNumber",  nvl(snap.getString("documentNumber")));
+                                v.put("documentType",    nvl(snap.getString("documentType")));
+                                v.put("userType",        nvl(snap.getString("userType")));
+                                v.put("commissionRate",  commissionRate);
                                 return v;
                             });
                 });
@@ -277,7 +301,7 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         comision.put("periodoInicio",        hoy);
         comision.put("periodoFin",           hoy);
         comision.put("totalVentas",          1);
-        comision.put("montoComision",        0.0);
+        comision.put("montoComision",        (double) vendedor.get("commissionRate"));
         comision.put("estado",               "PENDIENTE");
         comision.put("pagadoEn",             null);
         comision.put("creadoEn",             ahora);

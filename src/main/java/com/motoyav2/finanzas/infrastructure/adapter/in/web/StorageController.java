@@ -69,8 +69,9 @@ public class StorageController {
                 ? req.referenceId1() + "/" + req.referenceId2() + "_" + ts + "." + ext
                 : req.referenceId1() + "/" + ts + "." + ext;
         return switch (req.contexto()) {
-            case "cuota-cuenta"  -> "finanzas/comprobantes/" + base;
-            default              -> "finanzas/vouchers/" + base;   // pago-factura
+            case "cuota-cuenta"    -> "finanzas/comprobantes/" + base;
+            case "voucher-comision"-> "finanzas/vouchers-comisiones/" + base;
+            default                -> "finanzas/vouchers/" + base;   // pago-factura
         };
     }
 

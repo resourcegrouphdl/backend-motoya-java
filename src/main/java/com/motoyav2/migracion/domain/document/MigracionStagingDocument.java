@@ -51,6 +51,13 @@ public class MigracionStagingDocument {
     private String email;
     private String moto;
 
+    // Dirección del titular y tienda
+    private String storeId;
+    private String direccion;
+    private String distrito;
+    private String provincia;
+    private String departamento;
+
     // ── Datos del fiador (para migración asistida) ────────────────────────────
     private String fiadorNombre;
     private String fiadorApellidos;

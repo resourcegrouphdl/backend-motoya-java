@@ -38,6 +38,7 @@ public class CobranzaController {
     private final EnviarMensajeWhatsappUseCase enviarMensajeWhatsappUseCase;
     private final ActualizarEstadoMensajeUseCase actualizarEstadoMensajeUseCase;
 
+    private final PromesaGlobalService promesaGlobalService;
     private final DashboardService dashboardService;
     private final ComprobantesService comprobantesService;
     private final EventoService eventoService;
@@ -198,6 +199,16 @@ public class CobranzaController {
     // =========================================================================
     // PROMESAS
     // =========================================================================
+
+    /** Lista global de promesas enriquecidas con datos del caso. */
+    @GetMapping("/api/v1/cobranzas/promesas")
+    public Flux<PromesaResumenDto> getPromesasGlobal(
+            @RequestParam(required = false) String estado,
+            ServerWebExchange exchange) {
+        String storeId = (String) exchange.getAttributes().get("storeId");
+        log.debug("GET /promesas storeId={} estado={}", storeId, estado);
+        return promesaGlobalService.listar(storeId, estado);
+    }
 
     @GetMapping("/api/v1/cobranzas/casos/{contratoId}/promesas")
     public Flux<PromesaDocument> getPromesas(

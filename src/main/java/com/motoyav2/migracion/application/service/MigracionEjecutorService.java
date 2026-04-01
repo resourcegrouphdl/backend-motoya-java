@@ -157,6 +157,11 @@ public class MigracionEjecutorService {
         titular.put("tipoDocumento", "DNI");
         titular.put("numeroDocumento", staging.getClienteDni());
         titular.put("telefono", staging.getTelefono());
+        titular.put("email", staging.getEmail() != null ? staging.getEmail() : "");
+        titular.put("direccion", staging.getDireccion() != null ? staging.getDireccion() : "");
+        titular.put("distrito", staging.getDistrito() != null ? staging.getDistrito() : "");
+        titular.put("provincia", staging.getProvincia() != null ? staging.getProvincia() : "");
+        titular.put("departamento", staging.getDepartamento() != null ? staging.getDepartamento() : "");
 
         // Cronograma embebido
         List<Map<String, Object>> cronogramaDoc = cuotas.stream()
@@ -182,13 +187,27 @@ public class MigracionEjecutorService {
 
         // ── 1. CasoCobranza ──────────────────────────────────────────────────
         Map<String, Object> caso = new LinkedHashMap<>();
-        caso.put("contratoId",           contratoId);
+        // Fiador (opcional)
+        boolean tieneFiador = staging.getFiadorNombre() != null && !staging.getFiadorNombre().isBlank();
+        if (tieneFiador) {
+            Map<String, Object> fiador = new LinkedHashMap<>();
+            fiador.put("nombres", nvl(staging.getFiadorNombre()));
+            fiador.put("apellidos", nvl(staging.getFiadorApellidos()));
+            fiador.put("tipoDocumento", nvl(staging.getFiadorTipoDocumento(), "DNI"));
+            fiador.put("numeroDocumento", nvl(staging.getFiadorDni()));
+            fiador.put("telefono", nvl(staging.getFiadorTelefono()));
+            fiador.put("email", nvl(staging.getFiadorEmail()));
+            fiador.put("parentesco", nvl(staging.getFiadorParentesco()));
+            caso.put("fiador", fiador);
+        }
+
+        // contratoId NO se incluye en el body — es el @DocumentId (document path)
         caso.put("clienteNombre",         staging.getClienteNombre());
         caso.put("clienteTelefono",       staging.getTelefono());
         caso.put("clienteDni",            staging.getClienteDni());
         caso.put("titular",               titular);
         caso.put("motoDescripcion",       staging.getMoto());
-        caso.put("storeId",               null);
+        caso.put("storeId",               staging.getStoreId());
         caso.put("nivelEstrategia",       nivelEstrategia);
         caso.put("estadoCaso",            "INTERVENCION_REQUERIDA");
         caso.put("cicloVida",             "ACTIVO");
@@ -197,7 +216,8 @@ public class MigracionEjecutorService {
         caso.put("totalPagado",           cuotasPagadas * staging.getMontoCuota());
         caso.put("totalMora",             0.0);
         caso.put("totalCondonado",        0.0);
-        caso.put("fechaVencimientoPrimerCuotaImpaga", fechaPrimeraCuotaImpaga);
+        com.google.cloud.Timestamp tsImpaga = toTimestamp(fechaPrimeraCuotaImpaga);
+        if (tsImpaga != null) caso.put("fechaVencimientoPrimerCuotaImpaga", tsImpaga);
         caso.put("numeroCuotasTotales",   staging.getTotalCuotas());
         caso.put("numeroCuotasPagadas",   (int) cuotasPagadas);
         caso.put("cronograma",            cronogramaDoc);
@@ -214,7 +234,7 @@ public class MigracionEjecutorService {
         // ── 2. Movimiento SALDO_INICIAL ───────────────────────────────────────
         String movId = UUID.randomUUID().toString();
         Map<String, Object> movimiento = new LinkedHashMap<>();
-        movimiento.put("contratoId",    contratoId);
+        movimiento.put("contratoId", contratoId);
         movimiento.put("tipo",          "SALDO_INICIAL");
         movimiento.put("monto",         capitalOriginal);
         movimiento.put("saldoAnterior", 0.0);
@@ -288,5 +308,20 @@ public class MigracionEjecutorService {
                         + pendientes + " cuotas pendientes. Saldo: S/ " + String.format("%.2f", saldo),
                 null
         );
+    }
+
+    private String nvl(String s) { return s != null ? s : ""; }
+    private String nvl(String s, String def) { return (s != null && !s.isBlank()) ? s : def; }
+
+    /** Convierte YYYY-MM-DD a Firestore Timestamp (medianoche Lima). Retorna null si inválido. */
+    private com.google.cloud.Timestamp toTimestamp(String yyyyMmDd) {
+        if (yyyyMmDd == null || yyyyMmDd.isBlank()) return null;
+        try {
+            java.time.Instant instant = java.time.LocalDate.parse(yyyyMmDd)
+                    .atStartOfDay(java.time.ZoneId.of("America/Lima")).toInstant();
+            return com.google.cloud.Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), 0);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

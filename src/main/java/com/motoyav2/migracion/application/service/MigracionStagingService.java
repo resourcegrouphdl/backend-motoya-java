@@ -51,6 +51,11 @@ public class MigracionStagingService {
                     doc.setTelefono(req.telefono());
                     doc.setEmail(req.email());
                     doc.setMoto(req.moto());
+                    doc.setStoreId(req.storeId());
+                    doc.setDireccion(req.direccion());
+                    doc.setDistrito(req.distrito());
+                    doc.setProvincia(req.provincia());
+                    doc.setDepartamento(req.departamento());
                     doc.setFiadorNombre(req.fiadorNombre());
                     doc.setFiadorApellidos(req.fiadorApellidos());
                     doc.setFiadorTipoDocumento(req.fiadorTipoDocumento());

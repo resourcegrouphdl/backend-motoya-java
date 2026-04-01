@@ -28,6 +28,7 @@ public class ComisionDocument {
     private Integer totalVentas;
     private Double montoComision;
     private String estado;
+    private String pagoId;
     private String pagadoEn;
     private String creadoEn;
     private String actualizadoEn;

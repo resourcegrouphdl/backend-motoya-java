@@ -28,6 +28,13 @@ public record CompletarStagingRequest(
         // Opcionales — enriquecen la migración pero no bloquean COMPLETO
         String email,
 
+        // Dirección del titular (para estrategias de cobranza)
+        String storeId,
+        String direccion,
+        String distrito,
+        String provincia,
+        String departamento,
+
         String fiadorNombre,
         String fiadorApellidos,
         String fiadorTipoDocumento,

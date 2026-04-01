@@ -26,11 +26,17 @@ public class AlertaCobranzaPortAdapter implements AlertaCobranzaPort {
 
     @Override
     public Flux<AlertaCobranzaDocument> findByStoreId(String storeId) {
+        if (storeId == null || storeId.isBlank()) {
+            return repository.findAll();
+        }
         return repository.findByStoreIdAndDescartada(storeId, false);
     }
 
     @Override
     public Flux<AlertaCobranzaDocument> findByAgenteId(String agenteId) {
+        if (agenteId == null || agenteId.isBlank()) {
+            return repository.findAll();
+        }
         return repository.findByAgenteIdAndDescartada(agenteId, false);
     }
 

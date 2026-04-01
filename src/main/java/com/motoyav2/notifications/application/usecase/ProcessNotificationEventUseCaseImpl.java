@@ -34,6 +34,7 @@ public class ProcessNotificationEventUseCaseImpl {
         return eventRepository.update(event.markProcessing())
                 .flatMap(processing -> {
                     NotificationRequest request = NotificationRequest.builder()
+                            .eventId(event.id())  // trazabilidad: enlaza log con evento outbox
                             .channel(event.channel())
                             .recipient(event.recipient())
                             .template(event.template())

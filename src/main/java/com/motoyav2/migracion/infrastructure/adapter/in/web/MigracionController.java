@@ -1,6 +1,7 @@
 package com.motoyav2.migracion.infrastructure.adapter.in.web;
 
 import com.motoyav2.migracion.application.dto.*;
+import com.motoyav2.migracion.application.service.ContratoBarridoService;
 import com.motoyav2.migracion.application.service.MigracionEjecutorService;
 import com.motoyav2.migracion.application.service.MigracionImportarService;
 import com.motoyav2.migracion.application.service.MigracionStagingService;
@@ -36,6 +37,7 @@ public class MigracionController {
     private final MigracionImportarService importarService;
     private final MigracionStagingService  stagingService;
     private final MigracionEjecutorService ejecutorService;
+    private final ContratoBarridoService   barridoService;
 
     // ─── 1. Importar desde Google Calendar ───────────────────────────────────
 
@@ -132,6 +134,21 @@ public class MigracionController {
         log.info("[Migracion-API] POST /staging/ejecutar-lote ids={}", req != null ? req.ids() : "todos");
         return resolverUsuarioId()
                 .flatMap(uid -> ejecutorService.ejecutarLote(req, uid));
+    }
+
+    // ─── 8. Barrido de contratos → cobranzas-casos ───────────────────────────
+
+    @PostMapping("/contratos/barrido")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(
+            summary = "Barrido de contratos firmados → cobranzas",
+            description = "Lee todos los contratos en estado FIRMADO, ACTIVO o COMPLETADO " +
+                    "y crea o actualiza el caso en cobranzas-casos de forma idempotente. " +
+                    "No sobrescribe datos ya existentes; sólo completa campos vacíos.")
+    public Mono<BarridoContratoResponse> barridoContratos() {
+        log.info("[Migracion-API] POST /contratos/barrido");
+        return resolverUsuarioId()
+                .flatMap(barridoService::ejecutar);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

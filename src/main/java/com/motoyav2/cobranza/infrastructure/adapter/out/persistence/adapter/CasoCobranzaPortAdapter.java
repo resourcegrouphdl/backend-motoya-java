@@ -4,14 +4,15 @@ import com.motoyav2.cobranza.application.port.in.query.ListarCasosQuery;
 import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.repository.CasoCobranzaRepository;
-import io.github.resilience4j.core.registry.EntryAddedEvent;
 import io.github.resilience4j.reactor.retry.RetryOperator;
 import io.github.resilience4j.retry.RetryRegistry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
@@ -27,21 +28,28 @@ public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
     public Flux<CasoCobranzaDocument> query(ListarCasosQuery q) {
         Flux<CasoCobranzaDocument> base;
 
-        boolean tieneAgente = q.agenteId() != null;
-        boolean tieneEstado = q.estado() != null;
+        boolean tieneAgente = q.agenteId() != null && !q.agenteId().isBlank();
+        boolean tieneEstado = q.estado()   != null && !q.estado().isBlank();
+        boolean tieneStore  = q.storeId()  != null && !q.storeId().isBlank();
 
         if (tieneAgente && tieneEstado) {
             base = repository.findByAgenteAsignadoIdAndEstadoCaso(q.agenteId(), q.estado());
         } else if (tieneAgente) {
             base = repository.findByAgenteAsignadoId(q.agenteId());
-        } else if (tieneEstado) {
+        } else if (tieneStore && tieneEstado) {
             base = repository.findByStoreIdAndEstadoCaso(q.storeId(), q.estado());
-        } else {
+        } else if (tieneStore) {
             base = repository.findByStoreId(q.storeId());
+        } else {
+            // ADMIN sin filtro de tienda — devuelve todos
+            base = repository.findAll();
         }
 
-        // Retry 3x con backoff exponencial (instancia "firestoreTimeout" de application.properties)
-        return base.transformDeferred(RetryOperator.of(retryRegistry.retry("firestoreTimeout")));
+        // Omite documentos corruptos (@DocumentId conflict) sin terminar el stream
+        return base
+                .onErrorContinue(RuntimeException.class,
+                        (e, obj) -> log.warn("[CasoCobranza] Documento omitido por error de deserialización: {}", e.getMessage()))
+                .transformDeferred(RetryOperator.of(retryRegistry.retry("firestoreTimeout")));
     }
 
     // -------------------------------------------------------------------------
@@ -71,6 +79,13 @@ public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
     @Override
     public Flux<CasoCobranzaDocument> findByAgenteAsignadoId(String agenteId) {
         return repository.findByAgenteAsignadoId(agenteId);
+    }
+
+    @Override
+    public Flux<CasoCobranzaDocument> findAll() {
+        return repository.findAll()
+                .onErrorContinue(RuntimeException.class,
+                        (e, obj) -> log.warn("[CasoCobranza] Documento omitido: {}", e.getMessage()));
     }
 
     @Override

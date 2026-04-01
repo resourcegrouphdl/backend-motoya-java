@@ -13,5 +13,21 @@ public interface NotificationRepositoryPort {
     Mono<Notification> save(Notification notification);
     Mono<Notification> findById(String id);
     Flux<Notification> findByStatus(NotificationStatus status);
-    Mono<Notification> updateStatus(String id, NotificationStatus status, String lastError);
+
+    /**
+     * Actualiza el estado de la notificación incluyendo el ID externo del proveedor.
+     *
+     * @param id                ID del documento en Firestore
+     * @param status            Nuevo estado
+     * @param externalMessageId wamid (Meta) o messageId (SMTP). Null si no aplica.
+     * @param lastError         Mensaje de error. Null en caso de éxito.
+     */
+    Mono<Notification> updateStatus(String id, NotificationStatus status,
+                                    String externalMessageId, String lastError);
+
+    /**
+     * Recupera todos los logs de una notificación a partir del evento Outbox que los originó.
+     * Permite construir la timeline de intentos por evento.
+     */
+    Flux<Notification> findByEventId(String eventId);
 }
