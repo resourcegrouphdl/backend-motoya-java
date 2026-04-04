@@ -39,6 +39,7 @@ public class ConfiguracionCrediticiaDocument {
     private Map<String, Object> comisionDefault;
     private Double teaDefault;
     private List<Map<String, Object>> plazos;
+    private String modoCalculadora;
     private Timestamp actualizadoEn;
     private String actualizadoPor;
 }

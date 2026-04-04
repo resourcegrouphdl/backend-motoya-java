@@ -7,8 +7,8 @@ public record AjustarFinanciamientoCommand(
         BigDecimal nuevaInicial,
         int nuevoPlazo,
         /**
-         * TEA del crédito ajustado (ej: 0.60 = 60%).
-         * Si es null se usa MotorFinancieroService.TEA_DEFAULT.
+         * Reservado para modo FORMAL (calculadora SBS).
+         * En modo SIMPLIFICADO se ignora — la tasa se determina por el plazo.
          */
         BigDecimal tea,
         String usuarioId,

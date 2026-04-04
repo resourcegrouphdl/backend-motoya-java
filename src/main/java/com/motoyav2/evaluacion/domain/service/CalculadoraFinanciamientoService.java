@@ -23,7 +23,7 @@ public final class CalculadoraFinanciamientoService {
     public static final BigDecimal GASTOS_ADMINISTRATIVOS  = BigDecimal.valueOf(890);
 
     private static final BigDecimal ADICIONAL_FIJO         = GASTOS_ADMINISTRATIVOS;
-    private static final BigDecimal INICIAL_MINIMA_PCT     = new BigDecimal("0.20");
+    private static final BigDecimal INICIAL_MINIMA_PCT     = new BigDecimal("0.25");
     private static final BigDecimal MONTO_MAXIMO_FINANCIAR = BigDecimal.valueOf(5400);
 
     /** Tasas de interés por número de quincenas. */
@@ -164,21 +164,25 @@ public final class CalculadoraFinanciamientoService {
     // -------------------------------------------------------------------------
 
     /**
-     * Cuota quincenal sin intereses (fórmula lineal).
-     * Fórmula: (precioMoto + gastosAdmin - inicial) / plazoQuincenas
+     * Cuota quincenal con interés lineal.
+     * Fórmula: (montoFinanciar * (1 + tasa)) / plazoQuincenas
+     * Requiere plazoQuincenas en [16, 20, 24].
      */
     public static BigDecimal calcularCuotaQuincenal(
             BigDecimal precioMoto,
             BigDecimal inicial,
             int plazoQuincenas) {
         if (plazoQuincenas <= 0) throw new IllegalArgumentException("El plazo debe ser mayor a cero");
-        BigDecimal monto = precioMoto.add(GASTOS_ADMINISTRATIVOS).subtract(inicial);
-        return monto.divide(BigDecimal.valueOf(plazoQuincenas), 2, RoundingMode.HALF_UP);
+        BigDecimal tasa = TASAS.get(plazoQuincenas);
+        if (tasa == null) throw new IllegalArgumentException("Plazo no disponible: " + plazoQuincenas);
+        BigDecimal montoFinanciar = precioMoto.add(GASTOS_ADMINISTRATIVOS).subtract(inicial);
+        BigDecimal montoTotal = montoFinanciar.multiply(BigDecimal.ONE.add(tasa));
+        return montoTotal.divide(BigDecimal.valueOf(plazoQuincenas), 2, RoundingMode.HALF_UP);
     }
 
     /**
-     * Total a pagar sin intereses (fórmula lineal).
-     * Fórmula: inicial + (cuota * plazoQuincenas)
+     * Total a pagar (inicial + todas las cuotas).
+     * Fórmula: inicial + (cuotaQuincenal * plazoQuincenas)
      */
     public static BigDecimal calcularTotalAPagar(
             BigDecimal inicial,

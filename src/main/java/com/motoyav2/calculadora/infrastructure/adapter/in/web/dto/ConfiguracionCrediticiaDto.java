@@ -15,6 +15,7 @@ public record ConfiguracionCrediticiaDto(
         ComisionConfigDto comisionDefault,
         BigDecimal teaDefault,
         List<PlazoTeaConfigDto> plazos,
+        String modoCalculadora,
         Instant actualizadoEn,
         String  actualizadoPor
 ) {
@@ -28,6 +29,7 @@ public record ConfiguracionCrediticiaDto(
                 ComisionConfigDto.from(c.getComisionDefault()),
                 c.getTeaDefault(),
                 c.getPlazos().stream().map(PlazoTeaConfigDto::from).toList(),
+                c.getModoCalculadora() != null ? c.getModoCalculadora() : "SIMPLIFICADO",
                 c.getActualizadoEn(),
                 c.getActualizadoPor()
         );
