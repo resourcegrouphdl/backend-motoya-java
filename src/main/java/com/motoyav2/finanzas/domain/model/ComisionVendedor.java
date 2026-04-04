@@ -29,5 +29,6 @@ public class ComisionVendedor {
     int totalVentas;
     BigDecimal montoComision;
     EstadoPago estado;
+    String pagoId;        // referencia al PagoComisionVendedor cuando está EN_PROCESO o PAGADO
     LocalDateTime pagadoEn;
 }

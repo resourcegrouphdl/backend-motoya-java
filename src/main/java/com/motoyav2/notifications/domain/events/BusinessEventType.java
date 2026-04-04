@@ -19,6 +19,12 @@ public enum BusinessEventType {
     CUOTA_VENCIDA,             // EstadoPago.VENCIDO
     PAGO_CONFIRMADO,           // Pago registrado exitosamente
     COMISION_GENERADA,         // Comisión de vendedor generada
+    COMISION_PAGADA,           // Pago de comisión quincena confirmado
+    REPORTE_MENSUAL_GENERADO,  // Reporte mensual de contabilidad generado
+    FACTURA_PAGO_REGISTRADO,   // Pago (INICIAL o SALDO) de factura registrado → notifica a tienda
+
+    // ─── Cobranza / Vouchers ───────────────────────────────────────────
+    PAYMENT_PROOF_RECEIVED,    // Cliente envía voucher por WhatsApp → procesar con Document AI
 
     // ─── Eventos manuales desde API / otros microservicios ────────────
     MANUAL                     // Disparado manualmente desde el endpoint /api/v1/notifications

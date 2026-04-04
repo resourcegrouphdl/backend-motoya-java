@@ -26,7 +26,13 @@ public class VoucherPortAdapter implements VoucherPort {
 
     @Override
     public Flux<VoucherDocument> findByStoreIdAndEstado(String storeId, String estado) {
-        return repository.findByStoreIdAndEstado(storeId, estado);
+        boolean tieneStore  = storeId != null && !storeId.isBlank();
+        boolean tieneEstado = estado  != null && !estado.isBlank();
+
+        if (tieneStore && tieneEstado)  return repository.findByStoreIdAndEstado(storeId, estado);
+        if (tieneStore)                 return repository.findByStoreId(storeId);
+        if (tieneEstado)                return repository.findByEstado(estado);
+        return repository.findAll();
     }
 
     @Override

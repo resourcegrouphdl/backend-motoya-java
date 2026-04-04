@@ -15,6 +15,8 @@ public class Factura {
     String numero;
     String tiendaId;
     String tiendaNombre;
+    String tiendaEmail;
+    String tiendaTelefono;
     String ventaId;
     String clienteNombre;
     String motoModelo;

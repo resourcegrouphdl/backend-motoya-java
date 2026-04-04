@@ -38,4 +38,16 @@ public class NotificationDocument {
     private String lastError;
     private Timestamp createdAt;
     private Timestamp sentAt;
+
+    // ─── Campos de trazabilidad fintech (backward compatible) ───────────────
+    // Null en documentos anteriores a la versión que los introdujo — ignorar al leer.
+
+    /** ID del NotificationEvent en el Outbox. Enlaza este log con su evento origen. */
+    private String eventId;
+
+    /** ID asignado por el proveedor: wamid (Meta WhatsApp) o messageId (SMTP). */
+    private String externalMessageId;
+
+    /** Respuesta raw del proveedor en formato JSON string. Para debugging y auditoría. */
+    private String providerResponse;
 }

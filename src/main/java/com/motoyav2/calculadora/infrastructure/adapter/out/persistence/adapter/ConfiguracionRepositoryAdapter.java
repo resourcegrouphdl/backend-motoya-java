@@ -74,16 +74,19 @@ public class ConfiguracionRepositoryAdapter implements ConfiguracionCrediticiaRe
         Timestamp ts        = snap.getTimestamp("actualizadoEn");
         Instant   actualizado = ts != null ? ts.toDate().toInstant() : Instant.now();
 
+        String modo = snap.getString("modoCalculadora");
+
         return ConfiguracionCrediticia.builder()
                 .id(DOC)
                 .gastosAdministrativos(bd(snap, "gastosAdministrativos", 890.0))
-                .porcentajeInicialMinima(bd(snap, "porcentajeInicialMinima", 0.20))
+                .porcentajeInicialMinima(bd(snap, "porcentajeInicialMinima", 0.25))
                 .montoMaximoFinanciar(bd(snap, "montoMaximoFinanciar", 5400.0))
                 .montoMinimoFinanciar(bd(snap, "montoMinimoFinanciar", 500.0))
                 .tasaSeguroDesgravamenMensual(bd(snap, "tasaSeguroDesgravamenMensual", 0.0004))
                 .comisionDefault(comisionDefault)
                 .teaDefault(bd(snap, "teaDefault", 0.72))
                 .plazos(plazos.isEmpty() ? defaultPlazos() : plazos)
+                .modoCalculadora(modo != null ? modo : "SIMPLIFICADO")
                 .actualizadoEn(actualizado)
                 .actualizadoPor(snap.getString("actualizadoPor"))
                 .build();
@@ -154,6 +157,7 @@ public class ConfiguracionRepositoryAdapter implements ConfiguracionCrediticiaRe
         data.put("comisionDefault",              comisionMap);
         data.put("teaDefault",                   c.getTeaDefault().doubleValue());
         data.put("plazos",                       plazos);
+        data.put("modoCalculadora",              c.getModoCalculadora() != null ? c.getModoCalculadora() : "SIMPLIFICADO");
         data.put("actualizadoEn",                Timestamp.ofTimeSecondsAndNanos(
                 c.getActualizadoEn().getEpochSecond(), c.getActualizadoEn().getNano()));
         data.put("actualizadoPor",               c.getActualizadoPor());
@@ -171,7 +175,7 @@ public class ConfiguracionRepositoryAdapter implements ConfiguracionCrediticiaRe
         return ConfiguracionCrediticia.builder()
                 .id(DOC)
                 .gastosAdministrativos(BigDecimal.valueOf(890))
-                .porcentajeInicialMinima(new BigDecimal("0.20"))
+                .porcentajeInicialMinima(new BigDecimal("0.25"))
                 .montoMaximoFinanciar(BigDecimal.valueOf(5400))
                 .montoMinimoFinanciar(BigDecimal.valueOf(500))
                 .tasaSeguroDesgravamenMensual(new BigDecimal("0.0004"))
@@ -182,6 +186,7 @@ public class ConfiguracionRepositoryAdapter implements ConfiguracionCrediticiaRe
                         .build())
                 .teaDefault(new BigDecimal("0.72"))
                 .plazos(defaultPlazos())
+                .modoCalculadora("SIMPLIFICADO")
                 .actualizadoEn(Instant.now())
                 .actualizadoPor("sistema")
                 .build();

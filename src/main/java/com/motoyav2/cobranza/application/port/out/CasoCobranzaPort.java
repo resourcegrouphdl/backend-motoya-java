@@ -23,5 +23,7 @@ public interface CasoCobranzaPort {
 
     Flux<CasoCobranzaDocument> findByAgenteAsignadoId(String agenteId);
 
+    Flux<CasoCobranzaDocument> findAll();
+
     Mono<CasoCobranzaDocument> save(CasoCobranzaDocument caso);
 }

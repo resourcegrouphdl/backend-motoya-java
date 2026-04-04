@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Comprobante de Pago de Comisión - Motoya Digital</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 30px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+    .header { background: #E63946; padding: 24px 32px; text-align: center; }
+    .header img { max-height: 50px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
+    .header h1 { margin: 0; font-size: 20px; color: #fff; }
+    .header p { margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,0.85); }
+    .body { padding: 28px 32px; }
+    .body p { color: #444; font-size: 15px; line-height: 1.6; }
+    .monto-box { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 16px 20px; border-radius: 6px; margin: 20px 0; }
+    .monto-box .label { font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: .5px; }
+    .monto-box .valor { font-size: 28px; font-weight: 700; color: #1b5e20; }
+    .details { background: #f9fafb; border-radius: 6px; padding: 16px 20px; margin: 16px 0; }
+    .details .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; border-bottom: 1px solid #eee; }
+    .details .row:last-child { border-bottom: none; }
+    .details .key { color: #777; }
+    .details .val { font-weight: 600; color: #333; }
+    .btn { display: inline-block; margin-top: 20px; padding: 12px 28px; background: #E63946; color: #fff; text-decoration: none; border-radius: 6px; font-size: 15px; font-weight: 600; }
+    .footer { background: #333333; padding: 16px 32px; text-align: center; font-size: 12px; color: #aaaaaa; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya Digital"/>
+    <h1>✅ Pago de Comisión Confirmado</h1>
+    <p>Motoya Digital — Sistema de Gestión Financiera</p>
+  </div>
+  <div class="body">
+    <p>Hola <strong th:text="${vendedor}">Vendedor</strong>,</p>
+    <p>Te informamos que tu pago de comisión correspondiente al período
+      <strong th:text="${periodo}">período</strong> ha sido procesado exitosamente.</p>
+
+    <div class="monto-box">
+      <div class="label">Monto abonado</div>
+      <div class="valor" th:text="${monto}">S/ 0.00</div>
+    </div>
+
+    <div class="details">
+      <div class="row">
+        <span class="key">Período</span>
+        <span class="val" th:text="${periodo}">—</span>
+      </div>
+    </div>
+
+    <p>Puedes descargar tu comprobante de pago haciendo clic en el botón:</p>
+    <a th:href="${comprobanteUrl}" class="btn">📄 Descargar Comprobante</a>
+
+    <p style="margin-top:24px; font-size:13px; color:#888;">
+      Si tienes alguna consulta, comunícate con el área de finanzas de Motoya Digital.
+    </p>
+  </div>
+  <div class="footer">
+    <p>Este correo ha sido enviado automáticamente por el sistema de Motoya Digital.</p>
+    <p>© 2026 Motoya Digital. Todos los derechos reservados.</p>
+  </div>
+</div>
+</body>
+</html>

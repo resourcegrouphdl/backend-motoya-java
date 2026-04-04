@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/api/facturas")
+@RequestMapping({"/api/facturas", "/api/v1/facturas"})
 @RequiredArgsConstructor
 public class FacturaController {
 

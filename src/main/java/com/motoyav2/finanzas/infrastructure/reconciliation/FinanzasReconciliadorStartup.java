@@ -41,18 +41,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FinanzasReconciliadorStartup implements ApplicationRunner {
 
-    private static final String COL_CONTRATOS  = "contratos";
-    private static final String COL_FACTURAS   = "finanzas_facturas";
-    private static final String COL_PAGOS      = "pagos";
-    private static final String COL_COMISIONES = "finanzas_comisiones";
-    private static final String COL_SOLICITUDES= "solicitudes";
-    private static final String COL_USERS      = "users";
-    private static final String COL_CONFIG     = "finanzas_config";
-    private static final String DOC_FLAG       = "reconciliacion";
-    private static final String CAMPO_OK       = "completado";
-    private static final String CAMPO_FECHA    = "fechaEjecucion";
-    private static final String CAMPO_TOTAL    = "totalProcesados";
-    private static final int    CONDICION_PAGO_DIAS = 15;
+    private static final String COL_CONTRATOS         = "contratos";
+    private static final String COL_FACTURAS          = "finanzas_facturas";
+    private static final String COL_PAGOS             = "pagos";
+    private static final String COL_COMISIONES        = "finanzas_comisiones";
+    private static final String COL_SOLICITUDES       = "solicitudes";
+    private static final String COL_VENDEDOR_PROFILES = "vendedor_profiles";
+    private static final String COL_TIENDA_PROFILES   = "tienda_profiles";
+    private static final String COL_CONFIG            = "finanzas_config";
+    private static final String DOC_FLAG              = "reconciliacion";
+    private static final String CAMPO_OK              = "completado";
+    private static final String CAMPO_FECHA           = "fechaEjecucion";
+    private static final String CAMPO_TOTAL           = "totalProcesados";
+    private static final int    PLAZO_PAGO_DEFAULT    = 30;
 
     private final Firestore db;
 
@@ -146,6 +147,21 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
     // ── Construcción de la factura directamente desde ContratoDocument ────
 
     private Mono<Void> crearFacturaDesdeDoc(ContratoDocument doc) {
+        TiendaInfoEmbedded tienda = doc.getTienda();
+        String tiendaId = tienda != null ? nvl(tienda.getTiendaId()) : "";
+
+        // Primero leemos el plazo de pago configurado en tienda_profiles
+        return FirestoreReactiveUtils.toMono(
+                db.collection(COL_TIENDA_PROFILES).document(tiendaId).get())
+                .flatMap(tiendaSnap -> {
+                    int plazoFacturaDias = (tiendaSnap.exists() && tiendaSnap.contains("plazoFacturaDias"))
+                            ? tiendaSnap.getLong("plazoFacturaDias").intValue()
+                            : PLAZO_PAGO_DEFAULT;
+                    return crearFacturaDesdeDocConPlazo(doc, plazoFacturaDias);
+                });
+    }
+
+    private Mono<Void> crearFacturaDesdeDocConPlazo(ContratoDocument doc, int plazoFacturaDias) {
         String contratoId   = doc.getId();
         String ahora        = Instant.now().toString();
 
@@ -198,8 +214,10 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         BigDecimal montoP1 = BigDecimal.valueOf(cuotaInicial).setScale(2, RoundingMode.HALF_UP);
         BigDecimal montoP2 = total.subtract(montoP1);
 
-        String fechaP1 = fechaBase.plusDays(2).toString();
-        String fechaP2 = fechaBase.plusDays(CONDICION_PAGO_DIAS).toString();
+        LocalDate fechaP1Date = fechaBase.plusDays(2);
+        String fechaP1 = fechaP1Date.toString();
+        // P2 SALDO: fechaP1 + plazo configurado en tienda_profiles (15 o 30 días)
+        String fechaP2 = fechaP1Date.plusDays(plazoFacturaDias).toString();
 
         // ── Documento factura ─────────────────────────────────────────────
         Map<String, Object> factura = new HashMap<>();
@@ -220,7 +238,7 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         factura.put("fechaEmisionFactura",  fechaEmisionFact);
         factura.put("montoTotal",           montoTotal);
         factura.put("fechaFactura",         fechaBase.toString());
-        factura.put("condicionPago",        CONDICION_PAGO_DIAS);
+        factura.put("condicionPago",        plazoFacturaDias);
         factura.put("estado",               "PENDIENTE");
         factura.put("creadoEn",             ahora);
         factura.put("actualizadoEn",        ahora);
@@ -315,17 +333,21 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
                     String vendedorId = solicitudSnap.getString("vendedorId");
                     if (vendedorId == null || vendedorId.isBlank()) return Mono.empty();
                     return FirestoreReactiveUtils.toMono(
-                            db.collection(COL_USERS).document(vendedorId).get())
-                            .map(userSnap -> {
+                            db.collection(COL_VENDEDOR_PROFILES).document(vendedorId).get())
+                            .map(snap -> {
+                                Long commissionRateLong = snap.getLong("commissionRate");
+                                double commissionRate = commissionRateLong != null
+                                        ? commissionRateLong.doubleValue() : 100.0;
                                 Map<String, Object> v = new HashMap<>();
-                                v.put("vendedorId",    vendedorId);
-                                v.put("firstName",     nvl(userSnap.getString("firstName")));
-                                v.put("lastName",      nvl(userSnap.getString("lastName")));
-                                v.put("email",         nvl(userSnap.getString("email")));
-                                v.put("phone",         nvl(userSnap.getString("phone")));
-                                v.put("documentNumber",nvl(userSnap.getString("documentNumber")));
-                                v.put("documentType",  nvl(userSnap.getString("documentType")));
-                                v.put("userType",      nvl(userSnap.getString("userType")));
+                                v.put("vendedorId",     vendedorId);
+                                v.put("firstName",      nvl(snap.getString("firstName")));
+                                v.put("lastName",       nvl(snap.getString("lastName")));
+                                v.put("email",          nvl(snap.getString("email")));
+                                v.put("phone",          nvl(snap.getString("phone")));
+                                v.put("documentNumber", nvl(snap.getString("documentNumber")));
+                                v.put("documentType",   nvl(snap.getString("documentType")));
+                                v.put("userType",       nvl(snap.getString("userType")));
+                                v.put("commissionRate", commissionRate);
                                 return v;
                             });
                 });
@@ -356,7 +378,7 @@ public class FinanzasReconciliadorStartup implements ApplicationRunner {
         comision.put("periodoInicio",         hoy);
         comision.put("periodoFin",            hoy);
         comision.put("totalVentas",           1);
-        comision.put("montoComision",         100.0);
+        comision.put("montoComision",         (double) vendedor.get("commissionRate"));
         comision.put("estado",                "PENDIENTE");
         comision.put("pagadoEn",              null);
         comision.put("creadoEn",              ahora);

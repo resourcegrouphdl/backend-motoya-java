@@ -11,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -29,8 +29,6 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                 .defaultIfEmpty(new CasoCobranzaDocument())
                 .flatMap(existente -> {
                     boolean esNuevo = existente.getContratoId() == null;
-
-                    Date fechaVencimiento = parseFecha(command.fechaVencimientoPrimerCuotaImpaga());
 
                     CasoCobranzaDocument doc = CasoCobranzaDocument.builder()
                             .contratoId(command.contratoId())
@@ -53,7 +51,7 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                                     ? command.estadoCaso() : "EN_SEGUIMIENTO")
                             .agenteAsignadoId(command.agenteAsignadoId())
                             .agenteAsignadoNombre(command.agenteAsignadoNombre())
-                            .fechaVencimientoPrimerCuotaImpaga(fechaVencimiento)
+                            .fechaVencimientoPrimerCuotaImpaga(parseFecha(command.fechaVencimientoPrimerCuotaImpaga()))
                             .cronograma(command.cronograma())
                             .creadoEn(esNuevo ? new Date() : existente.getCreadoEn())
                             .actualizadoEn(new Date())
@@ -82,12 +80,16 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                 });
     }
 
+    /** Convierte ISO date string ("YYYY-MM-DD" o "YYYY-MM-DDTHH:mm:ssZ") a Date. */
     private Date parseFecha(String iso) {
         if (iso == null || iso.isBlank()) return null;
         try {
-            return new SimpleDateFormat("yyyy-MM-dd").parse(iso);
+            if (iso.contains("T")) {
+                return Date.from(java.time.Instant.parse(iso));
+            }
+            return Date.from(java.time.LocalDate.parse(iso)
+                    .atStartOfDay(ZoneId.of("America/Lima")).toInstant());
         } catch (Exception e) {
-            log.warn("No se pudo parsear fecha: {}", iso);
             return null;
         }
     }

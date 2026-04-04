@@ -10,6 +10,7 @@ import java.util.Map;
  * Ejemplo:
  * <pre>
  *   NotificationRequest.builder()
+ *       .eventId("outbox-event-id")          // opcional: enlaza log con evento outbox
  *       .channel(NotificationChannel.WHATSAPP)
  *       .recipient("51987654321")
  *       .template(NotificationTemplate.RECORDATORIO_CUOTA)
@@ -19,6 +20,7 @@ import java.util.Map;
  */
 @Builder
 public record NotificationRequest(
+        String eventId,                  // ID del NotificationEvent en el Outbox (trazabilidad)
         NotificationChannel channel,
         String recipient,
         NotificationTemplate template,

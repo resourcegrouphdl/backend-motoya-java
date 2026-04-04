@@ -3,11 +3,11 @@ package com.motoyav2.evaluacion.application.usecase;
 import com.google.cloud.Timestamp;
 import com.motoyav2.evaluacion.application.command.AjustarFinanciamientoCommand;
 import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
+import com.motoyav2.evaluacion.domain.model.OpcionFinanciamiento;
+import com.motoyav2.evaluacion.domain.model.ResultadoCalculoFinanciamiento;
 import com.motoyav2.evaluacion.domain.port.in.AjustarFinanciamientoUseCase;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
-import com.motoyav2.financiamiento.domain.model.ResultadoSimulacion;
-import com.motoyav2.financiamiento.domain.model.SolicitudSimulacion;
-import com.motoyav2.financiamiento.domain.service.MotorFinancieroService;
+import com.motoyav2.evaluacion.domain.service.CalculadoraFinanciamientoService;
 import com.motoyav2.shared.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -23,6 +24,9 @@ import java.util.Map;
 public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUseCase {
 
     private final SolicitudRepository solicitudRepository;
+
+    private static final List<Integer> PLAZOS_VALIDOS =
+            CalculadoraFinanciamientoService.getOpcionesQuincenas();
 
     @Override
     public Mono<Map<String, Object>> ejecutar(AjustarFinanciamientoCommand command) {
@@ -47,40 +51,38 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                                 "La inicial ajustada no puede ser menor a la original (S/ "
                                         + originalInicial.setScale(2, RoundingMode.HALF_UP) + ")"));
                     }
+                    if (!PLAZOS_VALIDOS.contains(command.nuevoPlazo())) {
+                        return Mono.error(new BadRequestException(
+                                "El plazo debe ser 16, 20 o 24 quincenas"));
+                    }
                     if (command.nuevoPlazo() > originalPlazo) {
                         return Mono.error(new BadRequestException(
                                 "El plazo ajustado no puede ser mayor al original ("
                                         + originalPlazo + " quincenas)"));
                     }
-                    if (command.nuevoPlazo() < 4) {
-                        return Mono.error(new BadRequestException("El plazo mínimo es 4 quincenas"));
-                    }
-                    BigDecimal costoTotal = precio.add(MotorFinancieroService.GASTOS_ADMINISTRATIVOS_DEFAULT);
+                    BigDecimal costoTotal = CalculadoraFinanciamientoService.calcularPrecioTotal(precio);
                     if (command.nuevaInicial().compareTo(costoTotal) >= 0) {
                         return Mono.error(new BadRequestException(
                                 "La inicial no puede ser igual o mayor al costo total"));
                     }
 
-                    // ── Recálculo con motor financiero (amortización francesa) ─
-                    BigDecimal tea = command.tea() != null
-                            ? command.tea()
-                            : MotorFinancieroService.TEA_DEFAULT;
-
-                    ResultadoSimulacion sim;
+                    // ── Recálculo con calculadora simplificada (interés lineal) ─
+                    ResultadoCalculoFinanciamiento calc;
                     try {
-                        sim = MotorFinancieroService.simular(SolicitudSimulacion.builder()
-                                .precioVehiculo(precio)
-                                .cuotaInicial(command.nuevaInicial())
-                                .numeroCuotas(command.nuevoPlazo())
-                                .tea(tea)
-                                .build());
+                        calc = CalculadoraFinanciamientoService
+                                .calcularFinanciamientoCompleto(precio, command.nuevaInicial());
                     } catch (IllegalArgumentException e) {
                         return Mono.error(new BadRequestException(e.getMessage()));
                     }
 
-                    BigDecimal cuota         = sim.getCuotaQuincenal();
-                    BigDecimal montoFinanciar = sim.getMontoFinanciado();
-                    BigDecimal total          = sim.getTotalPagar();
+                    OpcionFinanciamiento opcion = calc.getOpciones().stream()
+                            .filter(op -> op.getQuincenas() == command.nuevoPlazo())
+                            .findFirst()
+                            .orElseThrow(() -> new BadRequestException("Plazo no disponible"));
+
+                    BigDecimal cuota          = opcion.getCuotaQuincenal();
+                    BigDecimal montoFinanciar  = calc.getDatosCalculados().getMontoFinanciar();
+                    BigDecimal total           = opcion.getSumaTotal();
                     BigDecimal pct = costoTotal.compareTo(BigDecimal.ZERO) > 0
                             ? command.nuevaInicial()
                                     .divide(costoTotal, 4, RoundingMode.HALF_UP)
@@ -97,27 +99,25 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
 
                     if (solicitud.getDatosFinancieros() != null) {
                         Map<String, Object> df = new HashMap<>();
-                        df.put("inicial", command.nuevaInicial().doubleValue());
-                        df.put("montoCuotaQuincenal", cuota.doubleValue());
-                        df.put("numeroCuotasQuincenales", command.nuevoPlazo());
-                        df.put("montoFinanciar", montoFinanciar.doubleValue());
-                        df.put("totalAPagar", total.doubleValue());
-                        df.put("porcentajeInicial", pct.doubleValue());
-                        df.put("tea", tea.doubleValue());
-                        df.put("tcea", sim.getTcea().doubleValue());
-                        df.put("tasaQuincenal", sim.getTasaQuincenal().doubleValue());
+                        df.put("inicial",                  command.nuevaInicial().doubleValue());
+                        df.put("montoCuotaQuincenal",       cuota.doubleValue());
+                        df.put("numeroCuotasQuincenales",   command.nuevoPlazo());
+                        df.put("montoFinanciar",            montoFinanciar.doubleValue());
+                        df.put("totalAPagar",               total.doubleValue());
+                        df.put("porcentajeInicial",         pct.doubleValue());
+                        df.put("interesTotal",              opcion.getInteresTotal().doubleValue());
+                        df.put("tasaLineal",                opcion.getTasa().doubleValue());
+                        df.put("modoCalculadora",           "SIMPLIFICADO");
                         updates.put("datosFinancieros", df);
                     }
 
                     Map<String, Object> resultado = Map.of(
-                            "inicial", command.nuevaInicial().doubleValue(),
-                            "montoFinanciar", montoFinanciar.doubleValue(),
+                            "inicial",                 command.nuevaInicial().doubleValue(),
+                            "montoFinanciar",          montoFinanciar.doubleValue(),
                             "numeroCuotasQuincenales", command.nuevoPlazo(),
-                            "montoCuotaQuincenal", cuota.doubleValue(),
-                            "totalAPagar", total.doubleValue(),
-                            "porcentajeInicial", pct.doubleValue(),
-                            "tea", tea.doubleValue(),
-                            "tcea", sim.getTcea().doubleValue()
+                            "montoCuotaQuincenal",     cuota.doubleValue(),
+                            "totalAPagar",             total.doubleValue(),
+                            "porcentajeInicial",       pct.doubleValue()
                     );
 
                     return solicitudRepository.updateFields(command.solicitudId(), updates)

@@ -8,5 +8,8 @@ import java.time.LocalDate;
 
 public interface ComisionPort {
     Flux<ComisionVendedor> findAll(String tiendaId, LocalDate fechaInicio, LocalDate fechaFin);
+    Flux<ComisionVendedor> findByPagoId(String pagoId);
     Mono<Void> marcarPagada(String comisionId);
+    Mono<Void> marcarEnProceso(java.util.List<String> comisionIds, String pagoId);
+    Mono<Void> marcarPagadasBatch(java.util.List<String> comisionIds);
 }

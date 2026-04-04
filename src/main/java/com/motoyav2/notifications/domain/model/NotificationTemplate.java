@@ -65,6 +65,16 @@ public enum NotificationTemplate {
       NotificationChannel.EMAIL,
       "Nueva comisión disponible - Motoya"),
 
+  PAGO_COMISION_WHATSAPP(
+      "pago-comision-confirmado",
+      NotificationChannel.WHATSAPP,
+      "Pago de comisión confirmado - Motoya"),
+
+  PAGO_COMISION_EMAIL(
+      "pago-comision-confirmado",
+      NotificationChannel.EMAIL,
+      "Comprobante de pago de comisión - Motoya"),
+
   // ─── Evaluación De credito / notificaciones ─────────────────────────────────────────────────
 
   CREDITO_APROBADO_NOTIFICACION(
@@ -85,7 +95,18 @@ public enum NotificationTemplate {
   CREDITO_NOTIFICACION_REFERENCIA(
       "credito_notificacion_referencia",
       NotificationChannel.WHATSAPP,
-      "Notificación de referencia personal - Motoya");
+      "Notificación de referencia personal - Motoya Digital"),
+
+  // ─── Pagos a Tiendas ─────────────────────────────────────────────────────
+  PAGO_FACTURA_TIENDA_WHATSAPP(
+      "pago-factura-tienda",
+      NotificationChannel.WHATSAPP,
+      "Pago de factura registrado - Motoya Digital"),
+
+  PAGO_FACTURA_TIENDA_EMAIL(
+      "pago-factura-tienda",
+      NotificationChannel.EMAIL,
+      "Comprobante de pago de factura - Motoya Digital");
 
 
   /**

@@ -214,6 +214,84 @@ public class NotificationFacade {
         );
     }
 
+    /**
+     * Notifica al vendedor (WhatsApp + Email) cuando se confirma el pago de su comisión quincena.
+     * Envía el link del PDF comprobante generado.
+     * Ambos envíos se hacen de forma independiente; un fallo en uno no cancela el otro.
+     */
+    public Mono<Void> notificarPagoComisionConfirmado(
+            String pagoId, String email, String telefono, String vendedor,
+            String periodo, String monto, String comprobanteUrl) {
+        String refId = pagoId != null ? pagoId : "pago-desconocido";
+        Map<String, String> vars = Map.of(
+                "vendedor",       vendedor       != null ? vendedor       : "",
+                "periodo",        periodo        != null ? periodo        : "",
+                "monto",          "S/ " + (monto != null ? monto : "0"),
+                "comprobanteUrl", comprobanteUrl != null ? comprobanteUrl : ""
+        );
+        Mono<Void> wa = (telefono != null && !telefono.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.COMISION_PAGADA, refId,
+                        NotificationChannel.WHATSAPP, telefono,
+                        NotificationTemplate.PAGO_COMISION_WHATSAPP, vars)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] WA pago comisión error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+        Mono<Void> mail = (email != null && !email.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.COMISION_PAGADA, refId,
+                        NotificationChannel.EMAIL, email,
+                        NotificationTemplate.PAGO_COMISION_EMAIL, vars)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] Email pago comisión error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+        return Mono.when(wa, mail);
+    }
+
+    /**
+     * Notifica a la tienda (WhatsApp + Email) cuando Motoya Digital registra un pago
+     * de factura (INICIAL o SALDO). Ambos envíos son independientes y fire-and-forget.
+     *
+     * @param facturaId    ID de la factura (referencia del evento)
+     * @param email        Email de contacto de la tienda
+     * @param telefono     Teléfono de la tienda (9 dígitos sin país)
+     * @param tiendaNombre Nombre de la tienda
+     * @param numeroFactura Número de factura (ej: "F002-00005444")
+     * @param clienteNombre Nombre del cliente titular del contrato
+     * @param concepto     "Pago Inicial" o "Pago de Saldo"
+     * @param monto        Monto formateado (ej: "S/ 1,500.00")
+     * @param fechaPago    Fecha en que se realizó el pago (ej: "2026-03-30")
+     * @param metodoPago   Método de pago (ej: "TRANSFERENCIA")
+     */
+    public Mono<Void> notificarPagoFacturaTienda(
+            String facturaId, String email, String telefono, String tiendaNombre,
+            String numeroFactura, String clienteNombre, String concepto,
+            String monto, String fechaPago, String metodoPago) {
+        String refId = facturaId != null ? facturaId : "factura-desconocida";
+        Map<String, String> vars = Map.of(
+                "tiendaNombre",  tiendaNombre  != null ? tiendaNombre  : "",
+                "numeroFactura", numeroFactura != null ? numeroFactura : "",
+                "clienteNombre", clienteNombre != null ? clienteNombre : "",
+                "concepto",      concepto      != null ? concepto      : "",
+                "monto",         monto         != null ? monto         : "",
+                "fechaPago",     fechaPago     != null ? fechaPago     : "",
+                "metodoPago",    metodoPago    != null ? metodoPago    : ""
+        );
+        Mono<Void> wa = (telefono != null && !telefono.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.FACTURA_PAGO_REGISTRADO, refId,
+                        NotificationChannel.WHATSAPP, telefono,
+                        NotificationTemplate.PAGO_FACTURA_TIENDA_WHATSAPP, vars)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] WA pago factura error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+        Mono<Void> mail = (email != null && !email.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.FACTURA_PAGO_REGISTRADO, refId,
+                        NotificationChannel.EMAIL, email,
+                        NotificationTemplate.PAGO_FACTURA_TIENDA_EMAIL, vars)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] Email pago factura error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+        return Mono.when(wa, mail);
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private String formatMonto(java.math.BigDecimal monto) {

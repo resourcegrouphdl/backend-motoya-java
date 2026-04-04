@@ -33,7 +33,7 @@ public class EmailNotificationAdapter implements NotificationSenderPort {
     private String fromAddress;
 
     @Override
-    public Mono<Void> send(Notification notification) {
+    public Mono<String> send(Notification notification) {
         return Mono.fromCallable(() -> {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
@@ -44,11 +44,14 @@ public class EmailNotificationAdapter implements NotificationSenderPort {
             helper.setText(notification.renderedContent(), true); // true = isHtml
 
             mailSender.send(mimeMessage);
-            log.info("[EMAIL] ✓ Enviado | plantilla={} to={}", notification.template(), notification.recipient());
-            return mimeMessage;
+
+            // Capturar messageId del servidor SMTP para trazabilidad
+            String messageId = mimeMessage.getMessageID() != null ? mimeMessage.getMessageID() : "";
+            log.info("[EMAIL] ✓ Enviado | plantilla={} to={} messageId={}",
+                    notification.template(), notification.recipient(), messageId);
+            return messageId;
         })
         .subscribeOn(Schedulers.boundedElastic())
-        .then()
         .onErrorMap(ex -> {
             log.error("[EMAIL] ✗ Error enviando a={} error={}", notification.recipient(), ex.getMessage());
             return ex;

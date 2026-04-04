@@ -8,4 +8,7 @@ public interface FirestoreNotificationRepository
         extends FirestoreReactiveRepository<NotificationDocument> {
 
     Flux<NotificationDocument> findByStatus(String status);
+
+    /** Todos los logs de auditoría asociados a un evento Outbox específico. */
+    Flux<NotificationDocument> findByEventId(String eventId);
 }

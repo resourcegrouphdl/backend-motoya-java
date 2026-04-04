@@ -1,0 +1,12 @@
+Hola [(${vendedor})], 👋
+
+✅ *Tu pago de comisión ha sido confirmado.*
+
+📅 Período: [(${periodo})]
+💰 Monto abonado: *[(${monto})]*
+
+📄 Puedes descargar tu comprobante aquí:
+[(${comprobanteUrl})]
+
+Gracias por tu trabajo. ¡Sigue adelante! 🚀
+— Equipo Motoya Digital

@@ -34,6 +34,49 @@ public class NotificationEventRepositoryAdapter implements NotificationEventRepo
         return repository.save(toDocument(event)).map(this::toDomain);
     }
 
+    @Override
+    public Mono<NotificationEvent> findById(String id) {
+        return repository.findById(id).map(this::toDomain);
+    }
+
+    /**
+     * Búsqueda paginada con filtros opcionales. Todos los parámetros son opcionales (null = ignorar).
+     * Usa el SDK nativo de Firestore para soportar filtros compuestos dinámicos.
+     */
+    @Override
+    public Flux<NotificationEvent> findByFilters(String eventType, String status,
+                                                  String channel, String contratoId, int limit) {
+        return Mono.fromCallable(() -> {
+                    com.google.cloud.firestore.Query query =
+                            firestore.collection("notification_events");
+
+                    if (eventType != null && !eventType.isBlank()) {
+                        query = query.whereEqualTo("eventType", eventType);
+                    }
+                    if (status != null && !status.isBlank()) {
+                        query = query.whereEqualTo("status", status);
+                    }
+                    if (channel != null && !channel.isBlank()) {
+                        query = query.whereEqualTo("channel", channel);
+                    }
+                    if (contratoId != null && !contratoId.isBlank()) {
+                        query = query.whereEqualTo("contratoId", contratoId);
+                    }
+
+                    return query.orderBy("createdAt",
+                                    com.google.cloud.firestore.Query.Direction.DESCENDING)
+                            .limit(limit)
+                            .get()
+                            .get();
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMapMany(snapshot ->
+                        Flux.fromIterable(snapshot.getDocuments())
+                                .map(doc -> doc.toObject(NotificationEventDocument.class))
+                                .map(this::toDomain)
+                );
+    }
+
     /**
      * Query compuesto: status == PENDIENTE AND nextRetryAt <= now
      * Requiere índice compuesto en Firestore (status ASC, nextRetryAt ASC).

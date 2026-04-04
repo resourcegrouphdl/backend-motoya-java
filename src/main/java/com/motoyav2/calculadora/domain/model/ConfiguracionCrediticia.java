@@ -49,6 +49,13 @@ public class ConfiguracionCrediticia {
     /** Plazos disponibles con TEA por plazo y frecuencia */
     List<PlazoTeaConfig> plazos;
 
+    /**
+     * Modo de cálculo activo.
+     * "SIMPLIFICADO" = interés lineal con tasas fijas por quincenas (activo).
+     * "FORMAL"       = amortización francesa SBS-compliant (futuro).
+     */
+    String modoCalculadora;
+
     Instant actualizadoEn;
     String  actualizadoPor;
 }

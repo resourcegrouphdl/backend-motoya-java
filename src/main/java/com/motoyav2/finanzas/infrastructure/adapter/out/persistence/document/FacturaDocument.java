@@ -14,6 +14,8 @@ public class FacturaDocument {
     private String numero;
     private String tiendaId;
     private String tiendaNombre;
+    private String tiendaEmail;
+    private String tiendaTelefono;
     private String ventaId;
     private String clienteNombre;
     private String motoModelo;
