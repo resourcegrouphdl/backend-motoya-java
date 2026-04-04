@@ -26,6 +26,9 @@ public enum BusinessEventType {
     // ─── Cobranza / Vouchers ───────────────────────────────────────────
     PAYMENT_PROOF_RECEIVED,    // Cliente envía voucher por WhatsApp → procesar con Document AI
 
+    // ─── Evaluación de crédito ─────────────────────────────────────────
+    CREDITO_APROBADO,           // Decisión final APROBADO → notifica titular + fiador con certificado
+
     // ─── Eventos manuales desde API / otros microservicios ────────────
     MANUAL                     // Disparado manualmente desde el endpoint /api/v1/notifications
 }

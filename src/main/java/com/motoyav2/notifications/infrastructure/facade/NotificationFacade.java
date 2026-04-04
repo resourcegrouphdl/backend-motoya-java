@@ -146,6 +146,69 @@ public class NotificationFacade {
                 contrato.id(), ex.getMessage()));
     }
 
+    // ─── Eventos de Evaluación ────────────────────────────────────────────────
+
+    /**
+     * Notifica a titular y fiador (si existe) cuando la decisión final es APROBADO.
+     * Se envía:
+     *   - WhatsApp + Email al titular
+     *   - WhatsApp al fiador (si hay fiador)
+     * Todos los envíos son independientes; un fallo en uno no cancela los demás.
+     *
+     * @param solicitudId        ID de la solicitud (referencia del evento)
+     * @param telefonoTitular    Teléfono del titular (9 dígitos sin país)
+     * @param emailTitular       Email del titular
+     * @param nombreTitular      Nombre completo del titular
+     * @param telefonoFiador     Teléfono del fiador (null si no hay fiador)
+     * @param nombreFiador       Nombre completo del fiador (null si no hay fiador)
+     * @param codigoCertificado  Código/número del certificado (ej: codigoDeSolicitud)
+     * @param urlCertificado     URL pública del certificado PNG
+     */
+    public Mono<Void> notificarCreditoAprobado(
+            String solicitudId,
+            String telefonoTitular, String emailTitular, String nombreTitular,
+            String telefonoFiador, String nombreFiador,
+            String codigoCertificado, String urlCertificado) {
+
+        Map<String, String> varsTitular = Map.of(
+                "cliente",        nombreTitular   != null ? nombreTitular   : "",
+                "certificado",    codigoCertificado != null ? codigoCertificado : "",
+                "certificadoUrl", urlCertificado  != null ? urlCertificado  : ""
+        );
+
+        Mono<Void> waTitular = (telefonoTitular != null && !telefonoTitular.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.CREDITO_APROBADO, solicitudId,
+                        NotificationChannel.WHATSAPP, telefonoTitular,
+                        NotificationTemplate.CREDITO_APROBADO_NOTIFICACION, varsTitular)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] WA titular aprobado error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        Mono<Void> mailTitular = (emailTitular != null && !emailTitular.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.CREDITO_APROBADO, solicitudId,
+                        NotificationChannel.EMAIL, emailTitular,
+                        NotificationTemplate.CREDITO_APROBADO_NOTIFICACION, varsTitular)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] Email titular aprobado error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        Mono<Void> waFiador = (telefonoFiador != null && !telefonoFiador.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.CREDITO_APROBADO, solicitudId,
+                        NotificationChannel.WHATSAPP, telefonoFiador,
+                        NotificationTemplate.CREDITO_MOTO_FIADOR_NOTIFICACION,
+                        Map.of(
+                                "fiador",         nombreFiador    != null ? nombreFiador    : "",
+                                "cliente",        nombreTitular   != null ? nombreTitular   : "",
+                                "certificado",    codigoCertificado != null ? codigoCertificado : "",
+                                "certificadoUrl", urlCertificado  != null ? urlCertificado  : ""
+                        ))
+                  .onErrorResume(e -> { log.warn("[NotifFacade] WA fiador aprobado error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        return Mono.when(waTitular, mailTitular, waFiador);
+    }
+
     // ─── Eventos de Finanzas / Cobranza ──────────────────────────────────────
 
     /**
