@@ -31,6 +31,13 @@ public final class ReferenciaMapper {
                 .fechaContacto(timestamp(data, "fechaContacto"))
                 .rechazada(bool(data, "rechazada"))
                 .fechaRechazo(timestamp(data, "fechaRechazo"))
+                .solicitudId(str(data, "solicitudId"))
+                .wamid(str(data, "wamid"))
+                .respuestaWhatsapp(str(data, "respuestaWhatsapp"))
+                .clasificacionClaude(str(data, "clasificacionClaude"))
+                .confianzaClaude(toDouble(data.get("confianzaClaude")))
+                .fechaEnvioWhatsapp(timestamp(data, "fechaEnvioWhatsapp"))
+                .metodoVerificacion(str(data, "metodoVerificacion"))
                 .createdAt(timestamp(data, "createdAt"))
                 .updatedAt(timestamp(data, "updatedAt"))
                 .build();
@@ -45,6 +52,12 @@ public final class ReferenciaMapper {
         if (v == null) return null;
         if (v instanceof Number n) return n.intValue();
         try { return Integer.parseInt(v.toString()); } catch (Exception e) { return null; }
+    }
+
+    private static Double toDouble(Object v) {
+        if (v == null) return null;
+        if (v instanceof Number n) return n.doubleValue();
+        try { return Double.parseDouble(v.toString()); } catch (Exception e) { return null; }
     }
 
     private static Boolean bool(Map<String, Object> m, String key) {

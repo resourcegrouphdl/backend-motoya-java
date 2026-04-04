@@ -22,6 +22,23 @@ public class Referencia {
     Timestamp fechaContacto;
     Boolean rechazada;
     Timestamp fechaRechazo;
+
+    // ── Verificación automática vía WhatsApp ──────────────────────────────────
+    /** ID de la solicitud a la que pertenece — necesario para correlación webhook y umbral. */
+    String solicitudId;
+    /** wamid retornado por Meta al enviar el mensaje. */
+    String wamid;
+    /** Texto raw de la respuesta recibida por WhatsApp. */
+    String respuestaWhatsapp;
+    /** Clasificación de Claude: POSITIVA | NEGATIVA | DUDOSA. */
+    String clasificacionClaude;
+    /** Confianza de Claude: 0.0–1.0. */
+    Double confianzaClaude;
+    /** Momento en que se envió el mensaje WhatsApp de verificación. */
+    Timestamp fechaEnvioWhatsapp;
+    /** "automatico" si fue por WhatsApp/Claude, "manual" si el evaluador lo hizo directamente. */
+    String metodoVerificacion;
+
     Timestamp createdAt;
     Timestamp updatedAt;
 

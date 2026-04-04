@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.Map;
 
+import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toFlux;
 import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toMono;
 
 @Component
@@ -37,6 +38,18 @@ public class ReferenciaRepositoryAdapter implements ReferenciaRepository {
     }
 
     @Override
+    public Mono<Referencia> findByTelefonoAndEstadoWaEnviado(String telefono) {
+        // Requiere índice compuesto en Firestore: (telefono ASC, estadoVerificacion ASC)
+        return toFlux(db.collection(COL)
+                        .whereEqualTo("telefono", normalizePhone(telefono))
+                        .whereEqualTo("estadoVerificacion", "wa_enviado")
+                        .limit(1)
+                        .get())
+                .next()
+                .mapNotNull(ReferenciaMapper::toDomain);
+    }
+
+    @Override
     public Mono<String> create(Map<String, Object> fields) {
         return toMono(db.collection(COL).add(fields))
                 .map(ref -> ref.getId());
@@ -45,5 +58,13 @@ public class ReferenciaRepositoryAdapter implements ReferenciaRepository {
     @Override
     public Mono<Void> updateFields(String id, Map<String, Object> fields) {
         return toMono(db.collection(COL).document(id).update(fields)).then();
+    }
+
+    /** Normaliza el número al mismo formato que usa MetaWhatsAppNotificationAdapter. */
+    private String normalizePhone(String phone) {
+        if (phone == null) return "";
+        String digits = phone.replaceAll("[^0-9]", "");
+        if (digits.startsWith("51") && digits.length() == 11) return digits.substring(2);
+        return digits;
     }
 }

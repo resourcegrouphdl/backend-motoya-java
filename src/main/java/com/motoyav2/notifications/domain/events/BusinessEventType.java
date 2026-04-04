@@ -28,6 +28,7 @@ public enum BusinessEventType {
 
     // ─── Evaluación de crédito ─────────────────────────────────────────
     CREDITO_APROBADO,           // Decisión final APROBADO → notifica titular + fiador con certificado
+    VERIFICACION_REFERENCIA_WA, // Mensaje de verificación enviado a referencia personal
 
     // ─── Eventos manuales desde API / otros microservicios ────────────
     MANUAL                     // Disparado manualmente desde el endpoint /api/v1/notifications
