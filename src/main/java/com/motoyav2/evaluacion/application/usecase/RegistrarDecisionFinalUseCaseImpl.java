@@ -6,14 +6,20 @@ import com.motoyav2.evaluacion.application.command.DecisionFinalCommand;
 import com.motoyav2.evaluacion.domain.enums.Decision;
 import com.motoyav2.evaluacion.domain.enums.EstadoSolicitud;
 import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
+import com.motoyav2.evaluacion.domain.model.Cliente;
+import com.motoyav2.evaluacion.domain.model.Expediente;
 import com.motoyav2.evaluacion.domain.model.Solicitud;
 import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;
+import com.motoyav2.evaluacion.domain.port.in.ObtenerExpedienteUseCase;
 import com.motoyav2.evaluacion.domain.port.in.RegistrarDecisionFinalUseCase;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
 import com.motoyav2.evaluacion.domain.model.OpcionFinanciamiento;
 import com.motoyav2.evaluacion.domain.model.ResultadoCalculoFinanciamiento;
 import com.motoyav2.evaluacion.domain.service.CalculadoraFinanciamientoService;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.external.CertificadoExternoClient;
+import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -22,12 +28,16 @@ import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RegistrarDecisionFinalUseCaseImpl implements RegistrarDecisionFinalUseCase {
 
     private final SolicitudRepository solicitudRepository;
     private final CambiarEstadoUseCase cambiarEstadoUseCase;
+    private final ObtenerExpedienteUseCase obtenerExpedienteUseCase;
+    private final CertificadoExternoClient certificadoExternoClient;
+    private final NotificationFacade notificationFacade;
 
     @Override
     public Mono<Solicitud> ejecutar(DecisionFinalCommand command) {
@@ -48,7 +58,79 @@ public class RegistrarDecisionFinalUseCaseImpl implements RegistrarDecisionFinal
 
                     return solicitudRepository.updateFields(command.solicitudId(), updates)
                             .then(cambiarEstadoUseCase.ejecutar(estadoCmd))
-                            .then(solicitudRepository.findById(command.solicitudId()));
+                            .then(solicitudRepository.findById(command.solicitudId()))
+                            .flatMap(solicitudActualizada -> {
+                                if (command.decision() != Decision.APROBADO) {
+                                    return Mono.just(solicitudActualizada);
+                                }
+                                // Fire-and-forget: certificado + notificaciones no bloquean la respuesta
+                                dispararFlujoCertificadoYNotificaciones(solicitudActualizada)
+                                        .subscribe(
+                                                null,
+                                                ex -> log.error("[DECISION] Error en flujo post-aprobación para {}: {}",
+                                                        command.solicitudId(), ex.getMessage())
+                                        );
+                                return Mono.just(solicitudActualizada);
+                            });
+                });
+    }
+
+    /**
+     * Genera el certificado de aprobación via servicio externo, guarda la URL en Firestore
+     * y envía notificaciones por WhatsApp y email al titular y fiador.
+     * Se ejecuta en background (fire-and-forget).
+     */
+    private Mono<Void> dispararFlujoCertificadoYNotificaciones(Solicitud solicitud) {
+        return obtenerExpedienteUseCase.ejecutar(solicitud.getId())
+                .flatMap(expediente -> {
+                    Cliente titular = expediente.getTitular();
+                    Cliente fiador  = expediente.getFiador();
+
+                    CertificadoExternoClient.CertificadoRequest request = CertificadoExternoClient.CertificadoRequest.of(
+                            solicitud.getCodigoDeSolicitud() != null
+                                    ? solicitud.getCodigoDeSolicitud() : solicitud.getNumeroSolicitud(),
+                            titular != null ? titular.getNombreCompleto() : solicitud.getTitularNombreCompleto(),
+                            titular != null ? titular.getDocumentNumber() : solicitud.getTitularDni(),
+                            titular != null ? titular.getTelefono1()      : solicitud.getTitularTelefono(),
+                            titular != null ? titular.getEmail()          : solicitud.getTitularEmail(),
+                            fiador  != null ? fiador.getNombreCompleto()  : null,
+                            fiador  != null ? fiador.getDocumentNumber()  : null,
+                            expediente.getVehiculo() != null
+                                    ? expediente.getVehiculo().getDescripcion() : "",
+                            solicitud.getPrecioCompraMoto() != null
+                                    ? solicitud.getPrecioCompraMoto().doubleValue() : 0.0,
+                            solicitud.getInicial() != null
+                                    ? solicitud.getInicial().doubleValue() : 0.0,
+                            solicitud.getPlazoQuincenas() != null
+                                    ? solicitud.getPlazoQuincenas() : 0,
+                            solicitud.getMontoCuota() != null
+                                    ? solicitud.getMontoCuota().doubleValue() : 0.0
+                    );
+
+                    return certificadoExternoClient.generarCertificado(request)
+                            .flatMap(url -> {
+                                Map<String, Object> certUpdates = new HashMap<>();
+                                certUpdates.put("urlCertificado",              url);
+                                certUpdates.put("certificadoGenerado",         true);
+                                certUpdates.put("fechaGeneracionCertificado",  Timestamp.now());
+                                certUpdates.put("updatedAt",                   Timestamp.now());
+
+                                return solicitudRepository.updateFields(solicitud.getId(), certUpdates)
+                                        .then(notificationFacade.notificarCreditoAprobado(
+                                                solicitud.getId(),
+                                                titular != null ? titular.getTelefono1()   : solicitud.getTitularTelefono(),
+                                                titular != null ? titular.getEmail()        : solicitud.getTitularEmail(),
+                                                titular != null ? titular.getNombreCompleto(): solicitud.getTitularNombreCompleto(),
+                                                fiador  != null ? fiador.getTelefono1()    : null,
+                                                fiador  != null ? fiador.getNombreCompleto(): null,
+                                                request.codigoDeSolicitud(),
+                                                url
+                                        ));
+                            });
+                })
+                .onErrorResume(ex -> {
+                    log.error("[DECISION] Error en dispararFlujoCertificadoYNotificaciones: {}", ex.getMessage());
+                    return Mono.empty();
                 });
     }
 

@@ -7,6 +7,7 @@ import com.motoyav2.evaluacion.domain.enums.Decision;
 import com.motoyav2.evaluacion.domain.enums.EstadoSolicitud;
 import com.motoyav2.evaluacion.domain.model.HistorialEstado;
 import com.motoyav2.evaluacion.domain.port.in.*;
+import com.motoyav2.evaluacion.domain.port.in.EnviarVerificacionWhatsAppUseCase;
 import com.motoyav2.evaluacion.domain.port.in.CorregirNombreDesdeApiUseCase;
 import com.motoyav2.evaluacion.infrastructure.adapter.in.web.request.*;
 import com.motoyav2.evaluacion.infrastructure.adapter.in.web.response.ExpedienteCompletoResponse;
@@ -48,6 +49,7 @@ public class EvaluacionController {
     private final RechazarReferenciaUseCase rechazarReferenciaUseCase;
     private final AjustarFinanciamientoUseCase ajustarFinanciamientoUseCase;
     private final CorregirNombreDesdeApiUseCase corregirNombreDesdeApiUseCase;
+    private final EnviarVerificacionWhatsAppUseCase enviarVerificacionWhatsAppUseCase;
 
     // ── GET /expediente/{solicitudId} ──────────────────────────────────────
     @GetMapping("/expediente/{solicitudId}")
@@ -276,6 +278,15 @@ public class EvaluacionController {
                 new VerificarIdentidadCommand(clienteId, uid, nombre))
                 .onErrorMap(RecursoNoEncontradoException.class,
                         e -> new NotFoundException(e.getMessage()));
+    }
+
+    // ── POST /referencias/{referenciaId}/enviar-verificacion ─────────────────
+    @PostMapping("/referencias/{referenciaId}/enviar-verificacion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> enviarVerificacionWhatsApp(
+            @PathVariable String referenciaId,
+            @RequestParam String solicitudId) {
+        return enviarVerificacionWhatsAppUseCase.ejecutar(referenciaId, solicitudId);
     }
 
     // ── DELETE /referencias/{referenciaId} ────────────────────────────────
