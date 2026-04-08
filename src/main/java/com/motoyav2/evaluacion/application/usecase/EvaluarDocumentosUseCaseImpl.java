@@ -32,8 +32,12 @@ public class EvaluarDocumentosUseCaseImpl implements EvaluarDocumentosUseCase {
 
                     // ── Actualizar solicitud ───────────────────────────────
                     Map<String, Object> solUpdates = new HashMap<>();
+                    boolean esFiador = command.clienteId() != null
+                            && !command.clienteId().equals(solicitud.getTitularId());
                     if (command.scoreDocumental() != null) {
-                        solUpdates.put("scoreDocumental", command.scoreDocumental());
+                        // Titular → scoreDocumental; Fiador → scoreGarantes
+                        solUpdates.put(esFiador ? "scoreGarantes" : "scoreDocumental",
+                                command.scoreDocumental());
                     }
                     if (command.observaciones() != null) {
                         solUpdates.put("observacionesGenerales", command.observaciones());
@@ -66,7 +70,9 @@ public class EvaluarDocumentosUseCaseImpl implements EvaluarDocumentosUseCase {
 
                     Mono<Void> allUpdates = updateSolicitud.then(updateCliente);
 
-                    if (command.nuevoEstado() != null) {
+                    if (command.nuevoEstado() != null
+                            && com.motoyav2.evaluacion.domain.service.EstadoSolicitudStateMachine
+                                    .esTransicionValida(solicitud.getEstado(), command.nuevoEstado())) {
                         CambiarEstadoCommand estadoCmd = new CambiarEstadoCommand(
                                 command.solicitudId(),
                                 command.nuevoEstado(),

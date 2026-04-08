@@ -50,6 +50,8 @@ public class EvaluacionController {
     private final AjustarFinanciamientoUseCase ajustarFinanciamientoUseCase;
     private final CorregirNombreDesdeApiUseCase corregirNombreDesdeApiUseCase;
     private final EnviarVerificacionWhatsAppUseCase enviarVerificacionWhatsAppUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.ReemplazarFiadorUseCase reemplazarFiadorUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.ReemplazarReferenciasUseCase reemplazarReferenciasUseCase;
 
     // ── GET /expediente/{solicitudId} ──────────────────────────────────────
     @GetMapping("/expediente/{solicitudId}")
@@ -317,6 +319,42 @@ public class EvaluacionController {
                 nombre))
                 .onErrorMap(com.motoyav2.shared.exception.BadRequestException.class,
                         e -> new com.motoyav2.shared.exception.BadRequestException(e.getMessage()));
+    }
+
+    // ── POST /solicitudes/{solicitudId}/reemplazar-fiador ─────────────────
+    @PostMapping("/solicitudes/{solicitudId}/reemplazar-fiador")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> reemplazarFiador(
+            @PathVariable String solicitudId,
+            @RequestBody IngresarSolicitudRequest.ClienteRequest body) {
+        return reemplazarFiadorUseCase.ejecutar(solicitudId, toClienteData(body))
+                .onErrorMap(RecursoNoEncontradoException.class,
+                        e -> new NotFoundException(e.getMessage()));
+    }
+
+    // ── POST /solicitudes/{solicitudId}/reemplazar-referencias ─────────────
+    @PostMapping("/solicitudes/{solicitudId}/reemplazar-referencias")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> reemplazarReferencias(
+            @PathVariable String solicitudId,
+            @RequestBody List<IngresarSolicitudRequest.ReferenciaRequest> body) {
+        List<com.motoyav2.evaluacion.application.command.IngresarSolicitudCommand.ReferenciaData> refs = body.stream()
+                .map(r -> new com.motoyav2.evaluacion.application.command.IngresarSolicitudCommand.ReferenciaData(
+                        r.nombre(), r.apellidos(), r.telefono(), r.parentesco()))
+                .toList();
+        return reemplazarReferenciasUseCase.ejecutar(solicitudId, refs)
+                .onErrorMap(RecursoNoEncontradoException.class,
+                        e -> new NotFoundException(e.getMessage()));
+    }
+
+    private com.motoyav2.evaluacion.application.command.IngresarSolicitudCommand.ClienteData toClienteData(
+            IngresarSolicitudRequest.ClienteRequest r) {
+        return new com.motoyav2.evaluacion.application.command.IngresarSolicitudCommand.ClienteData(
+                r.documentType(), r.documentNumber(), r.nombres(), r.apellidoPaterno(), r.apellidoMaterno(),
+                r.estadoCivil(), r.email(), r.fechaNacimiento(), r.departamento(), r.provincia(),
+                r.distrito(), r.direccion(), r.ubicacionGPSCasa(), r.telefono1(), r.telefono2(),
+                r.ocupacion(), r.rangoIngresos(), r.tipoVivienda(), r.licenciaConducir(), r.numeroLicencia(),
+                r.archivos());
     }
 
     // ── Inner response type ───────────────────────────────────────────────

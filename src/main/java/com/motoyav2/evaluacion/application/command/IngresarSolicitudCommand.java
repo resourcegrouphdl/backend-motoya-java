@@ -54,7 +54,12 @@ public record IngresarSolicitudCommand(
             Double precioCompraMoto,
             Double inicial,
             Integer plazoQuincenas,
-            Double montoCuota
+            Double montoCuota,
+            Double montoFinanciar,
+            Double gastosAdministrativos,
+            Double tea,
+            Double tcea,
+            Double tasaQuincenal
     ) {}
 
     public record VendedorData(
