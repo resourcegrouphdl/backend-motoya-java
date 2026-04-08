@@ -189,12 +189,33 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
         m.put("vehiculoId", vehiculoId);
         m.put("referenciasIds", referenciasIds);
 
-        // Financiero legacy
+        // Financiero (campos legacy — compatibilidad con listados)
         IngresarSolicitudCommand.FinanciamientoData fin = cmd.financiamiento();
         m.put("precioCompraMoto", fin.precioCompraMoto());
         m.put("inicial", fin.inicial());
         m.put("plazoQuincenas", fin.plazoQuincenas());
         m.put("montoCuota", fin.montoCuota());
+
+        // Resolver montoFinanciar: si el frontend lo envía úsalo; si no, calcularlo
+        double gastosAdmin = fin.gastosAdministrativos() != null ? fin.gastosAdministrativos() : 0.0;
+        double montoFinanciarReal = fin.montoFinanciar() != null
+                ? fin.montoFinanciar()
+                : (fin.precioCompraMoto() + gastosAdmin - fin.inicial());
+        double costoTotal = fin.precioCompraMoto() + gastosAdmin;
+
+        // Sub-map datosFinancieros — necesario para que el evaluador vea montoFinanciar correcto
+        Map<String, Object> dfMap = new HashMap<>();
+        dfMap.put("montoVehiculo", fin.precioCompraMoto());
+        dfMap.put("soatCostosNotariales", gastosAdmin > 0 ? gastosAdmin : null);
+        dfMap.put("costoTotal", costoTotal);
+        dfMap.put("inicial", fin.inicial());
+        dfMap.put("montoFinanciar", montoFinanciarReal);
+        dfMap.put("numeroCuotasQuincenales", fin.plazoQuincenas());
+        dfMap.put("montoCuotaQuincenal", fin.montoCuota());
+        if (fin.tea() != null)          dfMap.put("tea", fin.tea());
+        if (fin.tcea() != null)         dfMap.put("tcea", fin.tcea());
+        if (fin.tasaQuincenal() != null) dfMap.put("tasaQuincenal", fin.tasaQuincenal());
+        m.put("datosFinancieros", dfMap);
 
         // Vendedor
         IngresarSolicitudCommand.VendedorData v = cmd.vendedor();

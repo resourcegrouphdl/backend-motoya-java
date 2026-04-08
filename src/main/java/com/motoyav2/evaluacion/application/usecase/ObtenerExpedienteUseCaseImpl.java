@@ -33,7 +33,10 @@ public class ObtenerExpedienteUseCaseImpl implements ObtenerExpedienteUseCase {
                             : Mono.empty();
 
                     Mono<com.motoyav2.evaluacion.domain.model.Vehiculo> vehiculoMono =
-                            vehiculoRepository.findById(solicitud.getVehiculoId());
+                            solicitud.getVehiculoId() != null
+                                    ? vehiculoRepository.findById(solicitud.getVehiculoId())
+                                            .defaultIfEmpty(nullVehiculo())
+                                    : Mono.just(nullVehiculo());
 
                     Mono<java.util.List<com.motoyav2.evaluacion.domain.model.Referencia>> refsMono =
                             solicitud.getReferenciasIds() != null && !solicitud.getReferenciasIds().isEmpty()
@@ -45,7 +48,7 @@ public class ObtenerExpedienteUseCaseImpl implements ObtenerExpedienteUseCase {
                             : Mono.empty();
 
                     return Mono.zip(
-                            titularMono,
+                            titularMono.defaultIfEmpty(nullCliente()),
                             fiadorMono.defaultIfEmpty(nullCliente()),
                             vehiculoMono,
                             refsMono,
@@ -59,11 +62,13 @@ public class ObtenerExpedienteUseCaseImpl implements ObtenerExpedienteUseCase {
                                 fiadorCliente != null,
                                 fiadorCliente != null ? fiadorCliente.getArchivos() : "N/A");
                         // --- END DEBUG ---
+                        var vehiculo = isNullV(tuple.getT3()) ? null : tuple.getT3();
+                        var titular  = isNull(tuple.getT1()) ? null : tuple.getT1();
                         return Expediente.builder()
                                 .solicitud(solicitud)
-                                .titular(tuple.getT1())
+                                .titular(titular)
                                 .fiador(fiadorCliente)
-                                .vehiculo(tuple.getT3())
+                                .vehiculo(vehiculo)
                                 .referencias(tuple.getT4())
                                 .asesorAsignado(isNull(tuple.getT5()) ? null : tuple.getT5())
                                 .build();
@@ -76,14 +81,20 @@ public class ObtenerExpedienteUseCaseImpl implements ObtenerExpedienteUseCase {
             com.motoyav2.evaluacion.domain.model.Cliente.builder().id("__null__").build();
     private static final com.motoyav2.evaluacion.domain.model.Usuario NULL_USUARIO =
             com.motoyav2.evaluacion.domain.model.Usuario.builder().id("__null__").build();
+    private static final com.motoyav2.evaluacion.domain.model.Vehiculo NULL_VEHICULO =
+            com.motoyav2.evaluacion.domain.model.Vehiculo.builder().id("__null__").build();
 
     private com.motoyav2.evaluacion.domain.model.Cliente nullCliente() { return NULL_CLIENTE; }
     private com.motoyav2.evaluacion.domain.model.Usuario nullUsuario() { return NULL_USUARIO; }
+    private com.motoyav2.evaluacion.domain.model.Vehiculo nullVehiculo() { return NULL_VEHICULO; }
 
     private boolean isNull(com.motoyav2.evaluacion.domain.model.Cliente c) {
         return c != null && "__null__".equals(c.getId());
     }
     private boolean isNull(com.motoyav2.evaluacion.domain.model.Usuario u) {
         return u != null && "__null__".equals(u.getId());
+    }
+    private boolean isNullV(com.motoyav2.evaluacion.domain.model.Vehiculo v) {
+        return v != null && "__null__".equals(v.getId());
     }
 }
