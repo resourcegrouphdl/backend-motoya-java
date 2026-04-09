@@ -8,5 +8,5 @@ public record VerificarReferenciaRequest(
         Integer scoreVerificacion,
         String observaciones,
         String actitudDuranteContacto,
-        @NotBlank String evaluadorId
+        String evaluadorId
 ) {}
