@@ -47,7 +47,7 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
     }
 
     @Override
-    public Flux<Solicitud> findAll(String estado, String prioridad, String search, int limit, int offset) {
+    public Flux<Solicitud> findAll(String estado, String prioridad, String search, String tiendaId, int limit, int offset) {
         var query = (Query) db.collection(COL)
                 .orderBy("createdAt", Query.Direction.DESCENDING);
 
@@ -57,6 +57,9 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
         if (prioridad != null && !prioridad.isBlank()) {
             query = query.whereEqualTo("prioridad", prioridad);
         }
+        if (tiendaId != null && !tiendaId.isBlank()) {
+            query = query.whereEqualTo("vendedor.tienda", tiendaId);
+        }
 
         return toFlux(query.offset(offset).limit(limit).get())
                 .mapNotNull(SolicitudMapper::toDomain)
@@ -64,13 +67,16 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
     }
 
     @Override
-    public Mono<Long> countAll(String estado, String prioridad, String search) {
+    public Mono<Long> countAll(String estado, String prioridad, String search, String tiendaId) {
         var query = (Query) db.collection(COL);
         if (estado != null && !estado.isBlank()) {
             query = query.whereEqualTo("estado", estado);
         }
         if (prioridad != null && !prioridad.isBlank()) {
             query = query.whereEqualTo("prioridad", prioridad);
+        }
+        if (tiendaId != null && !tiendaId.isBlank()) {
+            query = query.whereEqualTo("vendedor.tienda", tiendaId);
         }
         return toMono(query.count().get()).map(agg -> agg.getCount());
     }

@@ -10,8 +10,8 @@ public interface SolicitudRepository {
     Mono<Solicitud> findById(String id);
     Mono<Solicitud> findByNumeroSolicitud(String numeroSolicitud);
     Flux<Solicitud> findByEstado(String estado, int limit, int offset);
-    Flux<Solicitud> findAll(String estado, String prioridad, String search, int limit, int offset);
-    Mono<Long> countAll(String estado, String prioridad, String search);
+    Flux<Solicitud> findAll(String estado, String prioridad, String search, String tiendaId, int limit, int offset);
+    Mono<Long> countAll(String estado, String prioridad, String search, String tiendaId);
     Flux<Solicitud> findByVendedorId(String vendedorId, int limit, int offset);
     Mono<Long> countByVendedorId(String vendedorId);
     Mono<String> create(Map<String, Object> fields);
