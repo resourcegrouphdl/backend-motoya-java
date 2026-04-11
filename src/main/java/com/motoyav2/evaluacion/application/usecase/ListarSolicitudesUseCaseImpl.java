@@ -26,9 +26,9 @@ public class ListarSolicitudesUseCaseImpl implements ListarSolicitudesUseCase {
     public Mono<PagedResult<SolicitudResumenDto>> ejecutar(ListarSolicitudesQuery query) {
         int offset = query.page() * query.size();
 
-        Mono<Long> totalMono = solicitudRepository.countAll(query.estado(), query.prioridad(), query.search());
+        Mono<Long> totalMono = solicitudRepository.countAll(query.estado(), query.prioridad(), query.search(), query.tiendaId());
         Mono<java.util.List<SolicitudResumenDto>> listMono = solicitudRepository
-                .findAll(query.estado(), query.prioridad(), query.search(), query.size(), offset)
+                .findAll(query.estado(), query.prioridad(), query.search(), query.tiendaId(), query.size(), offset)
                 .flatMap(solicitud -> buildResumen(solicitud), 10)
                 .collectList();
 

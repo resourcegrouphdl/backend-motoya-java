@@ -1,5 +1,6 @@
 package com.motoyav2.evaluacion.infrastructure.adapter.in.web;
 
+import com.google.cloud.firestore.Firestore;
 import com.motoyav2.evaluacion.application.command.*;
 import com.motoyav2.evaluacion.application.dto.PagedResult;
 import com.motoyav2.evaluacion.application.dto.SolicitudResumenDto;
@@ -12,6 +13,7 @@ import com.motoyav2.evaluacion.domain.port.in.CorregirNombreDesdeApiUseCase;
 import com.motoyav2.evaluacion.infrastructure.adapter.in.web.request.*;
 import com.motoyav2.evaluacion.infrastructure.adapter.in.web.response.ExpedienteCompletoResponse;
 import com.motoyav2.evaluacion.application.dto.VerificacionIdentidadResult;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils;
 import com.motoyav2.evaluacion.shared.exception.RecursoNoEncontradoException;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.NotFoundException;
@@ -52,6 +54,7 @@ public class EvaluacionController {
     private final EnviarVerificacionWhatsAppUseCase enviarVerificacionWhatsAppUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ReemplazarFiadorUseCase reemplazarFiadorUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ReemplazarReferenciasUseCase reemplazarReferenciasUseCase;
+    private final Firestore firestore;
 
     // ── GET /expediente/{solicitudId} ──────────────────────────────────────
     @GetMapping("/expediente/{solicitudId}")
@@ -59,8 +62,96 @@ public class EvaluacionController {
             @PathVariable String solicitudId) {
         return obtenerExpedienteUseCase.ejecutar(solicitudId)
                 .map(ExpedienteCompletoResponse::from)
+                .flatMap(this::enriquecerTiendaNombre)
                 .onErrorMap(RecursoNoEncontradoException.class,
                         e -> new NotFoundException(e.getMessage()));
+    }
+
+    /**
+     * Resuelve el nombre comercial de la tienda desde tienda_profiles
+     * y lo inyecta en DatosVendedorResponse.tiendaNombre.
+     */
+    private Mono<ExpedienteCompletoResponse> enriquecerTiendaNombre(ExpedienteCompletoResponse resp) {
+        ExpedienteCompletoResponse.SolicitudResponse sol = resp.getSolicitud();
+        if (sol == null || sol.getVendedor() == null) return Mono.just(resp);
+
+        String tiendaId = sol.getVendedor().getTienda();
+        if (tiendaId == null || tiendaId.isBlank()) return Mono.just(resp);
+
+        return FirestoreUtils.toMono(firestore.collection("tienda_profiles").document(tiendaId).get())
+                .map(snap -> {
+                    String businessName = snap.exists()
+                            ? (String) snap.get("businessName")
+                            : null;
+                    if (businessName == null || businessName.isBlank()) return resp;
+
+                    // Reconstruir vendedor con tiendaNombre resuelto
+                    ExpedienteCompletoResponse.DatosVendedorResponse vendedorEnriquecido =
+                            ExpedienteCompletoResponse.DatosVendedorResponse.builder()
+                                    .id(sol.getVendedor().getId())
+                                    .nombre(sol.getVendedor().getNombre())
+                                    .tienda(tiendaId)
+                                    .tiendaNombre(businessName)
+                                    .email(sol.getVendedor().getEmail())
+                                    .telefono(sol.getVendedor().getTelefono())
+                                    .build();
+
+                    ExpedienteCompletoResponse.SolicitudResponse solEnriquecida =
+                            ExpedienteCompletoResponse.SolicitudResponse.builder()
+                                    .id(sol.getId())
+                                    .numeroSolicitud(sol.getNumeroSolicitud())
+                                    .estado(sol.getEstado())
+                                    .prioridad(sol.getPrioridad())
+                                    .titularId(sol.getTitularId())
+                                    .fiadorId(sol.getFiadorId())
+                                    .vehiculoId(sol.getVehiculoId())
+                                    .referenciasIds(sol.getReferenciasIds())
+                                    .precioCompraMoto(sol.getPrecioCompraMoto())
+                                    .inicial(sol.getInicial())
+                                    .montoCuota(sol.getMontoCuota())
+                                    .plazoQuincenas(sol.getPlazoQuincenas())
+                                    .datosFinancieros(sol.getDatosFinancieros())
+                                    .vendedor(vendedorEnriquecido)
+                                    .vendedorNombre(sol.getVendedorNombre())
+                                    .asesorAsignadoId(sol.getAsesorAsignadoId())
+                                    .fechaAsignacion(sol.getFechaAsignacion())
+                                    .scoreDocumental(sol.getScoreDocumental())
+                                    .scoreGarantes(sol.getScoreGarantes())
+                                    .scoreEntrevista(sol.getScoreEntrevista())
+                                    .scoreFinal(sol.getScoreFinal())
+                                    .decisionFinal(sol.getDecisionFinal())
+                                    .montoAprobado(sol.getMontoAprobado())
+                                    .motivoRechazo(sol.getMotivoRechazo())
+                                    .motivoDecision(sol.getMotivoDecision())
+                                    .fechaDecisionFinal(sol.getFechaDecisionFinal())
+                                    .condicionesAprobacion(sol.getCondicionesAprobacion())
+                                    .fortalezasCaso(sol.getFortalezasCaso())
+                                    .debilidadesCaso(sol.getDebilidadesCaso())
+                                    .resultadoFinal(sol.getResultadoFinal())
+                                    .evaluador(sol.getEvaluador())
+                                    .certificadoGenerado(sol.getCertificadoGenerado())
+                                    .urlCertificado(sol.getUrlCertificado())
+                                    .contratoGenerado(sol.getContratoGenerado())
+                                    .urlContrato(sol.getUrlContrato())
+                                    .observacionesGenerales(sol.getObservacionesGenerales())
+                                    .createdAt(sol.getCreatedAt())
+                                    .updatedAt(sol.getUpdatedAt())
+                                    .build();
+
+                    return ExpedienteCompletoResponse.builder()
+                            .solicitud(solEnriquecida)
+                            .titular(resp.getTitular())
+                            .fiador(resp.getFiador())
+                            .vehiculo(resp.getVehiculo())
+                            .referencias(resp.getReferencias())
+                            .datosCompletos(resp.getDatosCompletos())
+                            .asesorAsignado(resp.getAsesorAsignado())
+                            .build();
+                })
+                .onErrorResume(ex -> {
+                    log.warn("[TIENDA] No se pudo resolver nombre de tienda {}: {}", tiendaId, ex.getMessage());
+                    return Mono.just(resp);
+                });
     }
 
     // ── GET /solicitudes ──────────────────────────────────────────────────
@@ -69,10 +160,27 @@ public class EvaluacionController {
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String prioridad,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String tiendaId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return listarSolicitudesUseCase.ejecutar(
-                new ListarSolicitudesQuery(estado, prioridad, search, page, size));
+                new ListarSolicitudesQuery(estado, prioridad, search, tiendaId, page, size));
+    }
+
+    // ── GET /tiendas ──────────────────────────────────────────────────────
+    // Devuelve la lista de tiendas activas para el selector de filtro.
+    @GetMapping("/tiendas")
+    public Mono<List<Map<String, String>>> listarTiendas() {
+        return FirestoreUtils.toMono(firestore.collection("tienda_profiles").get())
+                .map(snap -> snap.getDocuments().stream()
+                        .map(doc -> {
+                            String businessName = doc.getString("businessName");
+                            if (businessName == null || businessName.isBlank()) return null;
+                            return Map.of("id", doc.getId(), "nombre", businessName);
+                        })
+                        .filter(java.util.Objects::nonNull)
+                        .sorted(java.util.Comparator.comparing(m -> m.get("nombre")))
+                        .collect(java.util.stream.Collectors.toList()));
     }
 
     // ── PUT /solicitudes/{solicitudId}/estado ─────────────────────────────

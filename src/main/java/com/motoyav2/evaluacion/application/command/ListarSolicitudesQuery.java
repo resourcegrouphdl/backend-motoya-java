@@ -4,6 +4,7 @@ public record ListarSolicitudesQuery(
         String estado,
         String prioridad,
         String search,
+        String tiendaId,
         int page,
         int size
 ) {

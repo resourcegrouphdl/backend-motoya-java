@@ -83,7 +83,8 @@ public class ExpedienteCompletoResponse {
     public static class DatosVendedorResponse {
         String id;
         String nombre;
-        String tienda;
+        String tienda;       // ID de la tienda (campo original en Firestore)
+        String tiendaNombre; // Nombre comercial resuelto desde tienda_profiles
         String email;
         String telefono;
     }
@@ -230,7 +231,8 @@ public class ExpedienteCompletoResponse {
                 .datosFinancieros(toDFResponse(s.getDatosFinancieros()))
                 .vendedor(s.getVendedor() != null ? DatosVendedorResponse.builder()
                         .id(s.getVendedor().getId()).nombre(s.getVendedor().getNombre())
-                        .tienda(s.getVendedor().getTienda()).email(s.getVendedor().getEmail())
+                        .tienda(s.getVendedor().getTienda()).tiendaNombre(null)
+                        .email(s.getVendedor().getEmail())
                         .telefono(s.getVendedor().getTelefono()).build() : null)
                 .vendedorNombre(s.getVendedorNombre())
                 .asesorAsignadoId(s.getAsesorAsignadoId())

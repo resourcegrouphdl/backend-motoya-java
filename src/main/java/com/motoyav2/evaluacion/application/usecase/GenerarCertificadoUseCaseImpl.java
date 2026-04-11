@@ -1,23 +1,32 @@
 package com.motoyav2.evaluacion.application.usecase;
 
+import com.google.cloud.Timestamp;
 import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
+import com.motoyav2.evaluacion.domain.model.Cliente;
 import com.motoyav2.evaluacion.domain.port.in.GenerarCertificadoUseCase;
+import com.motoyav2.evaluacion.domain.port.in.ObtenerExpedienteUseCase;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
-import com.motoyav2.evaluacion.shared.exception.RecursoNoEncontradoException;
+import com.motoyav2.evaluacion.infrastructure.adapter.out.external.CertificadoExternoClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * El certificado de aprobación es generado por un servicio externo dedicado.
- * Este use case simplemente recupera la URL del certificado que el servicio
- * externo ya almacenó en Firestore (campo urlCertificado).
+ * Si el certificado ya fue generado (urlCertificado en Firestore) lo devuelve.
+ * Si no, lo genera on-demand llamando al servicio externo, guarda la URL y la devuelve.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase {
 
     private final SolicitudRepository solicitudRepository;
+    private final ObtenerExpedienteUseCase obtenerExpedienteUseCase;
+    private final CertificadoExternoClient certificadoExternoClient;
 
     @Override
     public Mono<String> ejecutar(String solicitudIdOrNumero) {
@@ -25,11 +34,53 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
                 .switchIfEmpty(solicitudRepository.findByNumeroSolicitud(solicitudIdOrNumero))
                 .switchIfEmpty(Mono.error(new ExpedienteNotFoundException(solicitudIdOrNumero)))
                 .flatMap(solicitud -> {
+                    // Ya existe → devolver directamente
                     if (solicitud.getUrlCertificado() != null && !solicitud.getUrlCertificado().isBlank()) {
+                        log.info("[CERT] Certificado ya existente para solicitud {}", solicitudIdOrNumero);
                         return Mono.just(solicitud.getUrlCertificado());
                     }
-                    return Mono.error(new RecursoNoEncontradoException(
-                            "El certificado aún no está disponible para la solicitud: " + solicitudIdOrNumero));
+
+                    // No existe → generar on-demand
+                    log.info("[CERT] Generando certificado on-demand para solicitud {}", solicitudIdOrNumero);
+                    return obtenerExpedienteUseCase.ejecutar(solicitud.getId())
+                            .flatMap(expediente -> {
+                                Cliente titular = expediente.getTitular();
+                                Cliente fiador  = expediente.getFiador();
+
+                                CertificadoExternoClient.CertificadoRequest request =
+                                        CertificadoExternoClient.CertificadoRequest.of(
+                                                solicitud.getCodigoDeSolicitud() != null
+                                                        ? solicitud.getCodigoDeSolicitud()
+                                                        : solicitud.getNumeroSolicitud(),
+                                                titular != null ? titular.getNombreCompleto()  : solicitud.getTitularNombreCompleto(),
+                                                titular != null ? titular.getDocumentNumber()  : solicitud.getTitularDni(),
+                                                titular != null ? titular.getTelefono1()       : solicitud.getTitularTelefono(),
+                                                titular != null ? titular.getEmail()           : solicitud.getTitularEmail(),
+                                                fiador  != null ? fiador.getNombreCompleto()   : null,
+                                                fiador  != null ? fiador.getDocumentNumber()   : null,
+                                                expediente.getVehiculo() != null
+                                                        ? expediente.getVehiculo().getDescripcion() : "",
+                                                solicitud.getPrecioCompraMoto() != null
+                                                        ? solicitud.getPrecioCompraMoto().doubleValue() : 0.0,
+                                                solicitud.getInicial() != null
+                                                        ? solicitud.getInicial().doubleValue() : 0.0,
+                                                solicitud.getPlazoQuincenas() != null
+                                                        ? solicitud.getPlazoQuincenas() : 0,
+                                                solicitud.getMontoCuota() != null
+                                                        ? solicitud.getMontoCuota().doubleValue() : 0.0
+                                        );
+
+                                return certificadoExternoClient.generarCertificado(request)
+                                        .flatMap(url -> {
+                                            Map<String, Object> updates = new HashMap<>();
+                                            updates.put("urlCertificado",             url);
+                                            updates.put("certificadoGenerado",         true);
+                                            updates.put("fechaGeneracionCertificado",  Timestamp.now());
+                                            updates.put("updatedAt",                   Timestamp.now());
+                                            return solicitudRepository.updateFields(solicitud.getId(), updates)
+                                                    .thenReturn(url);
+                                        });
+                            });
                 });
     }
 }
