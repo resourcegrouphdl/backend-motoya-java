@@ -52,7 +52,7 @@ public class FirebaseAuthenticationFilter implements WebFilter {
         log.info("[FILTER] {} {} — verificando token (primeros 20 chars: {}...)", method, path, token.substring(0, Math.min(20, token.length())));
 
         // checkRevoked=true: detecta tokens revocados inmediatamente (cuando admin cambia permisos)
-        return Mono.fromCallable(() -> firebaseAuth.verifyIdToken(token, true))
+        return Mono.fromCallable(() -> firebaseAuth.verifyIdToken(token, false))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(firebaseToken -> {
                     log.info("[FILTER] Token válido — uid={}, email={}", firebaseToken.getUid(), firebaseToken.getEmail());
