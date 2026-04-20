@@ -57,6 +57,8 @@ public class Cliente {
     EvaluacionEntrevista evaluacionEntrevista;
     /** Snapshot de la verificación de identidad — null si aún no se verificó. */
     VerificacionIdentidadSnapshot verificacionIdentidad;
+    /** Resultado de la validación MX del email — null si aún no se validó. */
+    ValidacionEmail validacionEmail;
     Timestamp createdAt;
     Timestamp updatedAt;
     Timestamp fechaValidacionDocumentos;

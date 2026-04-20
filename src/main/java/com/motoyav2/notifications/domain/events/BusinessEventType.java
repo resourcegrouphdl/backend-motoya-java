@@ -27,6 +27,7 @@ public enum BusinessEventType {
     PAYMENT_PROOF_RECEIVED,    // Cliente envía voucher por WhatsApp → procesar con Document AI
 
     // ─── Evaluación de crédito ─────────────────────────────────────────
+    SOLICITUD_INGRESADA,        // Expediente registrado → notifica titular, fiador y vendedor
     CREDITO_APROBADO,           // Decisión final APROBADO → notifica titular + fiador con certificado
     VERIFICACION_REFERENCIA_WA, // Mensaje de verificación enviado a referencia personal
 

@@ -16,10 +16,13 @@ public final class UserDocumentMapper {
                 doc.getFirstName(),
                 doc.getLastName(),
                 doc.getEmail(),
+                doc.getPhone(),
                 doc.getUserType(),
+                doc.getUserCategory(),
                 Boolean.TRUE.equals(doc.getIsActive()),
                 Boolean.TRUE.equals(doc.getIsFirstLogin()),
-                doc.getStoreIds() != null ? doc.getStoreIds() : List.of()
+                doc.getStoreIds() != null ? doc.getStoreIds() : List.of(),
+                doc.getModulos() != null ? doc.getModulos() : List.of()
         );
     }
 }

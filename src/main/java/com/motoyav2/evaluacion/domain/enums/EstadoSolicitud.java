@@ -32,7 +32,8 @@ public enum EstadoSolicitud {
     CONTRATO_GENERADO("contrato_generado"),
     CONTRATO_FIRMADO("contrato_firmado"),
     ENTREGA_COMPLETADA("entrega_completada"),
-    CANCELADO("cancelado");
+    CANCELADO("cancelado"),
+    ARCHIVADA("archivada");
 
     private final String firestoreValue;
 

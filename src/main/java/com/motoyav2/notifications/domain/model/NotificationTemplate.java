@@ -77,6 +77,21 @@ public enum NotificationTemplate {
 
   // ─── Evaluación De credito / notificaciones ─────────────────────────────────────────────────
 
+  CREDITO_MOTO_SOLICITUD_RECIBIDA_EMAIL(
+      "credito_moto_solicitud_recibida",
+      NotificationChannel.EMAIL,
+      "Hemos recibido tu solicitud de crédito - Motoya Digital"),
+
+  CREDITO_MOTO_FIADOR_SOLICITUD(
+      "credito_moto_fiador_solicitud",
+      NotificationChannel.EMAIL,
+      "Confirmación de registro como garante - Motoya Digital"),
+
+  SOLICITUD_NUEVA_VENDEDOR(
+      "solicitud_nueva_vendedor",
+      NotificationChannel.EMAIL,
+      "Nueva solicitud de crédito registrada - Motoya Digital"),
+
   CREDITO_APROBADO_NOTIFICACION(
       "credito_aprobado_notificacion",
       NotificationChannel.WHATSAPP,
@@ -96,6 +111,32 @@ public enum NotificationTemplate {
       "credito_notificacion_referencia",
       NotificationChannel.WHATSAPP,
       "Notificación de referencia personal - Motoya Digital"),
+
+  CREDITO_MOTO_ENTREVISTA_EMAIL(
+      "credito_moto_entrevista_solicitud",
+      NotificationChannel.EMAIL,
+      "Agenda tu entrevista de crédito - Motoya Digital"),
+
+  SOLICITUD_CAMBIO_ESTADO_VENDEDOR(
+      "solicitud_cambio_estado_vendedor",
+      NotificationChannel.WHATSAPP,
+      "Actualización de solicitud - Motoya Digital"),
+
+  // ─── Cobranza / Vouchers ─────────────────────────────────────────────────
+  AUTORESPUESTA_COBRANZA(
+      "autorespuesta-cobranza",
+      NotificationChannel.WHATSAPP,
+      "Mensaje automático - Motoya Digital"),
+
+  VOUCHER_RECIBIDO_COBRANZA(
+      "voucher-recibido-cobranza",
+      NotificationChannel.WHATSAPP,
+      "Comprobante recibido - Motoya Digital"),
+
+  PROMESA_RECORDATORIO(
+      "promesa-recordatorio",
+      NotificationChannel.WHATSAPP,
+      "Recordatorio de promesa de pago - Motoya Digital"),
 
   // ─── Pagos a Tiendas ─────────────────────────────────────────────────────
   PAGO_FACTURA_TIENDA_WHATSAPP(

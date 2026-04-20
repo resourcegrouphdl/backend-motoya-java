@@ -60,7 +60,7 @@ public class ReferenciaRepositoryAdapter implements ReferenciaRepository {
         return toMono(db.collection(COL).document(id).update(fields)).then();
     }
 
-    /** Normaliza el número al mismo formato que usa MetaWhatsAppNotificationAdapter. */
+    /** Normaliza el número al mismo formato que usa FactilizaWhatsAppNotificationAdapter. */
     private String normalizePhone(String phone) {
         if (phone == null) return "";
         String digits = phone.replaceAll("[^0-9]", "");

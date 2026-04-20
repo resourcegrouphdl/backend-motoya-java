@@ -6,6 +6,7 @@ import com.motoyav2.evaluacion.domain.model.AlertaEntrevista;
 import com.motoyav2.evaluacion.domain.model.Cliente;
 import com.motoyav2.evaluacion.domain.model.EvaluacionDocumento;
 import com.motoyav2.evaluacion.domain.model.EvaluacionEntrevista;
+import com.motoyav2.evaluacion.domain.model.ValidacionEmail;
 import com.motoyav2.evaluacion.domain.model.VerificacionIdentidadSnapshot;
 
 import java.util.HashMap;
@@ -70,6 +71,7 @@ public final class ClienteMapper {
                 .observacionesEvaluador(str(data, "observacionesEvaluador"))
                 .evaluacionEntrevista(mapEntrevista(data.get("evaluacionEntrevista")))
                 .verificacionIdentidad(mapVerificacionSnapshot(data.get("verificacionIdentidad")))
+                .validacionEmail(mapValidacionEmail(data.get("validacionEmail")))
                 .createdAt(timestamp(data, "createdAt"))
                 .updatedAt(timestamp(data, "updatedAt"))
                 .fechaValidacionDocumentos(timestamp(data, "fechaValidacionDocumentos"))
@@ -183,6 +185,20 @@ public final class ClienteMapper {
                 str(m, "apiNombres"),
                 str(m, "apiApellidoPaterno"),
                 str(m, "apiApellidoMaterno")
+        );
+    }
+
+    private static ValidacionEmail mapValidacionEmail(Object raw) {
+        if (!(raw instanceof Map)) return null;
+        Map<String, Object> m = (Map<String, Object>) raw;
+        Object validoRaw = m.get("valido");
+        boolean valido = validoRaw instanceof Boolean b ? b
+                : validoRaw != null && Boolean.parseBoolean(validoRaw.toString());
+        return new ValidacionEmail(
+                valido,
+                str(m, "nivel"),
+                str(m, "detalle"),
+                timestamp(m, "verificadoEn")
         );
     }
 

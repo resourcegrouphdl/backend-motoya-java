@@ -127,7 +127,8 @@ public class SolicitudPublicaController {
                         r.financiamiento().montoCuota(),
                         null, null, null, null, null),
                 new IngresarSolicitudCommand.VendedorData(
-                        r.vendedor().id(), r.vendedor().nombre(), r.vendedor().tienda()),
+                        r.vendedor().id(), r.vendedor().nombre(),
+                        r.vendedor().tienda(), r.vendedor().email()),
                 r.mensajeOpcional()
         );
     }

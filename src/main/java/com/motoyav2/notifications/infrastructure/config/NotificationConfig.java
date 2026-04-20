@@ -1,6 +1,6 @@
 package com.motoyav2.notifications.infrastructure.config;
 
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppProperties;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -26,15 +26,14 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 public class NotificationConfig {
 
     /**
-     * WebClient dedicado a la Meta WhatsApp Business Cloud API.
-     * Base URL: https://graph.facebook.com — la versión y phoneNumberId se
-     * añaden en cada llamada vía variables de URI.
+     * WebClient dedicado a la API WhatsApp de Factiliza.
+     * Base URL: https://apiwsp.factiliza.com/v1 — la instancia se añade en cada llamada.
      */
-    @Bean("metaWhatsAppWebClient")
-    public WebClient metaWhatsAppWebClient(MetaWhatsAppProperties properties) {
+    @Bean("factilizaWhatsAppWebClient")
+    public WebClient factilizaWhatsAppWebClient(FactilizaProperties properties) {
         return WebClient.builder()
-                .baseUrl("https://graph.facebook.com")
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getAccessToken())
+                .baseUrl(properties.getBaseUrl())
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getToken())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .build();

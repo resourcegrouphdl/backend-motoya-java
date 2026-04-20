@@ -14,6 +14,10 @@ public final class FirestoreCollections {
     public static final String HISTORIAL_ESTADOS = "cambios_estado_solicitud";
     public static final String ALERTAS           = "alertas";
     public static final String USUARIOS          = "usuarios";
+    /** Registro maestro de personas — solo para autocomplete y central de riesgo. */
+    public static final String PERSONAS          = "personas";
+    /** Historial de conversaciones WhatsApp por solicitud. */
+    public static final String CONVERSACIONES_WA = "conversaciones_whatsapp";
 
     /*
     public static final String SOLICITUDES       = "solicitudes";

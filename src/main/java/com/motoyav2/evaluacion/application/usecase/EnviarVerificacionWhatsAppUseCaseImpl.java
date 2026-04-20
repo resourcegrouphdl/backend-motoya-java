@@ -5,7 +5,7 @@ import com.motoyav2.evaluacion.domain.port.in.EnviarVerificacionWhatsAppUseCase;
 import com.motoyav2.evaluacion.domain.port.out.ReferenciaRepository;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
 import com.motoyav2.evaluacion.shared.exception.RecursoNoEncontradoException;
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppNotificationAdapter;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaWhatsAppNotificationAdapter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,7 +21,7 @@ public class EnviarVerificacionWhatsAppUseCaseImpl implements EnviarVerificacion
 
     private final ReferenciaRepository    referenciaRepository;
     private final SolicitudRepository     solicitudRepository;
-    private final MetaWhatsAppNotificationAdapter metaWhatsApp;
+    private final FactilizaWhatsAppNotificationAdapter whatsApp;
 
     @Override
     public Mono<Void> ejecutar(String referenciaId, String solicitudId) {
@@ -44,7 +44,7 @@ public class EnviarVerificacionWhatsAppUseCaseImpl implements EnviarVerificacion
 
                     String mensaje = buildMensaje(nombreRef.trim(), titularNombre);
 
-                    return metaWhatsApp.sendText(telefonoRef, mensaje)
+                    return whatsApp.sendText(telefonoRef, mensaje)
                             .flatMap(wamid -> {
                                 Map<String, Object> updates = new HashMap<>();
                                 updates.put("wamid",               wamid);

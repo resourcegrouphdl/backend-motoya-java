@@ -1,3 +1,3 @@
 package com.motoyav2.notifications.infrastructure.channel.whatsapp;
 
-// Eliminado: reemplazado por MetaWhatsAppNotificationAdapter
+// Eliminado: reemplazado por FactilizaWhatsAppNotificationAdapter

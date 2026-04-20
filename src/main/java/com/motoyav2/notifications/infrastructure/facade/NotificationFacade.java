@@ -149,6 +149,95 @@ public class NotificationFacade {
     // ─── Eventos de Evaluación ────────────────────────────────────────────────
 
     /**
+     * Disparar cuando: IngresarSolicitudUseCase → solicitud guardada en Firestore.
+     *
+     * Envía de forma independiente (fire-and-forget por el Outbox):
+     *   1. WhatsApp al titular — confirmación de solicitud recibida
+     *   2. Email al titular — ídem por correo
+     *   3. Email al fiador  — confirmación de registro como garante (solo si hay fiador con email)
+     *   4. Email al vendedor — aviso de nueva solicitud registrada
+     *
+     * Un fallo en uno no cancela los demás. Todos van vía Outbox (no sincrónicos).
+     */
+    public Mono<Void> notificarSolicitudIngresada(
+            String solicitudId,
+            String emailTitular,    String nombreTitular,
+            String emailFiador,     String nombreFiador,
+            String emailVendedor,   String nombreVendedor,
+            String modeloMoto,      String montoSolicitado,
+            String documentoTitular, String telefonoTitular,
+            String fechaRegistro,   String codigoDeSolicitud) {
+
+        Map<String, String> varsTitular = Map.of(
+                "cliente", nombreTitular != null ? nombreTitular : "");
+
+        Map<String, String> varsWaTitular = Map.of(
+                "cliente",          nombreTitular      != null ? nombreTitular      : "",
+                "numero-solicitud", codigoDeSolicitud  != null ? codigoDeSolicitud  : solicitudId);
+
+        Map<String, String> varsFiador = (nombreFiador != null && nombreTitular != null)
+                ? Map.of("fiador", nombreFiador, "cliente", nombreTitular)
+                : Map.of("fiador", nombreFiador != null ? nombreFiador : "",
+                         "cliente", nombreTitular != null ? nombreTitular : "");
+
+        Map<String, String> varsVendedor = Map.of(
+                "vendedor",      nombreVendedor       != null ? nombreVendedor       : "",
+                "cliente",       nombreTitular        != null ? nombreTitular        : "",
+                "documento",     documentoTitular     != null ? documentoTitular     : "",
+                "telefono",      telefonoTitular      != null ? telefonoTitular      : "",
+                "modeloMoto",    modeloMoto           != null ? modeloMoto           : "",
+                "monto",         montoSolicitado      != null ? montoSolicitado      : "",
+                "fiador",        nombreFiador         != null ? nombreFiador         : "No registrado",
+                "fechaRegistro", fechaRegistro        != null ? fechaRegistro        : "");
+
+        Mono<Void> waTitular = (telefonoTitular != null && !telefonoTitular.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
+                        NotificationChannel.WHATSAPP, telefonoTitular,
+                        NotificationTemplate.CREDITO_MOTO_SOLICITUD_RECIBIDA, varsWaTitular)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] WA titular solicitud error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        Mono<Void> mailTitular = (emailTitular != null && !emailTitular.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
+                        NotificationChannel.EMAIL, emailTitular,
+                        NotificationTemplate.CREDITO_MOTO_SOLICITUD_RECIBIDA_EMAIL, varsTitular)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] Email titular solicitud error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        Mono<Void> mailFiador = (emailFiador != null && !emailFiador.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
+                        NotificationChannel.EMAIL, emailFiador,
+                        NotificationTemplate.CREDITO_MOTO_FIADOR_SOLICITUD, varsFiador)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] Email fiador solicitud error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        Mono<Void> mailVendedor = (emailVendedor != null && !emailVendedor.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
+                        NotificationChannel.EMAIL, emailVendedor,
+                        NotificationTemplate.SOLICITUD_NUEVA_VENDEDOR, varsVendedor)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] Email vendedor solicitud error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        Map<String, String> varsEntrevista = Map.of(
+                "cliente",           nombreTitular     != null ? nombreTitular     : "",
+                "codigoDeSolicitud", codigoDeSolicitud != null ? codigoDeSolicitud : solicitudId);
+
+        Mono<Void> mailEntrevistaTitular = (emailTitular != null && !emailTitular.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
+                        NotificationChannel.EMAIL, emailTitular,
+                        NotificationTemplate.CREDITO_MOTO_ENTREVISTA_EMAIL, varsEntrevista)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] Email entrevista titular error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        return Mono.when(waTitular, mailTitular, mailFiador, mailVendedor, mailEntrevistaTitular);
+    }
+
+    /**
      * Notifica a titular y fiador (si existe) cuando la decisión final es APROBADO.
      * Se envía:
      *   - WhatsApp + Email al titular
@@ -167,7 +256,7 @@ public class NotificationFacade {
     public Mono<Void> notificarCreditoAprobado(
             String solicitudId,
             String telefonoTitular, String emailTitular, String nombreTitular,
-            String telefonoFiador, String nombreFiador,
+            String telefonoFiador, String emailFiador, String nombreFiador,
             String codigoCertificado, String urlCertificado) {
 
         Map<String, String> varsTitular = Map.of(
@@ -192,21 +281,30 @@ public class NotificationFacade {
                   .onErrorResume(e -> { log.warn("[NotifFacade] Email titular aprobado error: {}", e.getMessage()); return Mono.empty(); })
                 : Mono.empty();
 
+        Map<String, String> varsFiadorAprobado = Map.of(
+                "fiador",         nombreFiador      != null ? nombreFiador      : "",
+                "cliente",        nombreTitular     != null ? nombreTitular     : "",
+                "certificado",    codigoCertificado != null ? codigoCertificado : "",
+                "certificadoUrl", urlCertificado    != null ? urlCertificado    : ""
+        );
+
         Mono<Void> waFiador = (telefonoFiador != null && !telefonoFiador.isBlank())
                 ? publishEvent.publish(
                         BusinessEventType.CREDITO_APROBADO, solicitudId,
                         NotificationChannel.WHATSAPP, telefonoFiador,
-                        NotificationTemplate.CREDITO_MOTO_FIADOR_NOTIFICACION,
-                        Map.of(
-                                "fiador",         nombreFiador    != null ? nombreFiador    : "",
-                                "cliente",        nombreTitular   != null ? nombreTitular   : "",
-                                "certificado",    codigoCertificado != null ? codigoCertificado : "",
-                                "certificadoUrl", urlCertificado  != null ? urlCertificado  : ""
-                        ))
+                        NotificationTemplate.CREDITO_MOTO_FIADOR_NOTIFICACION, varsFiadorAprobado)
                   .onErrorResume(e -> { log.warn("[NotifFacade] WA fiador aprobado error: {}", e.getMessage()); return Mono.empty(); })
                 : Mono.empty();
 
-        return Mono.when(waTitular, mailTitular, waFiador);
+        Mono<Void> mailFiador = (emailFiador != null && !emailFiador.isBlank())
+                ? publishEvent.publish(
+                        BusinessEventType.CREDITO_APROBADO, solicitudId,
+                        NotificationChannel.EMAIL, emailFiador,
+                        NotificationTemplate.CREDITO_MOTO_FIADOR_NOTIFICACION, varsFiadorAprobado)
+                  .onErrorResume(e -> { log.warn("[NotifFacade] Email fiador aprobado error: {}", e.getMessage()); return Mono.empty(); })
+                : Mono.empty();
+
+        return Mono.when(waTitular, mailTitular, waFiador, mailFiador);
     }
 
     // ─── Eventos de Finanzas / Cobranza ──────────────────────────────────────
@@ -233,18 +331,85 @@ public class NotificationFacade {
     }
 
     /**
-     * Alerta de cuota vencida (llamar desde scheduler de cobranza cuando EstadoPago.VENCIDO).
+     * Alerta de cuota vencida con mora calculada (S/ 3.00/día desde el día 1).
+     *
+     * @param montoMora  Mora acumulada formateada (ej: "S/ 9.00")
+     * @param montoTotal Cuota + mora formateada (ej: "S/ 129.00")
      */
     public Mono<Void> notificarCuotaVencida(
-            String contratoId, String telefono, String cliente, String monto, String diasVencido) {
+            String contratoId, String telefono, String cliente,
+            String monto, String diasVencido, String montoMora, String montoTotal) {
         return publishEvent.publish(
                 BusinessEventType.CUOTA_VENCIDA,
                 contratoId,
                 NotificationChannel.WHATSAPP,
                 telefono,
                 NotificationTemplate.CUOTA_VENCIDA,
-                Map.of("cliente", cliente, "monto", monto, "diasVencido", diasVencido)
+                Map.of("cliente", cliente, "monto", monto,
+                       "diasVencido", diasVencido,
+                       "montoMora", montoMora,
+                       "montoTotal", montoTotal)
         );
+    }
+
+    /**
+     * Recordatorio al cliente en el día que prometió pagar.
+     */
+    public Mono<Void> notificarRecordatorioPromesa(
+            String contratoId, String telefono, String cliente, String monto) {
+        return publishEvent.publish(
+                BusinessEventType.CUOTA_VENCIDA,
+                contratoId,
+                NotificationChannel.WHATSAPP,
+                telefono,
+                NotificationTemplate.PROMESA_RECORDATORIO,
+                Map.of("cliente", cliente, "monto", monto)
+        ).onErrorResume(e -> {
+            log.warn("[FACADE] Error recordatorio promesa contratoId={}: {}", contratoId, e.getMessage());
+            return Mono.empty();
+        });
+    }
+
+    /**
+     * Autorespuesta al cliente cuando envía un mensaje de texto a este chat de cobranza.
+     * Informa que el chat es solo notificaciones y da el número del asesor.
+     */
+    public Mono<Void> notificarAutorespuestaCobranza(
+            String contratoId, String telefono, String cliente) {
+        return publishEvent.publish(
+                BusinessEventType.PAYMENT_PROOF_RECEIVED,
+                contratoId,
+                NotificationChannel.WHATSAPP,
+                telefono,
+                NotificationTemplate.AUTORESPUESTA_COBRANZA,
+                Map.of("cliente", cliente)
+        ).onErrorResume(e -> {
+            log.warn("[FACADE] Error autorespuesta cobranza contratoId={}: {}", contratoId, e.getMessage());
+            return Mono.empty();
+        });
+    }
+
+    /**
+     * Confirma al cliente que se recibió su comprobante de pago vía WhatsApp.
+     *
+     * @param banco  Nombre del banco detectado por OCR (ej: "BCP")
+     * @param monto  Monto detectado formateado (ej: "S/ 120.00")
+     */
+    public Mono<Void> notificarVoucherRecibidoCobranza(
+            String contratoId, String telefono, String cliente, String banco, String monto) {
+        return publishEvent.publish(
+                BusinessEventType.PAYMENT_PROOF_RECEIVED,
+                contratoId,
+                NotificationChannel.WHATSAPP,
+                telefono,
+                NotificationTemplate.VOUCHER_RECIBIDO_COBRANZA,
+                Map.of("cliente", cliente,
+                       "banco", banco != null ? banco : "No identificado",
+                       "monto", monto != null ? monto : "Por determinar")
+        ).onErrorResume(e -> {
+            log.warn("[FACADE] Error notificando voucher recibido contratoId={}: {}", contratoId, e.getMessage());
+            return Mono.empty();
+        });
     }
 
     /**
@@ -353,6 +518,32 @@ public class NotificationFacade {
                   .onErrorResume(e -> { log.warn("[NotifFacade] Email pago factura error: {}", e.getMessage()); return Mono.empty(); })
                 : Mono.empty();
         return Mono.when(wa, mail);
+    }
+
+    /**
+     * Notifica al vendedor por WhatsApp cuando cambia el estado de su solicitud.
+     * Solo para estados relevantes para el vendedor (aprobado, rechazado, etc.).
+     */
+    public Mono<Void> notificarCambioEstadoVendedor(
+            String solicitudId,
+            String telefonoVendedor, String nombreVendedor,
+            String nombreCliente, String codigoDeSolicitud,
+            String nuevoEstado, String motivo) {
+
+        if (telefonoVendedor == null || telefonoVendedor.isBlank()) return Mono.empty();
+
+        Map<String, String> vars = new java.util.HashMap<>();
+        vars.put("vendedor",          nombreVendedor     != null ? nombreVendedor     : "");
+        vars.put("cliente",           nombreCliente      != null ? nombreCliente      : "");
+        vars.put("codigoDeSolicitud", codigoDeSolicitud  != null ? codigoDeSolicitud  : solicitudId);
+        vars.put("estado",            nuevoEstado        != null ? nuevoEstado        : "");
+        vars.put("motivo",            motivo             != null ? motivo             : "");
+
+        return publishEvent.publish(
+                        BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
+                        NotificationChannel.WHATSAPP, telefonoVendedor,
+                        NotificationTemplate.SOLICITUD_CAMBIO_ESTADO_VENDEDOR, vars)
+                .onErrorResume(e -> { log.warn("[NotifFacade] WA vendedor estado error: {}", e.getMessage()); return Mono.empty(); });
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

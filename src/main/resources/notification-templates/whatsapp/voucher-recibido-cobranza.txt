@@ -1,0 +1,12 @@
+✅ Hola [(${cliente})],
+
+Recibimos tu comprobante de pago.
+
+🏦 *Banco detectado:* [(${banco})]
+💰 *Monto detectado:* [(${monto})]
+
+Nuestro equipo lo revisará y verificará la acreditación en las cuentas de Motoya Digital. Te notificaremos cuando el pago sea procesado.
+
+_Este es un mensaje automático. Para consultas comunícate con el área de cobranzas al +51 912 301 507._
+
+*Motoya Digital* 🏍️

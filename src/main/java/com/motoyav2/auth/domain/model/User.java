@@ -7,9 +7,12 @@ public record User(
         String firstName,
         String lastName,
         String email,
+        String phone,
         String userType,
+        String userCategory,
         boolean active,
         boolean firstLogin,
-        List<String> storeIds
+        List<String> storeIds,
+        List<String> modulos
 ) {
 }

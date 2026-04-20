@@ -6,10 +6,15 @@ import com.motoyav2.evaluacion.application.service.ReferenciaClasificadorService
 import com.motoyav2.evaluacion.application.service.ReferenciaClasificadorService.Clasificacion;
 import com.motoyav2.evaluacion.domain.enums.EstadoSolicitud;
 import com.motoyav2.evaluacion.domain.model.Referencia;
+import com.motoyav2.evaluacion.domain.port.in.ActualizarSemaforoReferenciasUseCase;
 import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.ProcesarRespuestaReferenciaUseCase;
 import com.motoyav2.evaluacion.domain.port.out.ReferenciaRepository;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
+import com.motoyav2.notifications.domain.model.conversacion.DireccionMensaje;
+import com.motoyav2.notifications.domain.model.conversacion.RolParticipante;
+import com.motoyav2.notifications.domain.model.conversacion.TipoMensajeWa;
+import com.motoyav2.notifications.domain.port.in.RegistrarMensajeConversacionUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,10 +42,12 @@ public class ProcesarRespuestaReferenciaUseCaseImpl implements ProcesarRespuesta
     private static final String USUARIO_SISTEMA    = "sistema-automatico";
     private static final String NOMBRE_SISTEMA     = "Verificación Automática WhatsApp";
 
-    private final ReferenciaRepository        referenciaRepository;
-    private final SolicitudRepository         solicitudRepository;
-    private final ReferenciaClasificadorService clasificador;
-    private final CambiarEstadoUseCase        cambiarEstadoUseCase;
+    private final ReferenciaRepository               referenciaRepository;
+    private final SolicitudRepository                solicitudRepository;
+    private final ReferenciaClasificadorService      clasificador;
+    private final CambiarEstadoUseCase               cambiarEstadoUseCase;
+    private final ActualizarSemaforoReferenciasUseCase actualizarSemaforo;
+    private final RegistrarMensajeConversacionUseCase  registrarMensaje;
 
     @Override
     public Mono<Void> ejecutar(String fromPhone, String messageText) {
@@ -50,8 +57,22 @@ public class ProcesarRespuestaReferenciaUseCaseImpl implements ProcesarRespuesta
                     return Mono.empty();
                 }))
                 .flatMap(ref -> clasificador.clasificar(messageText)
-                        .flatMap(resultado -> actualizarReferencia(ref, messageText, resultado))
-                        .flatMap(refActualizada -> verificarUmbral(refActualizada))
+                        .flatMap(resultado -> {
+                            // Registrar en historial de conversación
+                            String nombreRef = (ref.getNombre() != null ? ref.getNombre() : "") + " " +
+                                    (ref.getApellidos() != null ? ref.getApellidos() : "");
+                            registrarMensaje.registrar(
+                                    ref.getSolicitudId(), normalizePhone(fromPhone), nombreRef.trim(),
+                                    RolParticipante.REFERENCIA, DireccionMensaje.INBOUND, TipoMensajeWa.TEXTO,
+                                    messageText, null, null,
+                                    resultado.clasificacion().name(), resultado.confianza()
+                            ).subscribe(null, e -> log.warn("[PROC-REF] Error registrando msg: {}", e.getMessage()));
+
+                            return actualizarReferencia(ref, messageText, resultado);
+                        })
+                        .flatMap(refActualizada -> actualizarSemaforo
+                                .actualizar(refActualizada.getSolicitudId())
+                                .then(verificarUmbral(refActualizada)))
                 );
     }
 
@@ -134,8 +155,8 @@ public class ProcesarRespuestaReferenciaUseCaseImpl implements ProcesarRespuesta
     private String normalizePhone(String phone) {
         if (phone == null) return "";
         String digits = phone.replaceAll("[^0-9]", "");
-        // Meta envía "51XXXXXXXXX" → extraer los 9 dígitos peruanos para comparar con lo guardado
-        if (digits.startsWith("51") && digits.length() == 11) return digits.substring(2);
+        if (digits.startsWith("51") && digits.length() == 11) digits = digits.substring(2);
+        if (digits.length() == 9) return "+51" + digits;
         return digits;
     }
 }

@@ -39,6 +39,9 @@ public class Solicitud {
     String titularTelefono;
     String titularEmail;
 
+    // Fiador desnormalizado (para central de riesgo — permite query por fiadorDni)
+    String fiadorDni;
+
     // Vendedor
     DatosVendedor vendedor;
     String vendedorId;
@@ -77,6 +80,11 @@ public class Solicitud {
     Timestamp fechaGeneracionContrato;
 
     String observacionesGenerales;
+
+    // Indicadores automáticos
+    String semaforoReferencias;   // verde | amarillo | rojo
+    java.util.Map<String, Object> alertaDuplicado;
+
     Timestamp createdAt;
     Timestamp updatedAt;
 

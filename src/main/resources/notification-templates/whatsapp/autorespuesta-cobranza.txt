@@ -1,0 +1,10 @@
+Hola [(${cliente})] 👋
+
+Este chat es solo para *notificaciones automáticas* de Motoya Digital.
+
+Para hablar directamente con un asesor de cobranzas, comunícate al:
+📞 *+51 912 301 507*
+
+Si deseas reportar un pago, envía tu *comprobante de transferencia* por este mismo chat y lo procesaremos a la brevedad.
+
+*Equipo Motoya Digital* 🏍️

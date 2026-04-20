@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Nueva solicitud de crédito registrada - Motoya Digital</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0; }
+        .container { max-width:800px; margin:30px auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color:#E63946; padding:24px 30px; text-align:center; }
+        .header img { max-height:50px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto; }
+        .header h1 { color:#ffffff; margin:0; font-size:22px; }
+        .body { padding:30px; }
+        .body p { color:#555555; line-height:1.8; }
+        .detail-box { background-color:#f9f9f9; border-left:4px solid #E63946; padding:15px 20px; margin:20px 0; border-radius:4px; }
+        .detail-box p { margin:6px 0; color:#333333; }
+        .footer { background-color:#333333; padding:20px; text-align:center; color:#aaaaaa; font-size:12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya Digital"/>
+        <h1>📥 Nueva Solicitud de Crédito Registrada</h1>
+    </div>
+
+    <div class="body">
+
+        <p>Estimado/a <strong>[[${vendedor}]]</strong>,</p>
+
+        <p>Se ha registrado una nueva solicitud de crédito en <strong>Motoya Digital</strong>.</p>
+
+        <div class="detail-box">
+            <p><strong>👤 Datos del cliente:</strong></p>
+            <p><strong>Nombre:</strong> [[${cliente}]]</p>
+            <p><strong>Documento:</strong> [[${documento}]]</p>
+            <p><strong>Teléfono:</strong> [[${telefono}]]</p>
+            <p><strong>Moto solicitada:</strong> [[${modeloMoto}]]</p>
+            <p><strong>Monto:</strong> [[${monto}]]</p>
+        </div>
+
+        <div class="detail-box">
+            <p><strong>ℹ️ Información adicional:</strong></p>
+            <p><strong>Garante:</strong> [[${fiador}]]</p>
+            <p><strong>Fecha de registro:</strong> [[${fechaRegistro}]]</p>
+        </div>
+
+        <p>
+            Por favor, proceder con el seguimiento y gestión correspondiente.
+            En caso de aprobación, contactar al cliente para continuar con el proceso.
+        </p>
+
+        <p>
+            Saludos,<br/>
+            <strong>Sistema Motoya Digital</strong>
+        </p>
+
+    </div>
+
+    <div class="footer">
+        <p>Este correo ha sido generado automáticamente por el sistema de Motoya Digital.</p>
+        <p>© 2026 Motoya Digital. Todos los derechos reservados.</p>
+    </div>
+
+</div>
+</body>
+</html>

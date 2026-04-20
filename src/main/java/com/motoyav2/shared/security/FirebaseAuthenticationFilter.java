@@ -6,10 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
@@ -47,10 +47,15 @@ public class FirebaseAuthenticationFilter implements WebFilter {
         }
 
         String token = authHeader.substring(BEARER_PREFIX.length());
+        String path  = exchange.getRequest().getPath().value();
+        String method = exchange.getRequest().getMethod().name();
+        log.info("[FILTER] {} {} — verificando token (primeros 20 chars: {}...)", method, path, token.substring(0, Math.min(20, token.length())));
 
-        return Mono.fromCallable(() -> firebaseAuth.verifyIdToken(token))
+        // checkRevoked=true: detecta tokens revocados inmediatamente (cuando admin cambia permisos)
+        return Mono.fromCallable(() -> firebaseAuth.verifyIdToken(token, true))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(firebaseToken -> {
+                    log.info("[FILTER] Token válido — uid={}, email={}", firebaseToken.getUid(), firebaseToken.getEmail());
                     FirebaseUserDetails userDetails = buildUserDetails(firebaseToken);
                     List<SimpleGrantedAuthority> authorities = extractAuthorities(firebaseToken);
                     FirebaseAuthenticationToken authentication =
@@ -60,12 +65,13 @@ public class FirebaseAuthenticationFilter implements WebFilter {
                             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
                 })
                 .onErrorResume(e -> {
-                    // Token inválido → continúa sin autenticar.
-                    // Spring Security aplicará las reglas de la ruta:
-                    //   - permitAll() → pasa sin auth
-                    //   - authenticated() → rechaza con 401
-                    log.warn("Firebase token verification failed: {}", e.getMessage());
-                    return chain.filter(exchange);
+                    log.warn("[FILTER] Token inválido para {} {}: {}", method, path, e.getMessage());
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                    String body = "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Token inválido o revocado\"}";
+                    return exchange.getResponse().writeWith(
+                            Mono.just(exchange.getResponse().bufferFactory().wrap(body.getBytes()))
+                    );
                 });
     }
 
