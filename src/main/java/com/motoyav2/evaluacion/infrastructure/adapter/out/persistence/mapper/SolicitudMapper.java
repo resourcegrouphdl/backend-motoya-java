@@ -45,6 +45,7 @@ public final class SolicitudMapper {
                 .titularDni(str(data, "titularDni"))
                 .titularTelefono(str(data, "titularTelefono"))
                 .titularEmail(str(data, "titularEmail"))
+                .fiadorDni(str(data, "fiadorDni"))
                 .vendedor(mapVendedor(data.get("vendedor")))
                 .vendedorId(str(data, "vendedorId"))
                 .vendedorNombre(str(data, "vendedorNombre"))
@@ -77,6 +78,8 @@ public final class SolicitudMapper {
                 .urlContrato(str(data, "urlContrato"))
                 .fechaGeneracionContrato(timestamp(data, "fechaGeneracionContrato"))
                 .observacionesGenerales(str(data, "observacionesGenerales"))
+                .semaforoReferencias(str(data, "semaforoReferencias"))
+                .alertaDuplicado((Map<String, Object>) data.get("alertaDuplicado"))
                 .createdAt(timestamp(data, "createdAt"))
                 .updatedAt(timestamp(data, "updatedAt"))
                 .build();

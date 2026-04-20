@@ -2,11 +2,23 @@
 
 Tu cuota está *VENCIDA* hace [(${diasVencido})] día(s).
 
-💰 *Monto pendiente:* [(${monto})]
+💰 *Cuota pendiente:* [(${monto})]
+⏳ *Mora acumulada (S/ 3.00/día):* [(${montoMora})]
+📊 *Total a pagar hoy:* [(${montoTotal})]
 
-Es importante que regularices tu pago a la brevedad posible para evitar cargos adicionales y mantener tu historial crediticio al día.
+Regulariza tu pago a la brevedad para evitar que la mora siga creciendo. Puedes transferir a:
 
-Comunícate con nosotros para coordinar tu pago:
-📞 Llámanos o escríbenos aquí mismo.
+🏦 *BCP:* 194-1058703-0-68
+    CCI: 002-19400105870306894
 
-*Equipo Motoya Digital* 🏍️
+🏦 *Interbank:* 2003006691585
+    CCI: 00320000300669158538
+
+🏦 *Scotiabank:* 000-4689149
+    CCI: 009-056-000004689149-35
+
+📲 *Yape:* 912301407
+
+📎 Una vez realizado el pago, envía tu *comprobante* por este mismo chat para que lo procesemos.
+
+_Este es un mensaje automático. Para hablar directamente con un asesor comunícate con el área de cobranzas de Motoya Digital al +51 912 301 507._

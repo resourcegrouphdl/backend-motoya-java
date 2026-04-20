@@ -15,9 +15,9 @@ import static com.motoyav2.evaluacion.domain.enums.EstadoSolicitud.*;
 public final class EstadoSolicitudStateMachine {
 
     private static final Map<EstadoSolicitud, Set<EstadoSolicitud>> TRANSICIONES = Map.ofEntries(
-            Map.entry(PENDIENTE,               Set.of(EN_REVISION_INICIAL, CANCELADO)),
-            Map.entry(EN_REVISION_INICIAL,     Set.of(EVALUACION_DOCUMENTAL, CANCELADO)),
-            Map.entry(EVALUACION_DOCUMENTAL,   Set.of(DOCUMENTOS_COMPLETOS, DOCUMENTOS_OBSERVADOS, DOCUMENTOS_INCOMPLETOS, CANCELADO)),
+            Map.entry(PENDIENTE,               Set.of(EN_REVISION_INICIAL, CANCELADO, ARCHIVADA)),
+            Map.entry(EN_REVISION_INICIAL,     Set.of(EVALUACION_DOCUMENTAL, CANCELADO, ARCHIVADA)),
+            Map.entry(EVALUACION_DOCUMENTAL,   Set.of(DOCUMENTOS_COMPLETOS, DOCUMENTOS_OBSERVADOS, DOCUMENTOS_INCOMPLETOS, CANCELADO, ARCHIVADA)),
             Map.entry(DOCUMENTOS_OBSERVADOS,   Set.of(EVALUACION_DOCUMENTAL, DOCUMENTOS_COMPLETOS, CANCELADO)),
             Map.entry(DOCUMENTOS_INCOMPLETOS,  Set.of(EVALUACION_DOCUMENTAL, CANCELADO)),
             Map.entry(DOCUMENTOS_COMPLETOS,    Set.of(CLIENTE_APROBADO, CLIENTE_RECHAZADO, CANCELADO)),
@@ -38,13 +38,14 @@ public final class EstadoSolicitudStateMachine {
             Map.entry(EN_REVISION_FINAL,       Set.of(APROBADO, RECHAZADO, CONDICIONAL, CANCELADO)),
             Map.entry(APROBADO,                Set.of(CERTIFICADO_GENERADO, CANCELADO)),
             Map.entry(CONDICIONAL,             Set.of(EN_REVISION_FINAL, APROBADO, RECHAZADO, CANCELADO)),
-            Map.entry(RECHAZADO,               Set.of()),
+            Map.entry(RECHAZADO,               Set.of(ARCHIVADA)),
             Map.entry(CERTIFICADO_GENERADO,    Set.of(ESPERANDO_INICIAL, CANCELADO)),
             Map.entry(ESPERANDO_INICIAL,       Set.of(CONTRATO_GENERADO, CANCELADO)),
             Map.entry(CONTRATO_GENERADO,       Set.of(CONTRATO_FIRMADO, CANCELADO)),
             Map.entry(CONTRATO_FIRMADO,        Set.of(ENTREGA_COMPLETADA, CANCELADO)),
             Map.entry(ENTREGA_COMPLETADA,      Set.of()),
-            Map.entry(CANCELADO,               Set.of())
+            Map.entry(CANCELADO,               Set.of()),
+            Map.entry(ARCHIVADA,               Set.of())
     );
 
     private EstadoSolicitudStateMachine() {}

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Solicitud de crédito recibida - Motoya Digital</title>
+    <title>Hemos recibido tu solicitud de crédito - Motoya Digital</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0; }
         .container { max-width:800px; margin:30px auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
@@ -11,11 +11,7 @@
         .header img { max-height:50px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto; }
         .header h1 { color:#ffffff; margin:0; font-size:22px; }
         .body { padding:30px; }
-        .body h2 { color:#333333; }
-        .body p { color:#555555; line-height:1.6; }
-        .detail-box { background-color:#f9f9f9; border-left:4px solid #E63946; padding:15px; margin:20px 0; border-radius:4px; }
-        .detail-box p { margin:5px 0; }
-        .info { background:#e8f4fd; border-left:4px solid #2196F3; padding:15px; margin-top:20px; border-radius:4px; }
+        .body p { color:#555555; line-height:1.8; }
         .footer { background-color:#333333; padding:20px; text-align:center; color:#aaaaaa; font-size:12px; }
     </style>
 </head>
@@ -29,30 +25,32 @@
 
     <div class="body">
 
-        <h2>Hola, [[${cliente}]]</h2>
+        <p>Estimado/a <strong>[[${cliente}]]</strong>,</p>
+
+        <p>¡Bienvenido/a a <strong>Motoya Digital</strong>!</p>
 
         <p>
-            Hemos recibido correctamente tu solicitud de crédito para la compra de tu motocicleta.
-            Nuestro equipo ya se encuentra evaluando tu información.
+            Hemos recibido correctamente tu solicitud de crédito para la adquisición de tu moto.
+            Queremos agradecerte por confiar en nosotros para dar este importante paso.
         </p>
-
-        <div class="detail-box">
-            <p><strong>📄 Número de solicitud:</strong> [[${numeroSolicitud}]]</p>
-        </div>
-
-        <div class="info">
-            <p><strong>⏱️ ¿Qué sigue?</strong></p>
-            <p>
-                El proceso de evaluación puede tomar hasta <strong>24 horas hábiles</strong>.
-                Te notificaremos por este medio y por WhatsApp cuando tengamos una respuesta.
-            </p>
-        </div>
 
         <p>
-            Si tienes alguna consulta, puedes comunicarte con tu asesor de ventas en cualquier momento.
+            Nuestro equipo ya se encuentra evaluando tu información. En caso tu solicitud sea aprobada,
+            uno de nuestros asesores se pondrá en contacto contigo a la brevedad para brindarte todos
+            los detalles y acompañarte en los siguientes pasos del proceso.
         </p>
 
-        <p>¡Gracias por confiar en <strong>Motoya Digital</strong>! 🚀</p>
+        <p>
+            Mientras tanto, si tienes alguna consulta, no dudes en responder a este correo.
+            Estaremos encantados de ayudarte.
+        </p>
+
+        <p>Gracias por elegir <strong>Motoya Digital</strong>.</p>
+
+        <p>
+            Saludos cordiales,<br/>
+            <strong>Equipo Motoya Digital</strong>
+        </p>
 
     </div>
 

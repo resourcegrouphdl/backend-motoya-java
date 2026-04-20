@@ -10,6 +10,9 @@ import java.util.List;
 @Document(collectionName = "users")
 public class UserDocument {
 
+    // uid se almacena como campo de datos Y como ID del documento (compatibilidad con app legada).
+    // No usar @DocumentId — ese conflicto rompe la deserialización en colecciones con uid como campo.
+    // Las escrituras se hacen vía SDK directo de Firestore (firestore.collection(...).document(uid).set/update).
     private String uid;
     private String authUID;
     private String firstName;
@@ -27,6 +30,7 @@ public class UserDocument {
     private Boolean isFirstLogin;
     private Boolean emailSent;
     private List<String> storeIds;
+    private List<String> modulos;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private Timestamp emailSentAt;

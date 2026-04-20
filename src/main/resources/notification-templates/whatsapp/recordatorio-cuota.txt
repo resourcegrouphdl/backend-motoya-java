@@ -1,12 +1,23 @@
 Hola [(${cliente})] 👋
 
-Te recordamos que tienes una cuota próxima a vencer:
+*Motoya Digital* te recuerda que tienes una cuota próxima a vencer:
 
 💰 *Monto:* [(${monto})]
-📅 *Fecha de vencimiento:* [(${fecha})]
+📅 *Vence el:* [(${fecha})]
 
-Realiza tu pago a tiempo para evitar cargos por mora. Puedes pagar en cualquiera de nuestras tiendas o mediante transferencia bancaria.
+Realiza tu pago antes de la fecha para evitar cargos por mora. Puedes transferir a:
 
-¿Necesitas ayuda? Escríbenos aquí mismo.
+🏦 *BCP:* 194-1058703-0-68
+    CCI: 002-19400105870306894
 
-*Motoya Digital* 🏍️
+🏦 *Interbank:* 2003006691585
+    CCI: 00320000300669158538
+
+🏦 *Scotiabank:* 000-4689149
+    CCI: 009-056-000004689149-35
+
+📲 *Yape:* 912301407
+
+📎 Una vez realizado el pago, envía tu *comprobante* por este mismo chat para que lo registremos.
+
+_Este es un mensaje automático. Para hablar con un asesor comunícate con el área de cobranzas al +51 912 301 507._

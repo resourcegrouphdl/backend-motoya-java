@@ -1,0 +1,680 @@
+{
+  "info": {
+    "name": "Motoya — WhatsApp Webhooks",
+    "_postman_id": "motoya-whatsapp-webhooks-v1",
+    "description": "Pruebas del sistema de webhooks WhatsApp (json.pe).\n\nEndpoints cubiertos:\n- POST /webhook/whatsapp (público — URL configurada en json.pe)\n- POST /api/v1/notificaciones/whatsapp/webhook (interno)\n\nVariables de entorno requeridas:\n- base_url: https://backend-motoya-java-26647667439.europe-west1.run.app\n- token_firebase: Bearer token de un usuario Firebase autenticado\n- webhook_token: token secreto del webhook (si está configurado)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "description": "Base URL. Cambiar a la URL de Cloud Run para probar en producción."
+    },
+    {
+      "key": "webhook_token",
+      "value": "fa7f9692-134e-4ade-8f9c-f51d17ba1ff5",
+      "description": "Token Bearer de la API WhatsApp json.pe"
+    },
+    {
+      "key": "phone_titular",
+      "value": "957311203",
+      "description": "Teléfono de prueba — titular"
+    },
+    {
+      "key": "phone_fiador",
+      "value": "957311203",
+      "description": "Teléfono de prueba — fiador"
+    },
+    {
+      "key": "phone_referencia",
+      "value": "957311203",
+      "description": "Teléfono de prueba — referencia (debe tener estado wa_enviado en Firestore)"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Webhook Público (/webhook/whatsapp)",
+      "description": "Endpoint configurado en el panel de json.pe. Siempre responde 200.",
+      "item": [
+        {
+          "name": "1.1 Mensaje de texto — titular",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Body contiene status:received', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('received');",
+                  "});",
+                  "",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_titular}}\",\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": {\n      \"body\": \"Hola, prefiero el martes a las 10am\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "1.2 Mensaje de texto — referencia (confirma)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Body contiene status:received', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('received');",
+                  "});",
+                  "",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_referencia}}\",\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": {\n      \"body\": \"Sí, lo conozco hace 5 años, es una persona responsable y cumplida\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "1.3 Mensaje de texto — referencia (niega)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_referencia}}\",\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": {\n      \"body\": \"No lo conozco, no tengo relación con esa persona\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "1.4 Mensaje de texto — referencia (dudosa / ambigua)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_referencia}}\",\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": {\n      \"body\": \"Mmm no sé, a veces paga a veces no\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "1.5 Imagen adjunta (voucher de pago)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_titular}}\",\n  \"message\": {\n    \"type\": \"image\",\n    \"image\": {\n      \"url\": \"https://storage.googleapis.com/motoya-form.appspot.com/test/voucher.jpg\",\n      \"caption\": \"Aquí está mi comprobante\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "1.6 PDF adjunto (documento)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_titular}}\",\n  \"message\": {\n    \"type\": \"document\",\n    \"document\": {\n      \"url\": \"https://storage.googleapis.com/motoya-form.appspot.com/test/boleta.pdf\",\n      \"filename\": \"boleta_sueldo.pdf\",\n      \"caption\": \"Mi boleta de pago\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "1.7 Payload desde nested 'data' (formato alternativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"from\": \"{{phone_titular}}\"\n  },\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": {\n      \"body\": \"Prefiero el jueves por la tarde\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "1.8 Payload vacío / sin 'from' (debe ignorarse, aún 200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK aunque payload sea incompleto', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"status_update\",\n  \"status\": \"delivered\",\n  \"messageId\": \"3EB03B12345\"\n}"
+            }
+          }
+        },
+        {
+          "name": "1.9 Con token de seguridad válido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 con token válido', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp?token={{webhook_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"],
+              "query": [
+                { "key": "token", "value": "{{webhook_token}}" }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_titular}}\",\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": {\n      \"body\": \"Confirmo el lunes a las 9am\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "1.10 Con token incorrecto (debe silenciar — aún 200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 aunque token sea incorrecto (silencia)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp?token=token-incorrecto",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"],
+              "query": [
+                { "key": "token", "value": "token-incorrecto" }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_titular}}\",\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": { \"body\": \"Hola\" }\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Webhook Interno (/api/v1/notificaciones/whatsapp/webhook)",
+      "description": "Endpoint original con Swagger. Misma lógica, distinta URL.",
+      "item": [
+        {
+          "name": "2.1 Mensaje de texto — titular",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Body contiene status:received', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('received');",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notificaciones/whatsapp/webhook",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notificaciones", "whatsapp", "webhook"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_titular}}\",\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": {\n      \"body\": \"El miércoles a las 11am me viene bien\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "2.2 Mensaje de imagen",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notificaciones/whatsapp/webhook",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notificaciones", "whatsapp", "webhook"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{phone_titular}}\",\n  \"message\": {\n    \"type\": \"image\",\n    \"image\": {\n      \"url\": \"https://storage.googleapis.com/motoya-form.appspot.com/test/dni.jpg\",\n      \"caption\": \"Mi DNI\"\n    }\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Simulación de payloads reales de json.pe",
+      "description": "Payloads con la estructura exacta que envía json.pe según su documentación.",
+      "item": [
+        {
+          "name": "3.1 Payload real json.pe — texto entrante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('=== PAYLOAD ACEPTADO ===');",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message\",\n  \"from\": \"{{phone_titular}}\",\n  \"pushName\": \"Juan Pérez\",\n  \"message\": {\n    \"id\": \"3EB0C1A2B3C4D5E6F7\",\n    \"type\": \"text\",\n    \"timestamp\": 1713484800,\n    \"text\": {\n      \"body\": \"Buenos días, puedo el viernes a las 3pm\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "3.2 Payload real json.pe — imagen con link",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message\",\n  \"from\": \"{{phone_titular}}\",\n  \"pushName\": \"Juan Pérez\",\n  \"message\": {\n    \"id\": \"3EB0IMAGEN1234\",\n    \"type\": \"image\",\n    \"timestamp\": 1713484900,\n    \"image\": {\n      \"link\": \"https://mmg.whatsapp.net/v/t62.7118-24/abc123.jpg\",\n      \"mimetype\": \"image/jpeg\",\n      \"caption\": \"Aquí mi recibo de agua\",\n      \"fileSha256\": \"AAABBBCCC\",\n      \"fileLength\": 204800,\n      \"mediaKey\": \"xyz\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "3.3 Payload real json.pe — document con id (sin URL directa)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Respuesta (mediaUrl será ID de media):', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message\",\n  \"from\": \"{{phone_titular}}\",\n  \"message\": {\n    \"id\": \"3EB0DOC5678\",\n    \"type\": \"document\",\n    \"timestamp\": 1713485000,\n    \"document\": {\n      \"id\": \"media_id_abc123xyz\",\n      \"filename\": \"boleta_marzo_2026.pdf\",\n      \"mimetype\": \"application/pdf\",\n      \"fileLength\": 512000\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "3.4 Evento de estado (delivery receipt) — debe ignorarse",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK (ignora silenciosamente)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('Payload sin from — debe loguearse como ignorado en Cloud Run');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/webhook/whatsapp",
+              "host": ["{{base_url}}"],
+              "path": ["webhook", "whatsapp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message_status\",\n  \"messageId\": \"3EB03B12345ABCDE\",\n  \"status\": \"read\",\n  \"timestamp\": 1713485100\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Conversaciones — Panel Evaluador",
+      "description": "Endpoints del panel admin para ver y enviar mensajes manualmente. Requieren token Firebase.",
+      "item": [
+        {
+          "name": "4.1 GET — historial de conversaciones de una solicitud",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('Es un array', function () {",
+                  "    pm.expect(Array.isArray(json)).to.be.true;",
+                  "});",
+                  "if (json.length > 0) {",
+                  "    console.log('Conversaciones encontradas:', json.length);",
+                  "    console.log('Primera conversación:', JSON.stringify(json[0], null, 2));",
+                  "} else {",
+                  "    console.log('No hay conversaciones para esta solicitud (esperado si es nueva)');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_firebase}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/evaluacion/{{solicitud_id}}/conversaciones",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "evaluacion", "{{solicitud_id}}", "conversaciones"]
+            }
+          }
+        },
+        {
+          "name": "4.2 POST — enviar mensaje manual al titular",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('Status es sent o error', function () {",
+                  "    pm.expect(['sent', 'error']).to.include(json.status);",
+                  "});",
+                  "console.log('Resultado:', JSON.stringify(json, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_firebase}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/evaluacion/{{solicitud_id}}/conversaciones/{{phone_titular}}/mensaje",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "evaluacion", "{{solicitud_id}}", "conversaciones", "{{phone_titular}}", "mensaje"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"texto\": \"Buenos días, le recordamos que su entrevista está programada para mañana a las 10am en nuestra oficina.\",\n  \"nombreParticipante\": \"Juan Pérez\",\n  \"rol\": \"TITULAR\"\n}"
+            }
+          }
+        },
+        {
+          "name": "4.3 POST — enviar mensaje manual al fiador",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_firebase}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/evaluacion/{{solicitud_id}}/conversaciones/{{phone_fiador}}/mensaje",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "evaluacion", "{{solicitud_id}}", "conversaciones", "{{phone_fiador}}", "mensaje"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"texto\": \"Estimado fiador, necesitamos que confirme su disponibilidad para la entrevista.\",\n  \"nombreParticipante\": \"Carlos Fiador\",\n  \"rol\": \"FIADOR\"\n}"
+            }
+          }
+        },
+        {
+          "name": "4.4 POST — texto vacío (debe devolver error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Devuelve status:error cuando texto vacío', function () {",
+                  "    pm.expect(json.status).to.eql('error');",
+                  "});",
+                  "console.log('Respuesta:', JSON.stringify(json, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_firebase}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/evaluacion/{{solicitud_id}}/conversaciones/{{phone_titular}}/mensaje",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "evaluacion", "{{solicitud_id}}", "conversaciones", "{{phone_titular}}", "mensaje"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"texto\": \"\",\n  \"nombreParticipante\": \"Juan Pérez\",\n  \"rol\": \"TITULAR\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

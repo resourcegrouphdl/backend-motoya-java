@@ -67,6 +67,7 @@ public record IngresarSolicitudRequest(
     public record VendedorRequest(
             @NotBlank String id,
             @NotBlank String nombre,
-            String tienda
+            String tienda,
+            String email
     ) {}
 }

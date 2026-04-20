@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Agenda tu entrevista de crédito - Motoya Digital</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0; }
+        .container { max-width:800px; margin:30px auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color:#1C4D8D; padding:24px 30px; text-align:center; }
+        .header img { max-height:50px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto; }
+        .header h1 { color:#ffffff; margin:0; font-size:22px; }
+        .body { padding:30px; }
+        .body h2 { color:#333333; }
+        .body p { color:#555555; line-height:1.6; }
+        .highlight-box { background-color:#e8f0fc; border-left:4px solid #1C4D8D; padding:15px; margin:20px 0; border-radius:4px; }
+        .highlight-box p { margin:5px 0; }
+        .steps { background:#f9f9f9; padding:20px; border-radius:6px; margin:20px 0; }
+        .steps h3 { color:#1C4D8D; margin-top:0; }
+        .steps ol { color:#555555; padding-left:20px; line-height:1.8; }
+        .btn { display:inline-block; margin-top:10px; padding:14px 32px; background-color:#E63946; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold; font-size:16px; }
+        .info-box { background:#fff8e1; border-left:4px solid #ffb300; padding:15px; margin:20px 0; border-radius:4px; }
+        .footer { background-color:#333333; padding:20px; text-align:center; color:#aaaaaa; font-size:12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya Digital"/>
+        <h1>📅 Agenda tu Entrevista de Crédito</h1>
+    </div>
+
+    <div class="body">
+
+        <h2>Hola, [[${cliente}]]</h2>
+
+        <p>
+            ¡Gracias por confiar en <strong>Motoya Digital</strong>! Hemos recibido tu solicitud
+            de crédito para la compra de tu motocicleta.
+        </p>
+
+        <div class="highlight-box">
+            <p><strong>📄 Código de solicitud:</strong> [[${codigoDeSolicitud}]]</p>
+            <p><strong>📋 Estado actual:</strong> En revisión inicial</p>
+        </div>
+
+        <p>
+            El siguiente paso es <strong>agendar una breve entrevista</strong> con uno de nuestros
+            asesores para completar la evaluación de tu solicitud. La entrevista puede realizarse
+            de forma presencial o virtual, según tu preferencia.
+        </p>
+
+        <div class="steps">
+            <h3>¿Cómo agendar tu entrevista?</h3>
+            <ol>
+                <li>Comunícate con tu asesor de ventas asignado.</li>
+                <li>Elige la fecha y hora que mejor se adapte a tu disponibilidad.</li>
+                <li>Ten a mano tus documentos de identidad y los documentos de ingresos.</li>
+            </ol>
+        </div>
+
+        <div class="info-box">
+            <p><strong>📌 Documentos que necesitarás:</strong></p>
+            <p>✔ DNI original y copia</p>
+            <p>✔ Comprobante de ingresos (boleta, recibo, declaración jurada)</p>
+            <p>✔ Recibo de servicios (agua o luz) del domicilio actual</p>
+        </div>
+
+        <p>
+            Si tienes alguna duda o consulta, no dudes en escribirnos por WhatsApp o
+            comunicarte con tu asesor directamente.
+        </p>
+
+        <p>
+            ¡Estamos emocionados de ayudarte a conseguir tu moto! 🏍️
+        </p>
+
+        <p>Atentamente,<br/><strong>Equipo Motoya Digital</strong></p>
+
+    </div>
+
+    <div class="footer">
+        <p>Este correo ha sido enviado automáticamente por el sistema de Motoya Digital.</p>
+        <p>La información de tus datos personales es tratada conforme a la <strong>Ley N° 29733 - Ley de Protección de Datos Personales del Perú</strong>.</p>
+        <p>© 2026 Motoya Digital. Todos los derechos reservados.</p>
+    </div>
+
+</div>
+</body>
+</html>

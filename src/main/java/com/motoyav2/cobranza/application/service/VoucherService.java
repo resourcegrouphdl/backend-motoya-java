@@ -54,6 +54,8 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                 .imagenPath(command.imagenPath())
                 .thumbPath(command.thumbPath())
                 .montoDetectado(command.montoDetectado())
+                .montoEsperado(command.montoEsperado())
+                .ocrResultado(command.ocrResultado())
                 .creadoEn(new Date())
                 .creadoPor(command.subioPor())
                 .build();
@@ -196,6 +198,13 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                             voucher.setActualizadoPor(command.agenteId());
                             voucher.setComprobanteId(comprobante.getId());
 
+                            // Marcar cuotas como PAGADA en el cronograma
+                            String fechaPago = resolveFechaPago(voucher, command);
+                            int cuotasMarcadas = CuotaAplicador.aplicar(
+                                    caso.getCronograma(), voucher.getMontoDetectado(), fechaPago, null);
+                            log.info("[AprobarVoucher] Cuotas marcadas PAGADA | contratoId={} count={} fechaPago={}",
+                                    voucher.getContratoId(), cuotasMarcadas, fechaPago);
+
                             // Actualizar saldo del caso
                             caso.setSaldoActual(saldoNuevo);
                             caso.setTotalPagado((caso.getTotalPagado() != null ? caso.getTotalPagado() : 0.0)
@@ -285,6 +294,27 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
 
                     return voucherPort.save(voucher).then(registrarEvento);
                 });
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Determina la fecha de pago a registrar en el cronograma:
+     *   1. fechaPagoReal del comando (retroactivo / migración)
+     *   2. Fecha extraída por OCR del voucher
+     *   3. Hoy como fallback
+     */
+    private String resolveFechaPago(VoucherDocument voucher, AprobarVoucherCommand command) {
+        if (command.fechaPagoReal() != null && !command.fechaPagoReal().isBlank()) {
+            return command.fechaPagoReal();
+        }
+        if (voucher.getOcrResultado() != null && voucher.getOcrResultado().getFecha() != null
+                && !voucher.getOcrResultado().getFecha().isBlank()) {
+            return voucher.getOcrResultado().getFecha();
+        }
+        return LocalDate.now().toString();
     }
 
     // -------------------------------------------------------------------------

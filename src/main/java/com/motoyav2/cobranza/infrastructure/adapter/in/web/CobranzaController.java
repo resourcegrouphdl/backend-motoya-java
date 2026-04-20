@@ -3,6 +3,7 @@ package com.motoyav2.cobranza.infrastructure.adapter.in.web;
 import com.motoyav2.cobranza.application.dto.*;
 import com.motoyav2.cobranza.application.port.in.*;
 import com.motoyav2.cobranza.application.port.in.command.*;
+import com.motoyav2.cobranza.application.port.in.command.RegistrarPagoManualCommand;
 import com.motoyav2.cobranza.application.port.in.query.ListarCasosQuery;
 import com.motoyav2.cobranza.application.service.*;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.*;
@@ -31,6 +32,7 @@ public class CobranzaController {
     private final ObtenerCasoUseCase obtenerCasoUseCase;
     private final AsignarAgenteUseCase asignarAgenteUseCase;
     private final RegistrarPromesaUseCase registrarPromesaUseCase;
+    private final CerrarPromesaUseCase cerrarPromesaUseCase;
     private final RecibirVoucherUseCase recibirVoucherUseCase;
     private final AprobarVoucherUseCase aprobarVoucherUseCase;
     private final RechazarVoucherUseCase rechazarVoucherUseCase;
@@ -48,6 +50,7 @@ public class CobranzaController {
     private final WhatsappService whatsappService;
     private final IniciarCasoUseCase iniciarCasoUseCase;
     private final ImportarCalendarioService importarCalendarioService;
+    private final RegistrarPagoManualUseCase registrarPagoManualUseCase;
 
     // =========================================================================
     // DASHBOARD
@@ -245,6 +248,29 @@ public class CobranzaController {
                 ));
     }
 
+    @PatchMapping("/api/v1/cobranzas/casos/{contratoId}/promesas/{promesaId}/cerrar")
+    public Mono<Map<String, Object>> cerrarPromesa(
+            @PathVariable String contratoId,
+            @PathVariable String promesaId,
+            @RequestBody CerrarPromesaRequest body,
+            ServerWebExchange exchange) {
+
+        String userId     = (String) exchange.getAttributes().get("userId");
+        String userNombre = (String) exchange.getAttributes().get("userNombre");
+        log.debug("PATCH /casos/{}/promesas/{}/cerrar resultado={}", contratoId, promesaId, body.resultado());
+
+        CerrarPromesaCommand command = new CerrarPromesaCommand(
+                contratoId, promesaId, body.resultado(),
+                body.montoPagado(), body.motivo(),
+                userId, userNombre);
+
+        return cerrarPromesaUseCase.ejecutar(command)
+                .thenReturn(Map.<String, Object>of(
+                        "status", "OK",
+                        "message", "Promesa cerrada"
+                ));
+    }
+
     // =========================================================================
     // ASIGNAR AGENTE
     // =========================================================================
@@ -299,7 +325,8 @@ public class CobranzaController {
         log.debug("POST /vouchers storeId={} contratoId={}", storeId, contratoId);
 
         RecibirVoucherCommand command = new RecibirVoucherCommand(
-                contratoId, storeId, imagenPath, thumbPath, montoDetectado, userId);
+                contratoId, storeId, imagenPath, thumbPath, montoDetectado,
+                null, null, userId);
 
         return recibirVoucherUseCase.ejecutar(command)
                 .map(voucherId -> Map.<String, Object>of(
@@ -329,7 +356,8 @@ public class CobranzaController {
                 body.rucReceptor() != null ? "RUC" : "DNI",
                 body.rucReceptor(),
                 body.razonSocialReceptor(),
-                null
+                null,
+                body.fechaPagoReal()
         );
 
         return aprobarVoucherUseCase.ejecutar(command)
@@ -358,6 +386,56 @@ public class CobranzaController {
                 .thenReturn(Map.<String, Object>of(
                         "status", "OK",
                         "message", "Voucher rechazado"
+                ));
+    }
+
+    // =========================================================================
+    // PAGO MANUAL — migración y correcciones administrativas
+    // =========================================================================
+
+    /**
+     * Registra un pago de forma manual sin requerir comprobante digital.
+     * Útil para:
+     *   - Clientes migrados con pagos previos al sistema
+     *   - Pagos en efectivo verificados por el agente
+     *   - Corrección de registros históricos
+     *
+     * El endpoint marca las cuotas como PAGADA y actualiza el saldo.
+     * Si se proporciona imagenPath (GCS path de imagen escaneada),
+     * también crea un VoucherDocument con estado APROBADO para auditoría.
+     */
+    @PostMapping("/api/v1/cobranzas/casos/{contratoId}/pago-manual")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<Map<String, Object>> registrarPagoManual(
+            @PathVariable String contratoId,
+            @RequestBody PagoManualRequest body,
+            ServerWebExchange exchange) {
+
+        String userId     = (String) exchange.getAttributes().get("userId");
+        String userNombre = (String) exchange.getAttributes().get("userNombre");
+        log.info("POST /casos/{contratoId}/pago-manual contratoId={} monto={} fechaPago={} fuente={}",
+                contratoId, body.monto(), body.fechaPago(), body.fuente());
+
+        RegistrarPagoManualCommand command = new RegistrarPagoManualCommand(
+                contratoId,
+                body.monto(),
+                body.fechaPago(),
+                body.numeroCuota(),
+                body.observaciones(),
+                body.imagenPath(),
+                body.fuente(),
+                userId,
+                userNombre
+        );
+
+        return registrarPagoManualUseCase.ejecutar(command)
+                .map(result -> Map.<String, Object>of(
+                        "status",          "OK",
+                        "message",         "Pago manual registrado",
+                        "contratoId",      result.contratoId(),
+                        "saldoNuevo",      result.saldoNuevo(),
+                        "cuotasMarcadas",  result.cuotasMarcadas(),
+                        "voucherId",       result.voucherId() != null ? result.voucherId() : ""
                 ));
     }
 
@@ -405,7 +483,7 @@ public class CobranzaController {
                 body.voucherId(), userId, userNombre,
                 "B001",
                 null, null, null,
-                "DNI", null, null, null
+                "DNI", null, null, null, null
         );
 
         return aprobarVoucherUseCase.ejecutar(command)
@@ -767,6 +845,13 @@ public class CobranzaController {
             String observaciones
     ) {}
 
+    public record CerrarPromesaRequest(
+            /** CUMPLIDA | INCUMPLIDA | CANCELADA */
+            String resultado,
+            Double montoPagado,
+            String motivo
+    ) {}
+
     public record AsignarAgenteRequest(
             String agenteId,
             String agenteNombre,
@@ -778,7 +863,22 @@ public class CobranzaController {
             String rucReceptor,
             String razonSocialReceptor,
             String emailReceptor,
-            String observaciones
+            String observaciones,
+            /** ISO YYYY-MM-DD — para pagos retroactivos. Null = usar fecha del OCR o hoy. */
+            String fechaPagoReal
+    ) {}
+
+    public record PagoManualRequest(
+            double monto,
+            /** ISO YYYY-MM-DD — fecha real del pago (puede ser retroactiva) */
+            String fechaPago,
+            /** Número de cuota específica a marcar. Null = aplicar cronológicamente. */
+            Integer numeroCuota,
+            String observaciones,
+            /** GCS path de imagen escaneada — null si no tiene comprobante */
+            String imagenPath,
+            /** MIGRACION | ADMIN_MANUAL | VOUCHER_FISICO */
+            String fuente
     ) {}
 
     public record RechazarVoucherRequest(

@@ -65,6 +65,7 @@ public record IngresarSolicitudCommand(
     public record VendedorData(
             String id,
             String nombre,
-            String tienda
+            String tienda,
+            String email
     ) {}
 }

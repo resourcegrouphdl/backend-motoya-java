@@ -37,11 +37,20 @@ public class ReemplazarFiadorUseCaseImpl implements ReemplazarFiadorUseCase {
                                 "La solicitud no está en estado fiador_rechazado"));
                     }
 
-                    // upsert fiador client
-                    return upsertCliente(fiador, solicitud.getCodigoDeSolicitud(), ahora)
+                    // Validar que el nuevo fiador no sea el mismo que el titular
+                    if (fiador.documentNumber() != null
+                            && fiador.documentNumber().equalsIgnoreCase(solicitud.getTitularDni())) {
+                        return Mono.error(new com.motoyav2.shared.exception.BadRequestException(
+                                "El fiador no puede tener el mismo documento que el titular ("
+                                + fiador.documentNumber() + ")"));
+                    }
+
+                    // Crear nuevo snapshot inmutable del fiador (nunca reusar doc existente)
+                    return crearClienteSnapshot(fiador, solicitud.getCodigoDeSolicitud(), ahora)
                             .flatMap(nuevoFiadorId -> {
                                 Map<String, Object> updates = new HashMap<>();
                                 updates.put("fiadorId", nuevoFiadorId);
+                                updates.put("fiadorDni", fiador.documentNumber());
                                 updates.put("estado", EstadoSolicitud.EVALUACION_GARANTES.getFirestoreValue());
                                 updates.put("updatedAt", ahora);
                                 log.info("Fiador reemplazado en solicitud {} → nuevo fiadorId={}", solicitudId, nuevoFiadorId);
@@ -50,18 +59,13 @@ public class ReemplazarFiadorUseCaseImpl implements ReemplazarFiadorUseCase {
                 });
     }
 
-    private Mono<String> upsertCliente(IngresarSolicitudCommand.ClienteData data,
-                                        String codigoDeSolicitud, Timestamp ahora) {
-        return clienteRepository.findByDocumentNumber(data.documentNumber())
-                .flatMap(existente -> {
-                    Map<String, Object> updates = buildClienteMap(data, codigoDeSolicitud, ahora);
-                    updates.put("updatedAt", ahora);
-                    return clienteRepository.updateFields(existente.getId(), updates)
-                            .thenReturn(existente.getId());
-                })
-                .switchIfEmpty(
-                        clienteRepository.create(buildClienteMap(data, codigoDeSolicitud, ahora))
-                );
+    /**
+     * Crea siempre un nuevo snapshot inmutable del fiador.
+     * No se reutiliza ni sobrescribe ningún documento existente.
+     */
+    private Mono<String> crearClienteSnapshot(IngresarSolicitudCommand.ClienteData data,
+                                               String codigoDeSolicitud, Timestamp ahora) {
+        return clienteRepository.create(buildClienteMap(data, codigoDeSolicitud, ahora));
     }
 
     private Map<String, Object> buildClienteMap(IngresarSolicitudCommand.ClienteData d,
@@ -83,8 +87,8 @@ public class ReemplazarFiadorUseCaseImpl implements ReemplazarFiadorUseCase {
         m.put("distrito", d.distrito());
         m.put("direccion", d.direccion());
         m.put("ubicacionGPSCasa", d.ubicacionGPSCasa());
-        m.put("telefono1", d.telefono1());
-        m.put("telefono2", d.telefono2());
+        m.put("telefono1", IngresarSolicitudUseCaseImpl.normalizarTelefono(d.telefono1()));
+        m.put("telefono2", IngresarSolicitudUseCaseImpl.normalizarTelefono(d.telefono2()));
         m.put("ocupacion", d.ocupacion());
         m.put("rangoIngresos", d.rangoIngresos());
         m.put("tipoVivienda", d.tipoVivienda());

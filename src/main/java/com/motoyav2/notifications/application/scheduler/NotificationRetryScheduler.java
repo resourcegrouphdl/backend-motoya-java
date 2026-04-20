@@ -34,24 +34,31 @@ public class NotificationRetryScheduler {
 
     @Scheduled(fixedDelayString = "${notifications.scheduler.delay-ms:30000}")
     public void processPendingEvents() {
-        if (!schedulerEnabled) return;
+        if (!schedulerEnabled) {
+            log.debug("[SCHEDULER] Desactivado — omitiendo ciclo");
+            return;
+        }
 
         if (!running.compareAndSet(false, true)) {
             log.debug("[SCHEDULER] Ciclo ya en ejecución, omitiendo...");
             return;
         }
 
-        log.debug("[SCHEDULER] Iniciando ciclo de procesamiento de eventos...");
+        log.info("[SCHEDULER] Iniciando ciclo de procesamiento de notificaciones pendientes...");
+
+        java.util.concurrent.atomic.AtomicInteger procesados = new java.util.concurrent.atomic.AtomicInteger(0);
 
         eventRepository.findPendingEventsReadyForRetry(Instant.now())
+                .doOnNext(event -> log.info("[SCHEDULER] Evento encontrado | id={} canal={} destinatario={} plantilla={}",
+                        event.id(), event.channel(), event.recipient(), event.template()))
                 .flatMap(event -> processUseCase.process(event)
+                        .doOnSuccess(v -> procesados.incrementAndGet())
                         .onErrorResume(ex -> {
-                            log.error("[SCHEDULER] Error procesando evento id={}: {}",
-                                    event.id(), ex.getMessage());
+                            log.error("[SCHEDULER] Error procesando evento id={}: {}", event.id(), ex.getMessage());
                             return Mono.empty();
                         })
                 )
-                .doOnComplete(() -> log.debug("[SCHEDULER] Ciclo completado"))
+                .doOnComplete(() -> log.info("[SCHEDULER] Ciclo completado | procesados={}", procesados.get()))
                 .doOnError(ex -> log.error("[SCHEDULER] Error en ciclo: {}", ex.getMessage()))
                 .doFinally(signal -> running.set(false))
                 .subscribe();

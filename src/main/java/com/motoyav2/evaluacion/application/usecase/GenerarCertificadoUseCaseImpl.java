@@ -1,8 +1,13 @@
 package com.motoyav2.evaluacion.application.usecase;
 
 import com.google.cloud.Timestamp;
+import com.motoyav2.evaluacion.application.command.CambiarEstadoCommand;
+import com.motoyav2.evaluacion.domain.enums.EstadoSolicitud;
 import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
 import com.motoyav2.evaluacion.domain.model.Cliente;
+import com.motoyav2.evaluacion.domain.model.DatosVendedor;
+import com.motoyav2.evaluacion.domain.model.Vehiculo;
+import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.GenerarCertificadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.ObtenerExpedienteUseCase;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
@@ -27,6 +32,7 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
     private final SolicitudRepository solicitudRepository;
     private final ObtenerExpedienteUseCase obtenerExpedienteUseCase;
     private final CertificadoExternoClient certificadoExternoClient;
+    private final CambiarEstadoUseCase cambiarEstadoUseCase;
 
     @Override
     public Mono<String> ejecutar(String solicitudIdOrNumero) {
@@ -44,8 +50,10 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
                     log.info("[CERT] Generando certificado on-demand para solicitud {}", solicitudIdOrNumero);
                     return obtenerExpedienteUseCase.ejecutar(solicitud.getId())
                             .flatMap(expediente -> {
-                                Cliente titular = expediente.getTitular();
-                                Cliente fiador  = expediente.getFiador();
+                                Cliente titular      = expediente.getTitular();
+                                Cliente fiador       = expediente.getFiador();
+                                Vehiculo vehiculo    = expediente.getVehiculo();
+                                DatosVendedor vend   = solicitud.getVendedor();
 
                                 CertificadoExternoClient.CertificadoRequest request =
                                         CertificadoExternoClient.CertificadoRequest.of(
@@ -53,21 +61,21 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
                                                         ? solicitud.getCodigoDeSolicitud()
                                                         : solicitud.getNumeroSolicitud(),
                                                 titular != null ? titular.getNombreCompleto()  : solicitud.getTitularNombreCompleto(),
-                                                titular != null ? titular.getDocumentNumber()  : solicitud.getTitularDni(),
-                                                titular != null ? titular.getTelefono1()       : solicitud.getTitularTelefono(),
-                                                titular != null ? titular.getEmail()           : solicitud.getTitularEmail(),
                                                 fiador  != null ? fiador.getNombreCompleto()   : null,
-                                                fiador  != null ? fiador.getDocumentNumber()   : null,
-                                                expediente.getVehiculo() != null
-                                                        ? expediente.getVehiculo().getDescripcion() : "",
+                                                vend    != null ? vend.getTienda()             : "",
+                                                vend    != null ? vend.getNombre()             : solicitud.getVendedorNombre(),
+                                                vehiculo != null ? vehiculo.getMarca()         : "",
+                                                vehiculo != null ? vehiculo.getModelo()        : "",
+                                                vehiculo != null ? vehiculo.getAnio()          : "",
+                                                vehiculo != null ? vehiculo.getColor()         : "",
                                                 solicitud.getPrecioCompraMoto() != null
                                                         ? solicitud.getPrecioCompraMoto().doubleValue() : 0.0,
                                                 solicitud.getInicial() != null
                                                         ? solicitud.getInicial().doubleValue() : 0.0,
-                                                solicitud.getPlazoQuincenas() != null
-                                                        ? solicitud.getPlazoQuincenas() : 0,
                                                 solicitud.getMontoCuota() != null
-                                                        ? solicitud.getMontoCuota().doubleValue() : 0.0
+                                                        ? solicitud.getMontoCuota().doubleValue() : 0.0,
+                                                solicitud.getPlazoQuincenas() != null
+                                                        ? solicitud.getPlazoQuincenas() : 0
                                         );
 
                                 return certificadoExternoClient.generarCertificado(request)
@@ -77,7 +85,20 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
                                             updates.put("certificadoGenerado",         true);
                                             updates.put("fechaGeneracionCertificado",  Timestamp.now());
                                             updates.put("updatedAt",                   Timestamp.now());
+
+                                            Mono<Void> transicion = EstadoSolicitud.APROBADO
+                                                    .equals(solicitud.getEstado())
+                                                    ? cambiarEstadoUseCase.ejecutar(new CambiarEstadoCommand(
+                                                            solicitud.getId(),
+                                                            EstadoSolicitud.CERTIFICADO_GENERADO,
+                                                            "sistema-automatico",
+                                                            "Generación manual de certificado",
+                                                            null))
+                                                    .then()
+                                                    : Mono.empty();
+
                                             return solicitudRepository.updateFields(solicitud.getId(), updates)
+                                                    .then(transicion)
                                                     .thenReturn(url);
                                         });
                             });

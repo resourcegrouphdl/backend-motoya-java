@@ -13,5 +13,11 @@ public record AprobarVoucherCommand(
         String tipoDocumentoReceptor,
         String numeroDocumentoReceptor,
         String nombreReceptor,
-        String descripcionItem
+        String descripcionItem,
+        /**
+         * ISO date YYYY-MM-DD de la fecha real del pago.
+         * Usar cuando el pago es retroactivo (migración / cliente antiguo).
+         * Si es null se usa la fecha extraída por OCR o la fecha de hoy.
+         */
+        String fechaPagoReal
 ) {}

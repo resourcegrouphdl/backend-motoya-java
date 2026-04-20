@@ -9,5 +9,6 @@ public class Usuario {
     String id;
     String nombre;  // firstName + lastName
     String email;
+    String telefono;
     String rol;     // userType → admin | supervisor | asesor | evaluador | vendedor
 }

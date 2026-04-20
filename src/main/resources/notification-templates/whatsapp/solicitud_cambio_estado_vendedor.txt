@@ -1,0 +1,10 @@
+Hola [(${vendedor})] 👋
+
+Te informamos que la solicitud de crédito *[(${codigoDeSolicitud})]* de tu cliente *[(${cliente})]* ha cambiado de estado.
+
+📋 *Nuevo estado:* [(${estado})]
+[# th:if="${motivo != null && !motivo.isEmpty()}"]📝 *Motivo:* [(${motivo})]
+[/]
+Para más detalles ingresa al sistema Motoya Digital.
+
+_Motoya Digital_

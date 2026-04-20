@@ -38,6 +38,24 @@
       ]
     },
     {
+      "collectionGroup": "solicitudes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "titularDni", "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" },
+        { "fieldPath": "__name__",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fiadorDni", "order": "ASCENDING"  },
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__",  "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "cambios_estado_solicitud",
       "queryScope": "COLLECTION",
       "fields": [
@@ -79,6 +97,24 @@
       "fields": [
         { "fieldPath": "estado",     "order": "ASCENDING"  },
         { "fieldPath": "prioridad",  "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" },
+        { "fieldPath": "__name__",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_dev",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "titularDni", "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" },
+        { "fieldPath": "__name__",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_dev",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fiadorDni",  "order": "ASCENDING"  },
         { "fieldPath": "createdAt",  "order": "DESCENDING" },
         { "fieldPath": "__name__",   "order": "DESCENDING" }
       ]
@@ -318,6 +354,69 @@
         { "fieldPath": "clienteNombreCalendar", "order": "ASCENDING" },
         { "fieldPath": "fechaInicio",           "order": "ASCENDING" },
         { "fieldPath": "__name__",              "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado",     "order": "ASCENDING"  },
+        { "fieldPath": "updatedAt",  "order": "ASCENDING"  },
+        { "fieldPath": "__name__",   "order": "ASCENDING"  }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_dev",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado",     "order": "ASCENDING"  },
+        { "fieldPath": "updatedAt",  "order": "ASCENDING"  },
+        { "fieldPath": "__name__",   "order": "ASCENDING"  }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "titularTelefono", "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",       "order": "DESCENDING" },
+        { "fieldPath": "__name__",        "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fiadorTelefono", "order": "ASCENDING"  },
+        { "fieldPath": "createdAt",      "order": "DESCENDING" },
+        { "fieldPath": "__name__",       "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "conversaciones_whatsapp",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "solicitudId",     "order": "ASCENDING"  },
+        { "fieldPath": "ultimaActividad", "order": "DESCENDING" },
+        { "fieldPath": "__name__",        "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "referencias",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "telefono",             "order": "ASCENDING" },
+        { "fieldPath": "estadoVerificacion",   "order": "ASCENDING" },
+        { "fieldPath": "__name__",             "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "referencias",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "solicitudId",          "order": "ASCENDING"  },
+        { "fieldPath": "estadoVerificacion",   "order": "ASCENDING"  },
+        { "fieldPath": "__name__",             "order": "ASCENDING"  }
       ]
     }
   ],

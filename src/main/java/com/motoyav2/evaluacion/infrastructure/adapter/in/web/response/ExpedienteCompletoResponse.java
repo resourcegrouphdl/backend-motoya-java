@@ -61,6 +61,8 @@ public class ExpedienteCompletoResponse {
         Boolean contratoGenerado;
         String urlContrato;
         String observacionesGenerales;
+        String semaforoReferencias;
+        Map<String, Object> alertaDuplicado;
         Timestamp createdAt;
         Timestamp updatedAt;
     }
@@ -87,6 +89,22 @@ public class ExpedienteCompletoResponse {
         String tiendaNombre; // Nombre comercial resuelto desde tienda_profiles
         String email;
         String telefono;
+    }
+
+    @Value @Builder
+    public static class ValidacionEmailResponse {
+        boolean valido;
+        String  nivel;
+        String  detalle;
+        Timestamp verificadoEn;
+    }
+
+    @Value @Builder
+    public static class VerificacionIdentidadResponse {
+        boolean exitoso;
+        String apiNombres;
+        String apiApellidoPaterno;
+        String apiApellidoMaterno;
     }
 
     @Value @Builder
@@ -125,6 +143,8 @@ public class ExpedienteCompletoResponse {
         Boolean datosVerificados;
         String observacionesEvaluador;
         EvaluacionEntrevistaResponse evaluacionEntrevista;
+        ValidacionEmailResponse validacionEmail;
+        VerificacionIdentidadResponse verificacionIdentidad;
         Timestamp createdAt;
         Timestamp updatedAt;
     }
@@ -180,6 +200,13 @@ public class ExpedienteCompletoResponse {
         String observaciones;
         Timestamp fechaContacto;
         Boolean rechazada;
+        String solicitudId;
+        String wamid;
+        String respuestaWhatsapp;
+        String clasificacionClaude;
+        Double confianzaClaude;
+        Timestamp fechaEnvioWhatsapp;
+        String metodoVerificacion;
     }
 
     @Value @Builder
@@ -256,6 +283,8 @@ public class ExpedienteCompletoResponse {
                 .contratoGenerado(s.getContratoGenerado())
                 .urlContrato(s.getUrlContrato())
                 .observacionesGenerales(s.getObservacionesGenerales())
+                .semaforoReferencias(s.getSemaforoReferencias())
+                .alertaDuplicado(s.getAlertaDuplicado())
                 .createdAt(s.getCreatedAt())
                 .updatedAt(s.getUpdatedAt())
                 .build();
@@ -322,6 +351,22 @@ public class ExpedienteCompletoResponse {
                 .datosVerificados(c.getDatosVerificados())
                 .observacionesEvaluador(c.getObservacionesEvaluador())
                 .evaluacionEntrevista(entRevista)
+                .validacionEmail(c.getValidacionEmail() != null
+                        ? ValidacionEmailResponse.builder()
+                                .valido(c.getValidacionEmail().valido())
+                                .nivel(c.getValidacionEmail().nivel())
+                                .detalle(c.getValidacionEmail().detalle())
+                                .verificadoEn(c.getValidacionEmail().verificadoEn())
+                                .build()
+                        : null)
+                .verificacionIdentidad(c.getVerificacionIdentidad() != null
+                        ? VerificacionIdentidadResponse.builder()
+                                .exitoso(c.getVerificacionIdentidad().exitoso())
+                                .apiNombres(c.getVerificacionIdentidad().apiNombres())
+                                .apiApellidoPaterno(c.getVerificacionIdentidad().apiApellidoPaterno())
+                                .apiApellidoMaterno(c.getVerificacionIdentidad().apiApellidoMaterno())
+                                .build()
+                        : null)
                 .createdAt(c.getCreatedAt()).updatedAt(c.getUpdatedAt())
                 .build();
     }
@@ -344,6 +389,13 @@ public class ExpedienteCompletoResponse {
                 .resultadoContacto(r.getResultadoContacto()).scoreVerificacion(r.getScoreVerificacion())
                 .observaciones(r.getObservaciones()).fechaContacto(r.getFechaContacto())
                 .rechazada(r.getRechazada())
+                .solicitudId(r.getSolicitudId())
+                .wamid(r.getWamid())
+                .respuestaWhatsapp(r.getRespuestaWhatsapp())
+                .clasificacionClaude(r.getClasificacionClaude())
+                .confianzaClaude(r.getConfianzaClaude())
+                .fechaEnvioWhatsapp(r.getFechaEnvioWhatsapp())
+                .metodoVerificacion(r.getMetodoVerificacion())
                 .build();
     }
 }

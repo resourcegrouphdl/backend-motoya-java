@@ -7,13 +7,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.text.DecimalFormat;
 
 /**
  * Cliente HTTP para el servicio externo de generación de certificados de aprobación.
- * Endpoint: POST https://backen-motoya-cloud-26647667439.southamerica-west1.run.app/api/v1/certificado
- * Sin autenticación por el momento (pública).
+ *
+ * POST https://backen-motoya-cloud-26647667439.southamerica-west1.run.app/api/v1/certificado
+ *  → genera el certificado y retorna { urlDelCertificadoGenerado }
+ *
+ * GET  https://backen-motoya-cloud-26647667439.southamerica-west1.run.app/api/v1/certificado/{numeroDeSolicitud}
+ *  → recupera un certificado ya generado
  */
 @Slf4j
 @Component
@@ -22,7 +25,8 @@ public class CertificadoExternoClient {
     private static final String BASE_URL =
             "https://backen-motoya-cloud-26647667439.southamerica-west1.run.app";
     private static final String PATH = "/api/v1/certificado";
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    private static final DecimalFormat DECIMAL_FMT = new DecimalFormat("#.00");
 
     private final WebClient webClient;
 
@@ -33,51 +37,102 @@ public class CertificadoExternoClient {
                 .build();
     }
 
-    /**
-     * Llama al servicio externo y retorna la URL del certificado PNG generado.
-     */
+    // ── POST — generar ────────────────────────────────────────────────────────
+
     public Mono<String> generarCertificado(CertificadoRequest request) {
+        log.info("[CERT] Generando certificado para solicitud={}", request.numeroDeSolicitud());
         return webClient.post()
                 .uri(PATH)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        response -> response.bodyToMono(String.class)
+                                .flatMap(body -> Mono.error(new RuntimeException(
+                                        "Servicio certificado error " + response.statusCode().value() + ": " + body))))
                 .bodyToMono(CertificadoResponse.class)
                 .map(CertificadoResponse::urlDelCertificadoGenerado)
-                .doOnSuccess(url -> log.info("[CERT] Certificado generado OK: {}", url))
-                .doOnError(ex -> log.error("[CERT] Error generando certificado: {}", ex.getMessage()));
+                .doOnSuccess(url -> log.info("[CERT] Certificado generado OK | solicitud={} url={}",
+                        request.numeroDeSolicitud(), url))
+                .doOnError(ex -> log.error("[CERT] Error generando certificado | solicitud={}: {}",
+                        request.numeroDeSolicitud(), ex.getMessage()));
+    }
+
+    // ── GET — recuperar existente ─────────────────────────────────────────────
+
+    public Mono<String> buscarCertificado(String numeroDeSolicitud) {
+        return webClient.get()
+                .uri(PATH + "/{numero}", numeroDeSolicitud)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError(),
+                        response -> Mono.empty())   // 404 → no existe aún
+                .bodyToMono(CertificadoResponse.class)
+                .map(CertificadoResponse::urlDelCertificadoGenerado)
+                .onErrorResume(ex -> {
+                    log.debug("[CERT] Certificado no encontrado en servicio externo para {}", numeroDeSolicitud);
+                    return Mono.empty();
+                });
     }
 
     // ── DTOs ─────────────────────────────────────────────────────────────────
 
+    /**
+     * Request alineado exactamente con CrearCertificadoRequest del servicio externo.
+     * Todos los campos numéricos se envían como String según la API.
+     */
     public record CertificadoRequest(
-            String codigoDeSolicitud,
-            String titularNombreCompleto,
-            String titularDni,
-            String titularTelefono,
-            String titularEmail,
-            String fiadorNombreCompleto,
-            String fiadorDni,
-            String vehiculoDescripcion,
-            Double precioMoto,
-            Double inicial,
-            Integer plazoQuincenas,
-            Double cuotaQuincenal,
-            String fechaAprobacion
+            String numeroDeSolicitud,
+            String titularDelCredito,
+            String fiadorDelCredito,
+            String nombreDeLaTienda,
+            String asesorDeVenta,
+            String marcaDelVehiculo,
+            String modeloDelVehiculo,
+            String anioDelVehiculo,
+            String colorDelVehiculo,
+            String precioDelVehiculo,
+            String inicialEngancheDelCredito,
+            String cuotaQuincenalDelCredito,
+            String numeroDeCuotasQuincenalesDelCredito
     ) {
+        /**
+         * Factory que construye el request desde los objetos del dominio.
+         * Los montos se formatean a 2 decimales: "1234.50"
+         */
         public static CertificadoRequest of(
-                String codigo, String titularNombre, String titularDni,
-                String titularTel, String titularEmail,
-                String fiadorNombre, String fiadorDni,
-                String vehiculoDesc,
-                double precioMoto, double inicial,
-                int plazoQuincenas, double cuotaQuincenal) {
+                String numeroDeSolicitud,
+                String titularNombre,
+                String fiadorNombre,
+                String nombreTienda,
+                String asesorNombre,
+                String marca,
+                String modelo,
+                String anio,
+                String color,
+                double precioMoto,
+                double inicial,
+                double cuotaQuincenal,
+                int numeroCuotas) {
+
             return new CertificadoRequest(
-                    codigo, titularNombre, titularDni, titularTel, titularEmail,
-                    fiadorNombre, fiadorDni, vehiculoDesc,
-                    precioMoto, inicial, plazoQuincenas, cuotaQuincenal,
-                    LocalDate.now().format(DATE_FMT)
+                    safe(numeroDeSolicitud),
+                    safe(titularNombre),
+                    fiadorNombre != null ? fiadorNombre : "",
+                    safe(nombreTienda),
+                    safe(asesorNombre),
+                    safe(marca),
+                    safe(modelo),
+                    safe(anio),
+                    safe(color),
+                    DECIMAL_FMT.format(precioMoto),
+                    DECIMAL_FMT.format(inicial),
+                    DECIMAL_FMT.format(cuotaQuincenal),
+                    String.valueOf(numeroCuotas)
             );
+        }
+
+        private static String safe(String s) {
+            return s != null ? s : "";
         }
     }
 

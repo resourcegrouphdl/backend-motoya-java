@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Confirmación de registro como garante - Motoya Digital</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0; }
+        .container { max-width:800px; margin:30px auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color:#E63946; padding:24px 30px; text-align:center; }
+        .header img { max-height:50px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto; }
+        .header h1 { color:#ffffff; margin:0; font-size:22px; }
+        .body { padding:30px; }
+        .body p { color:#555555; line-height:1.8; }
+        .footer { background-color:#333333; padding:20px; text-align:center; color:#aaaaaa; font-size:12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <img src="https://www.motoya.com.pe/wp-content/uploads/2023/07/Logo-web.png" alt="Motoya Digital"/>
+        <h1>📋 Confirmación de Registro como Garante</h1>
+    </div>
+
+    <div class="body">
+
+        <p>Estimado/a <strong>[[${fiador}]]</strong>,</p>
+
+        <p>Recibe un cordial saludo de <strong>Motoya Digital</strong>.</p>
+
+        <p>
+            Te informamos que has sido registrado/a como garante en la solicitud de crédito
+            para la adquisición de una moto, presentada por <strong>[[${cliente}]]</strong>.
+        </p>
+
+        <p>
+            Nuestro equipo se encuentra actualmente evaluando la solicitud. En caso esta sea aprobada,
+            uno de nuestros asesores se pondrá en contacto contigo para brindarte mayor información
+            y acompañarte en los siguientes pasos del proceso.
+        </p>
+
+        <p>
+            Te agradecemos por formar parte de este proceso. Si tienes alguna consulta o requieres
+            más información, puedes responder directamente a este correo y con gusto te atenderemos.
+        </p>
+
+        <p>
+            Saludos cordiales,<br/>
+            <strong>Equipo Motoya Digital</strong>
+        </p>
+
+    </div>
+
+    <div class="footer">
+        <p>Este correo ha sido enviado automáticamente por el sistema de Motoya Digital.</p>
+        <p>La información de sus datos personales es tratada conforme a la <strong>Ley N° 29733 - Ley de Protección de Datos Personales del Perú</strong>.</p>
+        <p>© 2026 Motoya Digital. Todos los derechos reservados.</p>
+    </div>
+
+</div>
+</body>
+</html>

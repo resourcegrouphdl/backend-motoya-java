@@ -7,8 +7,10 @@ import com.motoyav2.evaluacion.domain.enums.Decision;
 import com.motoyav2.evaluacion.domain.enums.EstadoSolicitud;
 import com.motoyav2.evaluacion.domain.exception.ExpedienteNotFoundException;
 import com.motoyav2.evaluacion.domain.model.Cliente;
+import com.motoyav2.evaluacion.domain.model.DatosVendedor;
 import com.motoyav2.evaluacion.domain.model.Expediente;
 import com.motoyav2.evaluacion.domain.model.Solicitud;
+import com.motoyav2.evaluacion.domain.model.Vehiculo;
 import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.ObtenerExpedienteUseCase;
 import com.motoyav2.evaluacion.domain.port.in.RegistrarDecisionFinalUseCase;
@@ -86,25 +88,28 @@ public class RegistrarDecisionFinalUseCaseImpl implements RegistrarDecisionFinal
                     Cliente titular = expediente.getTitular();
                     Cliente fiador  = expediente.getFiador();
 
+                    Vehiculo vehiculo = expediente.getVehiculo();
+                    DatosVendedor vendedor = solicitud.getVendedor();
+
                     CertificadoExternoClient.CertificadoRequest request = CertificadoExternoClient.CertificadoRequest.of(
                             solicitud.getCodigoDeSolicitud() != null
                                     ? solicitud.getCodigoDeSolicitud() : solicitud.getNumeroSolicitud(),
-                            titular != null ? titular.getNombreCompleto() : solicitud.getTitularNombreCompleto(),
-                            titular != null ? titular.getDocumentNumber() : solicitud.getTitularDni(),
-                            titular != null ? titular.getTelefono1()      : solicitud.getTitularTelefono(),
-                            titular != null ? titular.getEmail()          : solicitud.getTitularEmail(),
-                            fiador  != null ? fiador.getNombreCompleto()  : null,
-                            fiador  != null ? fiador.getDocumentNumber()  : null,
-                            expediente.getVehiculo() != null
-                                    ? expediente.getVehiculo().getDescripcion() : "",
+                            titular != null ? titular.getNombreCompleto()  : solicitud.getTitularNombreCompleto(),
+                            fiador  != null ? fiador.getNombreCompleto()   : null,
+                            vendedor != null ? vendedor.getTienda()        : "",
+                            vendedor != null ? vendedor.getNombre()        : solicitud.getVendedorNombre(),
+                            vehiculo != null ? vehiculo.getMarca()         : "",
+                            vehiculo != null ? vehiculo.getModelo()        : "",
+                            vehiculo != null ? vehiculo.getAnio()          : "",
+                            vehiculo != null ? vehiculo.getColor()         : "",
                             solicitud.getPrecioCompraMoto() != null
                                     ? solicitud.getPrecioCompraMoto().doubleValue() : 0.0,
                             solicitud.getInicial() != null
                                     ? solicitud.getInicial().doubleValue() : 0.0,
-                            solicitud.getPlazoQuincenas() != null
-                                    ? solicitud.getPlazoQuincenas() : 0,
                             solicitud.getMontoCuota() != null
-                                    ? solicitud.getMontoCuota().doubleValue() : 0.0
+                                    ? solicitud.getMontoCuota().doubleValue() : 0.0,
+                            solicitud.getPlazoQuincenas() != null
+                                    ? solicitud.getPlazoQuincenas() : 0
                     );
 
                     return certificadoExternoClient.generarCertificado(request)
@@ -115,21 +120,32 @@ public class RegistrarDecisionFinalUseCaseImpl implements RegistrarDecisionFinal
                                 certUpdates.put("fechaGeneracionCertificado",  Timestamp.now());
                                 certUpdates.put("updatedAt",                   Timestamp.now());
 
+                                CambiarEstadoCommand certCmd = new CambiarEstadoCommand(
+                                        solicitud.getId(),
+                                        EstadoSolicitud.CERTIFICADO_GENERADO,
+                                        "sistema-automatico",
+                                        "Generación automática de certificado",
+                                        "Certificado generado tras aprobación"
+                                );
+
                                 return solicitudRepository.updateFields(solicitud.getId(), certUpdates)
+                                        .then(cambiarEstadoUseCase.ejecutar(certCmd))
                                         .then(notificationFacade.notificarCreditoAprobado(
                                                 solicitud.getId(),
-                                                titular != null ? titular.getTelefono1()   : solicitud.getTitularTelefono(),
-                                                titular != null ? titular.getEmail()        : solicitud.getTitularEmail(),
+                                                titular != null ? titular.getTelefono1()    : solicitud.getTitularTelefono(),
+                                                titular != null ? titular.getEmail()         : solicitud.getTitularEmail(),
                                                 titular != null ? titular.getNombreCompleto(): solicitud.getTitularNombreCompleto(),
-                                                fiador  != null ? fiador.getTelefono1()    : null,
+                                                fiador  != null ? fiador.getTelefono1()     : null,
+                                                fiador  != null ? fiador.getEmail()          : null,
                                                 fiador  != null ? fiador.getNombreCompleto(): null,
-                                                request.codigoDeSolicitud(),
+                                                request.numeroDeSolicitud(),
                                                 url
                                         ));
                             });
                 })
                 .onErrorResume(ex -> {
-                    log.error("[DECISION] Error en dispararFlujoCertificadoYNotificaciones: {}", ex.getMessage());
+                    log.error("[DECISION] Error en dispararFlujoCertificadoYNotificaciones para solicitud={}: {}",
+                            solicitud.getId(), ex.getMessage(), ex);
                     return Mono.empty();
                 });
     }

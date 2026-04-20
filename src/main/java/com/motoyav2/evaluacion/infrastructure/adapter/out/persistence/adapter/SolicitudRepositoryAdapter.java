@@ -1,5 +1,6 @@
 package com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.adapter;
 
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.motoyav2.evaluacion.domain.model.Solicitud;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toFlux;
@@ -99,6 +102,66 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
     }
 
     @Override
+    public Flux<Solicitud> findByTitularDni(String titularDni, int limit) {
+        return toFlux(db.collection(COL)
+                .whereEqualTo("titularDni", titularDni)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit).get())
+                .mapNotNull(SolicitudMapper::toDomain);
+    }
+
+    @Override
+    public Flux<Solicitud> findByFiadorDni(String fiadorDni, int limit) {
+        return toFlux(db.collection(COL)
+                .whereEqualTo("fiadorDni", fiadorDni)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit).get())
+                .mapNotNull(SolicitudMapper::toDomain);
+    }
+
+    @Override
+    public Mono<Solicitud> findActivaByTitularTelefono(String telefono) {
+        if (telefono == null || telefono.isBlank()) return Mono.empty();
+        String normalized = normalizePhone(telefono);
+        return toFlux(db.collection(COL)
+                        .whereEqualTo("titularTelefono", normalized)
+                        .orderBy("createdAt", Query.Direction.DESCENDING)
+                        .limit(5).get())
+                .mapNotNull(SolicitudMapper::toDomain)
+                .filter(this::esActiva)
+                .next();
+    }
+
+    @Override
+    public Mono<Solicitud> findActivaByFiadorTelefono(String telefono) {
+        if (telefono == null || telefono.isBlank()) return Mono.empty();
+        String normalized = normalizePhone(telefono);
+        return toFlux(db.collection(COL)
+                        .whereEqualTo("fiadorTelefono", normalized)
+                        .orderBy("createdAt", Query.Direction.DESCENDING)
+                        .limit(5).get())
+                .mapNotNull(SolicitudMapper::toDomain)
+                .filter(this::esActiva)
+                .next();
+    }
+
+    @Override
+    public Flux<Solicitud> findAbandonadas(int diasInactividad) {
+        Timestamp cutoff = Timestamp.ofTimeSecondsAndNanos(
+                Instant.now().minusSeconds((long) diasInactividad * 86_400).getEpochSecond(), 0);
+
+        List<String> estadosAbandonables = List.of("pendiente", "en_revision_inicial", "evaluacion_documental");
+
+        return Flux.fromIterable(estadosAbandonables)
+                .flatMap(estado -> toFlux(db.collection(COL)
+                        .whereEqualTo("estado", estado)
+                        .whereLessThan("updatedAt", cutoff)
+                        .limit(50)
+                        .get())
+                        .mapNotNull(SolicitudMapper::toDomain));
+    }
+
+    @Override
     public Mono<String> create(Map<String, Object> fields) {
         return toMono(db.collection(COL).add(fields))
                 .map(ref -> ref.getId());
@@ -107,6 +170,27 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
     @Override
     public Mono<Void> updateFields(String id, Map<String, Object> fields) {
         return toMono(db.collection(COL).document(id).update(fields)).then();
+    }
+
+    @Override
+    public Mono<Void> delete(String id) {
+        return toMono(db.collection(COL).document(id).delete()).then();
+    }
+
+    private boolean esActiva(Solicitud s) {
+        if (s.getEstado() == null) return true;
+        return switch (s.getEstado()) {
+            case CANCELADO, RECHAZADO, ARCHIVADA, ENTREGA_COMPLETADA -> false;
+            default -> true;
+        };
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null) return "";
+        String digits = phone.replaceAll("[^0-9]", "");
+        if (digits.startsWith("51") && digits.length() == 11) digits = digits.substring(2);
+        if (digits.length() == 9) return "+51" + digits;
+        return digits;
     }
 
     private boolean matchesSearch(Solicitud s, String search) {

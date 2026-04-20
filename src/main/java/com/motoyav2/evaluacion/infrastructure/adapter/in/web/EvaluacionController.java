@@ -54,6 +54,9 @@ public class EvaluacionController {
     private final EnviarVerificacionWhatsAppUseCase enviarVerificacionWhatsAppUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ReemplazarFiadorUseCase reemplazarFiadorUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ReemplazarReferenciasUseCase reemplazarReferenciasUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.ActualizarEmailClienteUseCase actualizarEmailClienteUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.AnalizarSentinelUseCase analizarSentinelUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.EliminarSolicitudUseCase eliminarSolicitudUseCase;
     private final Firestore firestore;
 
     // ── GET /expediente/{solicitudId} ──────────────────────────────────────
@@ -375,6 +378,26 @@ public class EvaluacionController {
                         e -> new NotFoundException(e.getMessage()));
     }
 
+    // ── PATCH /clientes/{clienteId}/email ─────────────────────────────────
+    @PatchMapping("/clientes/{clienteId}/email")
+    public Mono<ResponseEntity<ExpedienteCompletoResponse.ValidacionEmailResponse>> actualizarEmail(
+            @PathVariable String clienteId,
+            @RequestBody Map<String, String> body) {
+        String nuevoEmail = body.get("email");
+        if (nuevoEmail == null) {
+            return Mono.error(new BadRequestException("El campo 'email' es requerido"));
+        }
+        return actualizarEmailClienteUseCase.actualizarEmail(clienteId, nuevoEmail.trim())
+                .map(ve -> ResponseEntity.ok(
+                        ExpedienteCompletoResponse.ValidacionEmailResponse.builder()
+                                .valido(ve.valido())
+                                .nivel(ve.nivel())
+                                .detalle(ve.detalle())
+                                .verificadoEn(ve.verificadoEn())
+                                .build()
+                ));
+    }
+
     // ── POST /clientes/{clienteId}/verificar-identidad ───────────────────
     @PostMapping("/clientes/{clienteId}/verificar-identidad")
     public Mono<VerificacionIdentidadResult> verificarIdentidad(
@@ -455,6 +478,17 @@ public class EvaluacionController {
                         e -> new NotFoundException(e.getMessage()));
     }
 
+    // ── POST /clientes/{clienteId}/sentinel/analizar ──────────────────────
+    @PostMapping("/clientes/{clienteId}/sentinel/analizar")
+    public Mono<ResponseEntity<com.motoyav2.evaluacion.application.dto.AnalizarSentinelResult>> analizarSentinel(
+            @PathVariable String clienteId,
+            @Valid @RequestBody AnalizarSentinelRequest body) {
+        return analizarSentinelUseCase.analizar(body.toCommand(clienteId))
+                .map(ResponseEntity::ok)
+                .onErrorMap(RecursoNoEncontradoException.class,
+                        e -> new NotFoundException(e.getMessage()));
+    }
+
     private com.motoyav2.evaluacion.application.command.IngresarSolicitudCommand.ClienteData toClienteData(
             IngresarSolicitudRequest.ClienteRequest r) {
         return new com.motoyav2.evaluacion.application.command.IngresarSolicitudCommand.ClienteData(
@@ -485,5 +519,14 @@ public class EvaluacionController {
                     h.getFechaCambio(), h.getUsuarioId(), h.getUsuarioNombre(), h.getMotivo()
             );
         }
+    }
+
+    // ── DELETE /{solicitudId} ──────────────────────────────────────────────────
+    @DeleteMapping("/{solicitudId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> eliminarSolicitud(@PathVariable String solicitudId) {
+        return eliminarSolicitudUseCase.eliminar(solicitudId)
+                .onErrorMap(com.motoyav2.shared.exception.NotFoundException.class,
+                        e -> new NotFoundException(e.getMessage()));
     }
 }

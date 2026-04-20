@@ -35,27 +35,28 @@ public class EmailNotificationAdapter implements NotificationSenderPort {
     @Override
     public Mono<String> send(Notification notification) {
         return Mono.fromCallable(() -> {
+            log.info("[EMAIL] Intentando enviar | plantilla={} to={} from={}",
+                    notification.template(), notification.recipient(), fromAddress);
+
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
-            helper.setFrom(fromAddress, "Motoya");
+            helper.setFrom(fromAddress, "Motoya Digital");
             helper.setTo(notification.recipient());
             helper.setSubject(notification.template().getEmailSubject());
-            helper.setText(notification.renderedContent(), true); // true = isHtml
+            helper.setText(notification.renderedContent(), true);
 
+            log.info("[EMAIL] Conectando al servidor SMTP y enviando...");
             mailSender.send(mimeMessage);
 
-            // Capturar messageId del servidor SMTP para trazabilidad
-            String messageId = mimeMessage.getMessageID() != null ? mimeMessage.getMessageID() : "";
+            String messageId = mimeMessage.getMessageID() != null ? mimeMessage.getMessageID() : "sin-id";
             log.info("[EMAIL] ✓ Enviado | plantilla={} to={} messageId={}",
                     notification.template(), notification.recipient(), messageId);
             return messageId;
         })
         .subscribeOn(Schedulers.boundedElastic())
-        .onErrorMap(ex -> {
-            log.error("[EMAIL] ✗ Error enviando a={} error={}", notification.recipient(), ex.getMessage());
-            return ex;
-        });
+        .doOnError(ex -> log.error("[EMAIL] ✗ Falló | to={} plantilla={} error={}",
+                notification.recipient(), notification.template(), ex.getMessage(), ex));
     }
 
     @Override

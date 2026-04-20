@@ -33,6 +33,7 @@ public class UsuarioRepositoryAdapter implements UsuarioRepository {
                             .id(doc.getId())
                             .nombre(nombreCompleto.trim())
                             .email(str(data, "email"))
+                            .telefono(str(data, "phone"))
                             .rol(str(data, "userType"))
                             .build();
                 });

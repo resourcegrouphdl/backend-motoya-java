@@ -24,9 +24,12 @@ public final class LoginResponseMapper {
                 result.user().firstName(),
                 result.user().lastName(),
                 result.user().email(),
+                result.user().phone(),
                 result.user().userType(),
+                result.user().userCategory(),
                 result.user().firstLogin(),
-                storeDtos
+                storeDtos,
+                result.user().modulos() != null ? result.user().modulos() : List.of()
         );
     }
 

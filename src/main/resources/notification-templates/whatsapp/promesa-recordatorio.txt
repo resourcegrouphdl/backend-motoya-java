@@ -1,0 +1,14 @@
+Hola [(${cliente})], te recordamos que *hoy* es el día que acordaste realizar tu pago de *[(${monto})]* a Motoya Digital.
+
+Para cumplir con tu compromiso, realiza tu depósito a cualquiera de nuestras cuentas:
+
+🏦 *BCP:* 191-22165738-0-53
+🏦 *Interbank:* 200-3003349-884
+🏦 *Scotiabank:* 071-7041758
+📱 *Yape/Plin:* 952 844 555
+
+Envíanos la foto del comprobante por este chat y un asesor confirmará tu pago.
+
+Si necesitas coordinar, contáctanos: *+51 912 301 507*
+
+_Motoya Digital - Confianza en movimiento_

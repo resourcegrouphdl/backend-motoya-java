@@ -10,7 +10,7 @@ import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendEmailReq
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendMediaRequest;
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendNotificationRequest;
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendNotificationResponse;
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppNotificationAdapter;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaWhatsAppNotificationAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,12 +34,12 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/notifications")
-@Tag(name = "Notificaciones", description = "Envío de notificaciones por WhatsApp (Meta) y Email")
+@Tag(name = "Notificaciones", description = "Envío de notificaciones por WhatsApp (Factiliza) y Email")
 public class NotificationController {
 
     private final SendNotificationUseCase sendNotificationUseCase;
     private final PublishBusinessEventUseCase publishBusinessEventUseCase;
-    private final MetaWhatsAppNotificationAdapter metaAdapter;
+    private final FactilizaWhatsAppNotificationAdapter factilizaAdapter;
     private final StoragePort storagePort;
 
     /**
@@ -144,10 +144,10 @@ public class NotificationController {
                 .doOnSuccess(r -> log.info("[NOTIF-API] ✓ Email encolado | to={}", req.to()));
     }
 
-    // ─── WhatsApp Media (Meta API) ────────────────────────────────────────────
+    // ─── WhatsApp Media (Factiliza API) ──────────────────────────────────────
 
     /**
-     * Envía un archivo (imagen, documento, video, audio) por WhatsApp vía Meta API.
+     * Envía un archivo (imagen, documento, video, audio) por WhatsApp vía Factiliza.
      * El archivo debe estar previamente subido en Firebase Storage.
      * Se obtiene la URL de descarga automáticamente.
      */
@@ -155,7 +155,7 @@ public class NotificationController {
     @ResponseStatus(HttpStatus.OK)
     @Operation(
             summary = "Enviar archivo por WhatsApp",
-            description = "Obtiene la URL de Firebase Storage y envía el archivo por WhatsApp usando Meta API. " +
+            description = "Obtiene la URL de Firebase Storage y envía el archivo por WhatsApp usando Factiliza. " +
                     "mediaType válidos: image, document, video, audio")
     public Mono<SendNotificationResponse> sendMedia(
             @Valid @RequestBody SendMediaRequest req) {
@@ -164,7 +164,7 @@ public class NotificationController {
                 req.recipient(), req.storagePath(), req.mediaType());
 
         return storagePort.getDownloadUrl(req.storagePath())
-                .flatMap(url -> metaAdapter.sendMedia(
+                .flatMap(url -> factilizaAdapter.sendMedia(
                         req.recipient(),
                         url,
                         req.mediaType(),
