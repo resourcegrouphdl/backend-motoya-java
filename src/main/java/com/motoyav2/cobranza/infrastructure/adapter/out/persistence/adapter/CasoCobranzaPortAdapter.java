@@ -28,6 +28,7 @@ public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
     public Flux<CasoCobranzaDocument> query(ListarCasosQuery q) {
         Flux<CasoCobranzaDocument> base;
 
+        boolean esAdmin     = "ADMIN".equalsIgnoreCase(q.rol());
         boolean tieneAgente = q.agenteId() != null && !q.agenteId().isBlank();
         boolean tieneEstado = q.estado()   != null && !q.estado().isBlank();
         boolean tieneStore  = q.storeId()  != null && !q.storeId().isBlank();
@@ -36,12 +37,14 @@ public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
             base = repository.findByAgenteAsignadoIdAndEstadoCaso(q.agenteId(), q.estado());
         } else if (tieneAgente) {
             base = repository.findByAgenteAsignadoId(q.agenteId());
+        } else if (esAdmin) {
+            // ADMIN ve toda la cartera sin importar su storeId
+            base = repository.findAll();
         } else if (tieneStore && tieneEstado) {
             base = repository.findByStoreIdAndEstadoCaso(q.storeId(), q.estado());
         } else if (tieneStore) {
             base = repository.findByStoreId(q.storeId());
         } else {
-            // ADMIN sin filtro de tienda — devuelve todos
             base = repository.findAll();
         }
 

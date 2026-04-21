@@ -9,6 +9,7 @@ import com.motoyav2.cobranza.application.port.out.EventoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.PromesaPort;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.PromesaDocument;
+import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.ConflictException;
 import com.motoyav2.shared.exception.NotFoundException;
@@ -29,6 +30,7 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
     private final CasoCobranzaPort casoPort;
     private final PromesaPort promesaPort;
     private final EventoCobranzaPort eventoPort;
+    private final NotificationFacade notificationFacade;
 
     // -------------------------------------------------------------------------
     // RegistrarPromesaUseCase
@@ -75,8 +77,21 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
                                     .creadoEn(new Date())
                                     .build();
 
+                            Mono<Void> notifWa = caso.getClienteTelefono() != null
+                                    ? notificationFacade.notificarRecordatorioPromesa(
+                                            command.contratoId(),
+                                            caso.getClienteTelefono(),
+                                            caso.getClienteNombre(),
+                                            String.format("S/ %.2f", command.monto()))
+                                      .onErrorResume(e -> {
+                                          log.warn("[PROMESA] Error WA promesa {}: {}", command.contratoId(), e.getMessage());
+                                          return Mono.empty();
+                                      })
+                                    : Mono.empty();
+
                             return casoPort.save(caso)
                                     .then(eventoPort.append(command.contratoId(), evento))
+                                    .then(notifWa)
                                     .thenReturn(promesa.getId());
                         })
                 );

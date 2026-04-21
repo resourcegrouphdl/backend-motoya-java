@@ -7,14 +7,16 @@ package com.motoyav2.cobranza.application.port.in.query;
  * @param estado    Opcional — filtra por {@code estadoCaso} (ej. EN_SEGUIMIENTO).
  * @param prioridad Opcional — ALTA | MEDIA | BAJA (calculado en memoria).
  * @param agenteId  Opcional — solo SUPERVISOR/ADMIN pueden filtrar por agente.
+ * @param rol       Rol del usuario autenticado — ADMIN omite filtro de tienda.
  * @param page      Página base-0 (default 0).
- * @param size      Tamaño de página (default 20, máx 100).
+ * @param size      Tamaño de página (default 20, máx 500).
  */
 public record ListarCasosQuery(
         String storeId,
         String estado,
         String prioridad,
         String agenteId,
+        String rol,
         int page,
         int size
 ) {
