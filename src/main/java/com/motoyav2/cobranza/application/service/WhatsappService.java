@@ -3,6 +3,7 @@ package com.motoyav2.cobranza.application.service;
 import com.motoyav2.cobranza.application.port.in.ActualizarEstadoMensajeUseCase;
 import com.motoyav2.cobranza.application.port.in.EnviarMensajeWhatsappUseCase;
 import com.motoyav2.cobranza.application.port.in.command.EnviarMensajeWhatsappCommand;
+import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.EventoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.MensajeWhatsappPort;
 import com.motoyav2.cobranza.application.port.out.PlantillaWhatsappPort;
@@ -32,6 +33,7 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
     private final PlantillaWhatsappPort plantillaPort;
     private final MensajeWhatsappPort mensajePort;
     private final EventoCobranzaPort eventoPort;
+    private final CasoCobranzaPort casoPort;
 
     // TODO: inyectar TwilioService cuando esté implementado
     // private final TwilioService twilioService;
@@ -130,6 +132,45 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
 
     public Flux<MensajeWhatsappDocument> listarMensajes(String contratoId) {
         return mensajePort.findByContratoId(contratoId);
+    }
+
+    /**
+     * Busca el contratoId cuyo clienteTelefono coincide con el número entrante.
+     * Normaliza el número a +51XXXXXXXXX para comparar.
+     */
+    public Mono<String> encontrarContratoIdPorTelefono(String telefono) {
+        String normalizado = normalizarTelefono(telefono);
+        return casoPort.findAll()
+                .filter(c -> c.getClienteTelefono() != null
+                        && normalizarTelefono(c.getClienteTelefono()).equals(normalizado))
+                .next()
+                .map(c -> c.getContratoId())
+                .switchIfEmpty(Mono.error(new NotFoundException("Contrato no encontrado para teléfono: " + telefono)));
+    }
+
+    /** Almacena un mensaje de texto entrante del cliente como INBOUND. */
+    public Mono<Void> registrarMensajeEntrante(String contratoId, String telefono,
+                                                String wamid, String texto, Date recibidoEn) {
+        MensajeWhatsappDocument doc = MensajeWhatsappDocument.builder()
+                .id(UUID.randomUUID().toString())
+                .contratoId(contratoId)
+                .telefono(telefono)
+                .direction("INBOUND")
+                .wamid(wamid)
+                .textoRecibido(texto)
+                .estado("RECIBIDO")
+                .recibidoEn(recibidoEn)
+                .automatico(false)
+                .build();
+        return mensajePort.save(doc).then();
+    }
+
+    private String normalizarTelefono(String tel) {
+        if (tel == null) return "";
+        String digits = tel.replaceAll("\\D", "");
+        if (digits.startsWith("51") && digits.length() == 11) return "+" + digits;
+        if (digits.length() == 9) return "+51" + digits;
+        return "+" + digits;
     }
 
     // -------------------------------------------------------------------------

@@ -17,4 +17,9 @@ public class MetricasPortAdapter implements MetricasPort {
     public Mono<MetricasDocument> findResumenActual() {
         return repository.findResumenActual();
     }
+
+    @Override
+    public Mono<MetricasDocument> save(MetricasDocument doc) {
+        return repository.save(doc);
+    }
 }

@@ -85,6 +85,10 @@ public class Solicitud {
     String semaforoReferencias;   // verde | amarillo | rojo
     java.util.Map<String, Object> alertaDuplicado;
 
+    // WhatsApp bienvenida
+    Boolean titularBienvenidaEnviada;
+    Boolean fiadorBienvenidaEnviada;
+
     Timestamp createdAt;
     Timestamp updatedAt;
 

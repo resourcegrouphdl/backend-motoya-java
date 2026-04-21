@@ -28,7 +28,7 @@ public class CorsConfig {
         "https://pwa-motoya-notifications.web.app"
     ));
 
-    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
 
     // 🔑 API pública → SIEMPRE false

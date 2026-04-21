@@ -20,6 +20,6 @@ public record ListarCasosQuery(
 ) {
     public ListarCasosQuery {
         if (page < 0) page = 0;
-        if (size <= 0 || size > 100) size = 20;
+        if (size <= 0 || size > 500) size = 20;
     }
 }

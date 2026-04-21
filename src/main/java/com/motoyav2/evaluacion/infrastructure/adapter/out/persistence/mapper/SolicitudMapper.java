@@ -80,6 +80,8 @@ public final class SolicitudMapper {
                 .observacionesGenerales(str(data, "observacionesGenerales"))
                 .semaforoReferencias(str(data, "semaforoReferencias"))
                 .alertaDuplicado((Map<String, Object>) data.get("alertaDuplicado"))
+                .titularBienvenidaEnviada(nestedBool(data, "entrevista", "titularBienvenidaEnviada"))
+                .fiadorBienvenidaEnviada(nestedBool(data, "entrevista", "fiadorBienvenidaEnviada"))
                 .createdAt(timestamp(data, "createdAt"))
                 .updatedAt(timestamp(data, "updatedAt"))
                 .build();
@@ -147,7 +149,12 @@ public final class SolicitudMapper {
         try { return new BigDecimal(v.toString()); } catch (Exception e) { return null; }
     }
 
-    @SuppressWarnings("unchecked")
+    private static Boolean nestedBool(Map<String, Object> data, String parent, String key) {
+        Object raw = data.get(parent);
+        if (!(raw instanceof Map)) return null;
+        return bool((Map<String, Object>) raw, key);
+    }
+
     private static List<String> listStr(Map<String, Object> m, String key) {
         Object v = m.get(key);
         if (v instanceof List<?> list) {

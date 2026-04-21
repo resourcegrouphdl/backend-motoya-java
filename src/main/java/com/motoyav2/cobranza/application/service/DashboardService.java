@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 @Slf4j
@@ -20,6 +22,9 @@ public class DashboardService {
 
     private final MetricasPort metricasPort;
     private final AlertaCobranzaPort alertaPort;
+    private final RecalcularMetricasService recalcularService;
+
+    private static final int STALE_MINUTES = 30;
 
     // -------------------------------------------------------------------------
     // Dashboard KPIs
@@ -27,8 +32,18 @@ public class DashboardService {
 
     public Mono<DashboardDto> getDashboard(String storeId, String userId, String rol) {
         return metricasPort.findResumenActual()
+                .flatMap(doc -> isStale(doc)
+                        ? recalcularService.recalcular()
+                        : Mono.just(doc))
+                .switchIfEmpty(recalcularService.recalcular())
                 .map(doc -> buildDashboard(doc, userId, rol))
-                .switchIfEmpty(Mono.just(emptyDashboard()));
+                .onErrorReturn(emptyDashboard());
+    }
+
+    private boolean isStale(MetricasDocument doc) {
+        if (doc.getUltimaActualizacion() == null) return true;
+        return doc.getUltimaActualizacion().toInstant()
+                .isBefore(Instant.now().minus(STALE_MINUTES, ChronoUnit.MINUTES));
     }
 
     private DashboardDto buildDashboard(MetricasDocument doc, String userId, String rol) {

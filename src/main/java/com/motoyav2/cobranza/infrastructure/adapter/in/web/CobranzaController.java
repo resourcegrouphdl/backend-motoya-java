@@ -42,6 +42,7 @@ public class CobranzaController {
 
     private final PromesaGlobalService promesaGlobalService;
     private final DashboardService dashboardService;
+    private final RecalcularMetricasService recalcularMetricasService;
     private final ComprobantesService comprobantesService;
     private final EventoService eventoService;
     private final MovimientosService movimientosService;
@@ -51,6 +52,7 @@ public class CobranzaController {
     private final IniciarCasoUseCase iniciarCasoUseCase;
     private final ImportarCalendarioService importarCalendarioService;
     private final RegistrarPagoManualUseCase registrarPagoManualUseCase;
+    private final ProcesarVoucherWhatsappService procesarVoucherWhatsappService;
 
     // =========================================================================
     // DASHBOARD
@@ -63,6 +65,17 @@ public class CobranzaController {
         String rol     = (String) exchange.getAttributes().get("userRol");
         log.debug("GET /dashboard storeId={} userId={} rol={}", storeId, userId, rol);
         return dashboardService.getDashboard(storeId, userId, rol);
+    }
+
+    @PostMapping("/api/v1/cobranzas/dashboard/recalcular")
+    public Mono<Map<String, Object>> recalcularDashboard() {
+        return recalcularMetricasService.recalcular()
+                .map(doc -> Map.<String, Object>of(
+                        "status", "OK",
+                        "casosActivos", doc.getCasosActivos() != null ? doc.getCasosActivos() : 0,
+                        "ultimaActualizacion", doc.getUltimaActualizacion() != null
+                                ? doc.getUltimaActualizacion().toInstant().toString() : ""
+                ));
     }
 
     // =========================================================================
@@ -753,9 +766,9 @@ public class CobranzaController {
 
     /**
      * POST /webhooks/whatsapp
-     * Meta Cloud API envía status updates como JSON.
-     * Payload ejemplo:
-     * { "entry": [{ "changes": [{ "value": { "statuses": [{ "id": "wamid.xxx", "status": "delivered" }] } }] }] }
+     * Maneja tanto status updates (delivery) como mensajes entrantes del cliente.
+     * Payload Meta/Factiliza:
+     * { "entry": [{ "changes": [{ "value": { "statuses": [...], "messages": [...] } }] }] }
      */
     @PostMapping(value = "/webhooks/whatsapp",
                  consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -767,39 +780,80 @@ public class CobranzaController {
         try {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> entries = (List<Map<String, Object>>) payload.get("entry");
-            if (entries == null || entries.isEmpty()) {
-                return Mono.just(Map.of("status", "OK"));
-            }
+            if (entries == null || entries.isEmpty()) return Mono.just(Map.of("status", "OK"));
+
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> changes = (List<Map<String, Object>>) entries.get(0).get("changes");
-            if (changes == null || changes.isEmpty()) {
-                return Mono.just(Map.of("status", "OK"));
-            }
+            if (changes == null || changes.isEmpty()) return Mono.just(Map.of("status", "OK"));
+
             @SuppressWarnings("unchecked")
             Map<String, Object> value = (Map<String, Object>) changes.get(0).get("value");
-            if (value == null) {
-                return Mono.just(Map.of("status", "OK"));
-            }
+            if (value == null) return Mono.just(Map.of("status", "OK"));
+
+            // ── Status updates (entrega, lectura) ─────────────────────────────
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> statuses = (List<Map<String, Object>>) value.get("statuses");
-            if (statuses == null || statuses.isEmpty()) {
-                return Mono.just(Map.of("status", "OK"));
+            if (statuses != null && !statuses.isEmpty()) {
+                Map<String, Object> statusEntry = statuses.get(0);
+                String wamid  = (String) statusEntry.get("id");
+                String status = (String) statusEntry.get("status");
+                String estado = mapMetaStatus(status);
+                log.debug("WA status wamid={} -> {}", wamid, estado);
+                return actualizarEstadoMensajeUseCase.ejecutar(wamid, estado, new Date())
+                        .thenReturn(Map.<String, Object>of("status", "OK"));
             }
 
-            Map<String, Object> statusEntry = statuses.get(0);
-            String wamid  = (String) statusEntry.get("id");
-            String status = (String) statusEntry.get("status");
-            String estado = mapMetaStatus(status);
-            Date timestamp = new Date();
+            // ── Mensajes entrantes del cliente ────────────────────────────────
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> messages = (List<Map<String, Object>>) value.get("messages");
+            if (messages != null && !messages.isEmpty()) {
+                procesarMensajesEntrantes(messages, value).subscribe(
+                        v -> log.debug("Mensajes entrantes procesados"),
+                        e -> log.warn("Error procesando mensajes entrantes: {}", e.getMessage())
+                );
+            }
 
-            log.debug("Meta WA webhook wamid={} status={} -> estado={}", wamid, status, estado);
-
-            return actualizarEstadoMensajeUseCase.ejecutar(wamid, estado, timestamp)
-                    .thenReturn(Map.<String, Object>of("status", "OK"));
         } catch (Exception e) {
             log.warn("Error procesando Meta webhook: {}", e.getMessage());
-            return Mono.just(Map.of("status", "OK"));
         }
+        return Mono.just(Map.of("status", "OK"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Mono<Void> procesarMensajesEntrantes(
+            List<Map<String, Object>> messages,
+            Map<String, Object> value) {
+
+        Map<String, Object> msg = messages.get(0);
+        String wamid     = (String) msg.get("id");
+        String fromPhone = (String) msg.get("from");
+        String tipo      = (String) msg.getOrDefault("type", "text");
+        long   ts        = Long.parseLong(msg.getOrDefault("timestamp", "0").toString());
+
+        // Buscar el caso por teléfono (el número que escribe es el titular/fiador)
+        return whatsappService.encontrarContratoIdPorTelefono(fromPhone)
+                .flatMap(contratoId -> {
+                    boolean esMedia = "image".equals(tipo) || "document".equals(tipo) || "audio".equals(tipo);
+                    if (esMedia) {
+                        Map<String, Object> mediaMap = (Map<String, Object>) msg.get(tipo);
+                        String mediaId   = mediaMap != null ? (String) mediaMap.get("id") : null;
+                        String mimeType  = mediaMap != null ? (String) mediaMap.get("mime_type") : null;
+                        String mediaUrl  = "factiliza://media/" + mediaId; // URL lógica; WhatsappService descarga
+                        log.info("[WEBHOOK-WA] Media entrante contratoId={} tipo={} mediaId={}", contratoId, tipo, mediaId);
+                        return procesarVoucherWhatsappService
+                                .procesar(contratoId, null, null, fromPhone, mediaUrl, mimeType);
+                    } else {
+                        String texto = msg.containsKey("text")
+                                ? (String) ((Map<String, Object>) msg.get("text")).get("body")
+                                : "";
+                        log.info("[WEBHOOK-WA] Texto entrante contratoId={} from={}", contratoId, fromPhone);
+                        return whatsappService.registrarMensajeEntrante(contratoId, fromPhone, wamid, texto, new Date(ts * 1000));
+                    }
+                })
+                .onErrorResume(e -> {
+                    log.warn("[WEBHOOK-WA] No se pudo asociar teléfono {} a un contrato: {}", fromPhone, e.getMessage());
+                    return Mono.empty();
+                });
     }
 
     /** GET /webhooks/whatsapp — verificación del webhook Meta (challenge) */

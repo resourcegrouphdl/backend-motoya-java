@@ -11,6 +11,7 @@ import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.GenerarCertificadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.ObtenerExpedienteUseCase;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
+import com.motoyav2.evaluacion.domain.port.out.TiendaNombrePort;
 import com.motoyav2.evaluacion.infrastructure.adapter.out.external.CertificadoExternoClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
     private final ObtenerExpedienteUseCase obtenerExpedienteUseCase;
     private final CertificadoExternoClient certificadoExternoClient;
     private final CambiarEstadoUseCase cambiarEstadoUseCase;
+    private final TiendaNombrePort tiendaNombrePort;
 
     @Override
     public Mono<String> ejecutar(String solicitudIdOrNumero) {
@@ -48,12 +50,14 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
 
                     // No existe → generar on-demand
                     log.info("[CERT] Generando certificado on-demand para solicitud {}", solicitudIdOrNumero);
-                    return obtenerExpedienteUseCase.ejecutar(solicitud.getId())
+                    DatosVendedor vend = solicitud.getVendedor();
+                    String tiendaId = vend != null ? vend.getTienda() : "";
+                    return tiendaNombrePort.resolverNombre(tiendaId != null ? tiendaId : "")
+                            .flatMap(nombreTienda -> obtenerExpedienteUseCase.ejecutar(solicitud.getId())
                             .flatMap(expediente -> {
                                 Cliente titular      = expediente.getTitular();
                                 Cliente fiador       = expediente.getFiador();
                                 Vehiculo vehiculo    = expediente.getVehiculo();
-                                DatosVendedor vend   = solicitud.getVendedor();
 
                                 CertificadoExternoClient.CertificadoRequest request =
                                         CertificadoExternoClient.CertificadoRequest.of(
@@ -62,7 +66,7 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
                                                         : solicitud.getNumeroSolicitud(),
                                                 titular != null ? titular.getNombreCompleto()  : solicitud.getTitularNombreCompleto(),
                                                 fiador  != null ? fiador.getNombreCompleto()   : null,
-                                                vend    != null ? vend.getTienda()             : "",
+                                                nombreTienda,
                                                 vend    != null ? vend.getNombre()             : solicitud.getVendedorNombre(),
                                                 vehiculo != null ? vehiculo.getMarca()         : "",
                                                 vehiculo != null ? vehiculo.getModelo()        : "",
@@ -101,7 +105,7 @@ public class GenerarCertificadoUseCaseImpl implements GenerarCertificadoUseCase 
                                                     .then(transicion)
                                                     .thenReturn(url);
                                         });
-                            });
+                            }));
                 });
     }
 }

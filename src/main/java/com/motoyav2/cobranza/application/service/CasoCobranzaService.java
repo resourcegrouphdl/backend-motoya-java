@@ -142,7 +142,7 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
             java.time.LocalDate fechaLocal = fecha.toInstant()
                     .atZone(java.time.ZoneId.of("America/Lima"))
                     .toLocalDate();
-            return Math.max(0, (int) java.time.temporal.ChronoUnit.DAYS.between(fechaLocal, java.time.LocalDate.now()));
+            return Math.max(0, (int) java.time.temporal.ChronoUnit.DAYS.between(fechaLocal, java.time.LocalDate.now(java.time.ZoneId.of("America/Lima"))));
         } catch (Exception e) {
             return 0;
         }
