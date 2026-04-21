@@ -63,6 +63,7 @@ public class ListarSolicitudesUseCaseImpl implements ListarSolicitudesUseCase {
                             .vendedorNombre(solicitud.getVendedorNombre())
                             .vendedorTienda(solicitud.getVendedor() != null ? solicitud.getVendedor().getTienda() : null)
                             .certificadoGenerado(solicitud.getCertificadoGenerado())
+                            .urlCertificado(solicitud.getUrlCertificado())
                             .createdAt(solicitud.getCreatedAt())
                             .updatedAt(solicitud.getUpdatedAt())
                             .build();

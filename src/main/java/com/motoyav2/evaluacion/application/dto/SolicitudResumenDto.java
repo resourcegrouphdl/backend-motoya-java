@@ -23,6 +23,7 @@ public class SolicitudResumenDto {
     String vendedorNombre;
     String vendedorTienda;
     Boolean certificadoGenerado;
+    String urlCertificado;
     Timestamp createdAt;
     Timestamp updatedAt;
 }
