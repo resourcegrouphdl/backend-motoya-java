@@ -55,6 +55,7 @@ public class EvaluacionController {
     private final com.motoyav2.evaluacion.domain.port.in.ReemplazarFiadorUseCase reemplazarFiadorUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ReemplazarReferenciasUseCase reemplazarReferenciasUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ActualizarEmailClienteUseCase actualizarEmailClienteUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.ActualizarDocumentoClienteUseCase actualizarDocumentoClienteUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.AnalizarSentinelUseCase analizarSentinelUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.EliminarSolicitudUseCase eliminarSolicitudUseCase;
     private final Firestore firestore;
@@ -396,6 +397,21 @@ public class EvaluacionController {
                                 .verificadoEn(ve.verificadoEn())
                                 .build()
                 ));
+    }
+
+    // ── PATCH /clientes/{clienteId}/documento ─────────────────────────────
+    @PatchMapping("/clientes/{clienteId}/documento")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> actualizarDocumento(
+            @PathVariable String clienteId,
+            @RequestBody Map<String, String> body) {
+        String documentType   = body.get("documentType");
+        String documentNumber = body.get("documentNumber");
+        if (documentType == null || documentNumber == null) {
+            return Mono.error(new BadRequestException("Los campos 'documentType' y 'documentNumber' son requeridos"));
+        }
+        return actualizarDocumentoClienteUseCase.actualizarDocumento(clienteId, documentType, documentNumber)
+                .onErrorMap(RecursoNoEncontradoException.class, e -> new NotFoundException(e.getMessage()));
     }
 
     // ── POST /clientes/{clienteId}/verificar-identidad ───────────────────
