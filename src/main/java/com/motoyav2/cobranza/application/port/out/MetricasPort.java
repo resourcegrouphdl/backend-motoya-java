@@ -6,4 +6,6 @@ import reactor.core.publisher.Mono;
 public interface MetricasPort {
 
     Mono<MetricasDocument> findResumenActual();
+
+    Mono<MetricasDocument> save(MetricasDocument doc);
 }

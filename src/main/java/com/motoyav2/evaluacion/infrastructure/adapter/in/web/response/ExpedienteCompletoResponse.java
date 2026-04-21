@@ -63,6 +63,8 @@ public class ExpedienteCompletoResponse {
         String observacionesGenerales;
         String semaforoReferencias;
         Map<String, Object> alertaDuplicado;
+        Boolean titularBienvenidaEnviada;
+        Boolean fiadorBienvenidaEnviada;
         Timestamp createdAt;
         Timestamp updatedAt;
     }
@@ -285,6 +287,8 @@ public class ExpedienteCompletoResponse {
                 .observacionesGenerales(s.getObservacionesGenerales())
                 .semaforoReferencias(s.getSemaforoReferencias())
                 .alertaDuplicado(s.getAlertaDuplicado())
+                .titularBienvenidaEnviada(s.getTitularBienvenidaEnviada())
+                .fiadorBienvenidaEnviada(s.getFiadorBienvenidaEnviada())
                 .createdAt(s.getCreatedAt())
                 .updatedAt(s.getUpdatedAt())
                 .build();

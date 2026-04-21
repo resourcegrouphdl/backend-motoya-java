@@ -15,6 +15,7 @@ import com.motoyav2.evaluacion.domain.port.in.CambiarEstadoUseCase;
 import com.motoyav2.evaluacion.domain.port.in.ObtenerExpedienteUseCase;
 import com.motoyav2.evaluacion.domain.port.in.RegistrarDecisionFinalUseCase;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
+import com.motoyav2.evaluacion.domain.port.out.TiendaNombrePort;
 import com.motoyav2.evaluacion.domain.model.OpcionFinanciamiento;
 import com.motoyav2.evaluacion.domain.model.ResultadoCalculoFinanciamiento;
 import com.motoyav2.evaluacion.domain.service.CalculadoraFinanciamientoService;
@@ -40,6 +41,7 @@ public class RegistrarDecisionFinalUseCaseImpl implements RegistrarDecisionFinal
     private final ObtenerExpedienteUseCase obtenerExpedienteUseCase;
     private final CertificadoExternoClient certificadoExternoClient;
     private final NotificationFacade notificationFacade;
+    private final TiendaNombrePort tiendaNombrePort;
 
     @Override
     public Mono<Solicitud> ejecutar(DecisionFinalCommand command) {
@@ -91,12 +93,22 @@ public class RegistrarDecisionFinalUseCaseImpl implements RegistrarDecisionFinal
                     Vehiculo vehiculo = expediente.getVehiculo();
                     DatosVendedor vendedor = solicitud.getVendedor();
 
+                    String tiendaId = vendedor != null ? vendedor.getTienda() : null;
+                    return tiendaNombrePort.resolverNombre(tiendaId != null ? tiendaId : "")
+                            .flatMap(nombreTienda -> buildYEnviarCertificado(solicitud, titular, fiador, vehiculo, vendedor, nombreTienda));
+                });
+    }
+
+    private Mono<Void> buildYEnviarCertificado(
+            Solicitud solicitud, Cliente titular, Cliente fiador,
+            Vehiculo vehiculo, DatosVendedor vendedor, String nombreTienda) {
+
                     CertificadoExternoClient.CertificadoRequest request = CertificadoExternoClient.CertificadoRequest.of(
                             solicitud.getCodigoDeSolicitud() != null
                                     ? solicitud.getCodigoDeSolicitud() : solicitud.getNumeroSolicitud(),
                             titular != null ? titular.getNombreCompleto()  : solicitud.getTitularNombreCompleto(),
                             fiador  != null ? fiador.getNombreCompleto()   : null,
-                            vendedor != null ? vendedor.getTienda()        : "",
+                            nombreTienda,
                             vendedor != null ? vendedor.getNombre()        : solicitud.getVendedorNombre(),
                             vehiculo != null ? vehiculo.getMarca()         : "",
                             vehiculo != null ? vehiculo.getModelo()        : "",
@@ -112,39 +124,38 @@ public class RegistrarDecisionFinalUseCaseImpl implements RegistrarDecisionFinal
                                     ? solicitud.getPlazoQuincenas() : 0
                     );
 
-                    return certificadoExternoClient.generarCertificado(request)
-                            .flatMap(url -> {
-                                Map<String, Object> certUpdates = new HashMap<>();
-                                certUpdates.put("urlCertificado",              url);
-                                certUpdates.put("certificadoGenerado",         true);
-                                certUpdates.put("fechaGeneracionCertificado",  Timestamp.now());
-                                certUpdates.put("updatedAt",                   Timestamp.now());
+        return certificadoExternoClient.generarCertificado(request)
+                .flatMap(url -> {
+                    Map<String, Object> certUpdates = new HashMap<>();
+                    certUpdates.put("urlCertificado",             url);
+                    certUpdates.put("certificadoGenerado",        true);
+                    certUpdates.put("fechaGeneracionCertificado", Timestamp.now());
+                    certUpdates.put("updatedAt",                  Timestamp.now());
 
-                                CambiarEstadoCommand certCmd = new CambiarEstadoCommand(
-                                        solicitud.getId(),
-                                        EstadoSolicitud.CERTIFICADO_GENERADO,
-                                        "sistema-automatico",
-                                        "Generación automática de certificado",
-                                        "Certificado generado tras aprobación"
-                                );
+                    CambiarEstadoCommand certCmd = new CambiarEstadoCommand(
+                            solicitud.getId(),
+                            EstadoSolicitud.CERTIFICADO_GENERADO,
+                            "sistema-automatico",
+                            "Generación automática de certificado",
+                            "Certificado generado tras aprobación"
+                    );
 
-                                return solicitudRepository.updateFields(solicitud.getId(), certUpdates)
-                                        .then(cambiarEstadoUseCase.ejecutar(certCmd))
-                                        .then(notificationFacade.notificarCreditoAprobado(
-                                                solicitud.getId(),
-                                                titular != null ? titular.getTelefono1()    : solicitud.getTitularTelefono(),
-                                                titular != null ? titular.getEmail()         : solicitud.getTitularEmail(),
-                                                titular != null ? titular.getNombreCompleto(): solicitud.getTitularNombreCompleto(),
-                                                fiador  != null ? fiador.getTelefono1()     : null,
-                                                fiador  != null ? fiador.getEmail()          : null,
-                                                fiador  != null ? fiador.getNombreCompleto(): null,
-                                                request.numeroDeSolicitud(),
-                                                url
-                                        ));
-                            });
+                    return solicitudRepository.updateFields(solicitud.getId(), certUpdates)
+                            .then(cambiarEstadoUseCase.ejecutar(certCmd))
+                            .then(notificationFacade.notificarCreditoAprobado(
+                                    solicitud.getId(),
+                                    titular != null ? titular.getTelefono1()     : solicitud.getTitularTelefono(),
+                                    titular != null ? titular.getEmail()          : solicitud.getTitularEmail(),
+                                    titular != null ? titular.getNombreCompleto() : solicitud.getTitularNombreCompleto(),
+                                    fiador  != null ? fiador.getTelefono1()      : null,
+                                    fiador  != null ? fiador.getEmail()           : null,
+                                    fiador  != null ? fiador.getNombreCompleto()  : null,
+                                    request.numeroDeSolicitud(),
+                                    url
+                            ));
                 })
                 .onErrorResume(ex -> {
-                    log.error("[DECISION] Error en dispararFlujoCertificadoYNotificaciones para solicitud={}: {}",
+                    log.error("[DECISION] Error generando certificado para solicitud={}: {}",
                             solicitud.getId(), ex.getMessage(), ex);
                     return Mono.empty();
                 });

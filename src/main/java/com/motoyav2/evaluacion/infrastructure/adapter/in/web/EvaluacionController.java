@@ -56,6 +56,8 @@ public class EvaluacionController {
     private final com.motoyav2.evaluacion.domain.port.in.ReemplazarReferenciasUseCase reemplazarReferenciasUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ActualizarEmailClienteUseCase actualizarEmailClienteUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ActualizarDocumentoClienteUseCase actualizarDocumentoClienteUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.ActualizarTelefonoClienteUseCase actualizarTelefonoClienteUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.ReenviarBienvenidaWaUseCase reenviarBienvenidaWaUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.AnalizarSentinelUseCase analizarSentinelUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.EliminarSolicitudUseCase eliminarSolicitudUseCase;
     private final Firestore firestore;
@@ -412,6 +414,28 @@ public class EvaluacionController {
         }
         return actualizarDocumentoClienteUseCase.actualizarDocumento(clienteId, documentType, documentNumber)
                 .onErrorMap(RecursoNoEncontradoException.class, e -> new NotFoundException(e.getMessage()));
+    }
+
+    // ── PATCH /clientes/{clienteId}/telefono ──────────────────────────────
+    @PatchMapping("/clientes/{clienteId}/telefono")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> actualizarTelefono(
+            @PathVariable String clienteId,
+            @RequestBody Map<String, String> body) {
+        String telefono = body.get("telefono1");
+        if (telefono == null || telefono.isBlank()) {
+            return Mono.error(new BadRequestException("El campo 'telefono1' es requerido"));
+        }
+        return actualizarTelefonoClienteUseCase.actualizarTelefono(clienteId, telefono);
+    }
+
+    // ── POST /solicitudes/{solicitudId}/reenviar-bienvenida-wa ────────────
+    @PostMapping("/solicitudes/{solicitudId}/reenviar-bienvenida-wa")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> reenviarBienvenidaWa(
+            @PathVariable String solicitudId,
+            @RequestParam(defaultValue = "false") boolean esFiador) {
+        return reenviarBienvenidaWaUseCase.reenviar(solicitudId, esFiador);
     }
 
     // ── POST /clientes/{clienteId}/verificar-identidad ───────────────────

@@ -45,6 +45,20 @@ public class MensajeWhatsappDocument {
 
     private String errorDetalle;
 
+    /** OUTBOUND (enviado al cliente) | INBOUND (recibido del cliente) */
+    private String direction;
+
+    /** Solo mensajes INBOUND con media (imagen, documento, audio) */
+    private String mediaUrl;
+    private String mediaType;
+    /** true si el media fue procesado como voucher de pago */
+    private Boolean esVoucher;
+    private String voucherId;
+    /** Timestamp de recepción (mensajes INBOUND) */
+    private Date recibidoEn;
+    /** Texto del mensaje entrante si es tipo text */
+    private String textoRecibido;
+
     /** true si fue disparado por estrategia automática */
     private Boolean automatico;
     private String estrategiaId;
