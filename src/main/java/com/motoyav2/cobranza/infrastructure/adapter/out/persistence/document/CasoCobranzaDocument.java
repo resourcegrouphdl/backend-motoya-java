@@ -75,6 +75,10 @@ public class CasoCobranzaDocument {
     /** ExcepcionCaso: FALLECIDO | INSOLVENTE | DISPUTA | OPT_OUT | JUDICIAL_ACTIVO */
     private String excepcionActiva;
 
+    // Mora automática
+    /** Fecha del último recordatorio WA de mora enviado por el scheduler. */
+    private Date ultimoRecordatorioMora;
+
     // Auditoría
     private Date creadoEn;
     private Date actualizadoEn;

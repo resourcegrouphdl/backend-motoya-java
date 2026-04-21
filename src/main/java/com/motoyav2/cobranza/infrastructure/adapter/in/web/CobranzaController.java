@@ -48,11 +48,14 @@ public class CobranzaController {
     private final MovimientosService movimientosService;
     private final AlertaService alertaService;
     private final EstrategiaService estrategiaService;
+    private final EstrategiaAutomaticaService estrategiaAutomaticaService;
     private final WhatsappService whatsappService;
     private final IniciarCasoUseCase iniciarCasoUseCase;
     private final ImportarCalendarioService importarCalendarioService;
     private final RegistrarPagoManualUseCase registrarPagoManualUseCase;
     private final ProcesarVoucherWhatsappService procesarVoucherWhatsappService;
+    private final MoraDiariaService moraDiariaService;
+    private final ConciliacionService conciliacionService;
 
     // =========================================================================
     // DASHBOARD
@@ -79,6 +82,42 @@ public class CobranzaController {
     }
 
     // =========================================================================
+    // MORA DIARIA — trigger manual para testing / emergencias
+    // =========================================================================
+
+    @PostMapping("/api/v1/cobranzas/mora/procesar")
+    public Mono<Map<String, Object>> procesarMoraDiaria() {
+        return moraDiariaService.procesarMoraDiaria()
+                .count()
+                .map(total -> Map.<String, Object>of(
+                        "status", "OK",
+                        "casosActualizados", total
+                ));
+    }
+
+    // =========================================================================
+    // ESTRATEGIAS — trigger manual
+    // =========================================================================
+
+    @PostMapping("/api/v1/cobranzas/estrategias/ejecutar")
+    public Mono<Map<String, Object>> ejecutarEstrategias() {
+        return estrategiaAutomaticaService.ejecutarEstrategiasActivas()
+                .map(total -> Map.<String, Object>of(
+                        "status", "OK",
+                        "casosContactados", total
+                ));
+    }
+
+    // =========================================================================
+    // CONCILIACIÓN
+    // =========================================================================
+
+    @GetMapping("/api/v1/cobranzas/conciliacion")
+    public Mono<ConciliacionDto> getConciliacion() {
+        return conciliacionService.conciliar();
+    }
+
+    // =========================================================================
     // CASOS
     // =========================================================================
 
@@ -92,9 +131,10 @@ public class CobranzaController {
             ServerWebExchange exchange) {
 
         String storeId = (String) exchange.getAttributes().get("storeId");
-        ListarCasosQuery query = new ListarCasosQuery(storeId, estado, prioridad, agenteId, page, size);
-        log.debug("GET /casos storeId={} estado={} prioridad={} agenteId={} page={} size={}",
-                storeId, estado, prioridad, agenteId, page, size);
+        String rol     = (String) exchange.getAttributes().get("userRol");
+        ListarCasosQuery query = new ListarCasosQuery(storeId, estado, prioridad, agenteId, rol, page, size);
+        log.debug("GET /casos storeId={} rol={} estado={} prioridad={} agenteId={} page={} size={}",
+                storeId, rol, estado, prioridad, agenteId, page, size);
         return listarCasosUseCase.ejecutar(query);
     }
 
@@ -112,8 +152,9 @@ public class CobranzaController {
             ServerWebExchange exchange) {
 
         String storeId = (String) exchange.getAttributes().get("storeId");
-        log.debug("GET /casos/urgentes storeId={} limit={}", storeId, limit);
-        ListarCasosQuery query = new ListarCasosQuery(storeId, "INTERVENCION_REQUERIDA", "CRITICA", null, 0, limit);
+        String rol     = (String) exchange.getAttributes().get("userRol");
+        log.debug("GET /casos/urgentes storeId={} rol={} limit={}", storeId, rol, limit);
+        ListarCasosQuery query = new ListarCasosQuery(storeId, "INTERVENCION_REQUERIDA", "CRITICA", null, rol, 0, limit);
         return listarCasosUseCase.ejecutar(query);
     }
 
