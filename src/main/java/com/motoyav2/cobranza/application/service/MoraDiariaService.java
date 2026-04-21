@@ -185,7 +185,7 @@ public class MoraDiariaService {
                 .creadoEn(new Date())
                 .build();
 
-        return wa.then(eventoPort.append(caso.getContratoId(), ev));
+        return wa.then(eventoPort.append(caso.getContratoId(), ev)).then();
     }
 
     // ── Evento de escalado de nivel ───────────────────────────────────────────
@@ -211,7 +211,7 @@ public class MoraDiariaService {
                 .creadoEn(new Date())
                 .build();
 
-        return eventoPort.append(contratoId, ev);
+        return eventoPort.append(contratoId, ev).then();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
