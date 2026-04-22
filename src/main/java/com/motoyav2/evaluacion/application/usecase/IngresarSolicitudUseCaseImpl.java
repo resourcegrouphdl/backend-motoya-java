@@ -313,6 +313,12 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
         m.put("tipoVivienda", d.tipoVivienda());
         m.put("licenciaConducir", d.licenciaConducir());
         m.put("numeroLicencia", d.numeroLicencia());
+        if (d.sexo()             != null) m.put("sexo",             d.sexo());
+        if (d.tipoTrabajo()      != null) m.put("tipoTrabajo",      d.tipoTrabajo());
+        if (d.relacionConFiador()  != null) m.put("relacionConFiador",  d.relacionConFiador());
+        if (d.relacionConTitular() != null) m.put("relacionConTitular", d.relacionConTitular());
+        if (d.nacionalidad()     != null) m.put("nacionalidad",     d.nacionalidad());
+        if (d.estadoResidencia() != null) m.put("estadoResidencia", d.estadoResidencia());
         if (d.archivos() != null && !d.archivos().isEmpty()) {
             m.put("archivos", d.archivos());
         }
@@ -452,6 +458,12 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
         m.put("tipoVivienda", d.tipoVivienda());
         m.put("licenciaConducir", d.licenciaConducir());
         m.put("numeroLicencia", d.numeroLicencia());
+        if (d.sexo()             != null) m.put("sexo",             d.sexo());
+        if (d.tipoTrabajo()      != null) m.put("tipoTrabajo",      d.tipoTrabajo());
+        if (d.relacionConFiador()  != null) m.put("relacionConFiador",  d.relacionConFiador());
+        if (d.relacionConTitular() != null) m.put("relacionConTitular", d.relacionConTitular());
+        if (d.nacionalidad()     != null) m.put("nacionalidad",     d.nacionalidad());
+        if (d.estadoResidencia() != null) m.put("estadoResidencia", d.estadoResidencia());
         m.put("updatedAt", ahora);
         return m;
     }

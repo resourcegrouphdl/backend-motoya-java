@@ -28,19 +28,23 @@ public class ConversacionRepositoryAdapter implements ConversacionRepository {
 
     @Override
     public Mono<Void> upsertConversacion(ConversacionWa conv) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("solicitudId",        conv.solicitudId());
-        data.put("telefono",           conv.telefono());
-        data.put("nombreParticipante", conv.nombreParticipante());
-        data.put("rol",                conv.rol().name());
-        data.put("estadoConversacion", conv.estadoConversacion().name());
-        data.put("ultimaActividad",    toTs(conv.ultimaActividad()));
-        data.put("createdAt",          FieldValue.serverTimestamp());
+        Map<String, Object> mutableFields = new HashMap<>();
+        mutableFields.put("solicitudId",        conv.solicitudId());
+        mutableFields.put("telefono",           conv.telefono());
+        mutableFields.put("nombreParticipante", conv.nombreParticipante());
+        mutableFields.put("rol",                conv.rol().name());
+        mutableFields.put("estadoConversacion", conv.estadoConversacion().name());
+        mutableFields.put("ultimaActividad",    toTs(conv.ultimaActividad()));
 
-        return toMono(db.collection(COL).document(conv.id())
-                .set(data, SetOptions.mergeFields(
-                        "solicitudId", "telefono", "nombreParticipante",
-                        "rol", "estadoConversacion", "ultimaActividad")))
+        Map<String, Object> createData = new HashMap<>(mutableFields);
+        createData.put("createdAt", FieldValue.serverTimestamp());
+
+        DocumentReference ref = db.collection(COL).document(conv.id());
+        // Try to create (sets createdAt only on first write); if doc already exists, just update mutable fields
+        return toMono(ref.create(createData))
+                .onErrorResume(e -> toMono(ref.set(mutableFields,
+                        SetOptions.mergeFields("solicitudId", "telefono", "nombreParticipante",
+                                "rol", "estadoConversacion", "ultimaActividad"))))
                 .then()
                 .onErrorResume(e -> {
                     log.error("[CONV-REPO] Error upsert conversacion={}: {}", conv.id(), e.getMessage());

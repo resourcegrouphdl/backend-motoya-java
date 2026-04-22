@@ -158,11 +158,13 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
     }
 
     /** Almacena un mensaje de texto entrante del cliente como INBOUND. */
-    public Mono<Void> registrarMensajeEntrante(String contratoId, String telefono,
-                                                String wamid, String texto, Date recibidoEn) {
+    public Mono<Void> registrarMensajeEntrante(String contratoId, String clienteNombre,
+                                                String telefono, String wamid,
+                                                String texto, Date recibidoEn) {
         MensajeWhatsappDocument doc = MensajeWhatsappDocument.builder()
                 .id(UUID.randomUUID().toString())
                 .contratoId(contratoId)
+                .clienteNombre(clienteNombre)
                 .telefono(telefono)
                 .direction("INBOUND")
                 .wamid(wamid)

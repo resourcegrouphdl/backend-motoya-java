@@ -143,6 +143,9 @@ public class SolicitudPublicaController {
                 c.telefono1(), c.telefono2(),
                 c.ocupacion(), c.rangoIngresos(), c.tipoVivienda(),
                 c.licenciaConducir(), c.numeroLicencia(),
+                c.sexo(), c.tipoTrabajo(),
+                c.relacionConFiador(), c.relacionConTitular(),
+                c.nacionalidad(), c.estadoResidencia(),
                 c.archivos()
         );
     }
