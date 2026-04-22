@@ -23,4 +23,9 @@ public class PlantillaWhatsappPortAdapter implements PlantillaWhatsappPort {
     public Flux<PlantillaWhatsappDocument> findActivas() {
         return repository.findByActivaAndAprobadaPorMeta(true, true);
     }
+
+    @Override
+    public Mono<PlantillaWhatsappDocument> save(PlantillaWhatsappDocument plantilla) {
+        return repository.save(plantilla);
+    }
 }

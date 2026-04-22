@@ -9,4 +9,6 @@ public interface PlantillaWhatsappPort {
     Mono<PlantillaWhatsappDocument> findById(String plantillaId);
 
     Flux<PlantillaWhatsappDocument> findActivas();
+
+    Mono<PlantillaWhatsappDocument> save(PlantillaWhatsappDocument plantilla);
 }
