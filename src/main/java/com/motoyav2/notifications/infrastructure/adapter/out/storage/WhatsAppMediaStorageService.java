@@ -92,6 +92,29 @@ public class WhatsAppMediaStorageService {
     }
 
     /**
+     * Sube bytes en memoria a GCS (para uploads multipart desde el controller).
+     * Ruta: cobranzas-pagos-manuales/{contextId}/{filename}
+     */
+    public Mono<MediaUploadResult> subirBytes(byte[] bytes, String mediaType, String filename, String contextId) {
+        return Mono.fromCallable(() -> {
+            String ext      = resolveExtension(mediaType, filename);
+            String safeName = filename != null ? sanitize(filename) : (UUID.randomUUID() + "." + ext);
+            String folder   = contextId != null ? contextId : UUID.randomUUID().toString();
+            String gcsPath  = "cobranzas-pagos-manuales/" + folder + "/" + safeName;
+            String mime     = MIME_MAP.getOrDefault(
+                    mediaType != null ? mediaType.toLowerCase() : "", "application/octet-stream");
+
+            BlobId   blobId   = BlobId.of(bucketName, gcsPath);
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(mime).build();
+            storage.create(blobInfo, bytes);
+
+            log.info("[WA-MEDIA] Subido a GCS | path={} size={}KB", gcsPath, bytes.length / 1024);
+            return new MediaUploadResult(gcsPath, "gs://" + bucketName + "/" + gcsPath);
+        }).subscribeOn(Schedulers.boundedElastic())
+          .doOnError(e -> log.error("[WA-MEDIA] Error subiendo bytes a GCS: {}", e.getMessage()));
+    }
+
+    /**
      * Descarga bytes desde una URL de Factiliza y los sube a GCS.
      * Retorna gcsPath (relativo) y gcsUri (gs://bucket/path) para Document AI.
      *
