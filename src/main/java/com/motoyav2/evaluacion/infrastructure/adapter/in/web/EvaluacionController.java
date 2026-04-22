@@ -536,6 +536,8 @@ public class EvaluacionController {
                 r.estadoCivil(), r.email(), r.fechaNacimiento(), r.departamento(), r.provincia(),
                 r.distrito(), r.direccion(), r.ubicacionGPSCasa(), r.telefono1(), r.telefono2(),
                 r.ocupacion(), r.rangoIngresos(), r.tipoVivienda(), r.licenciaConducir(), r.numeroLicencia(),
+                r.sexo(), r.tipoTrabajo(), r.relacionConFiador(), r.relacionConTitular(),
+                r.nacionalidad(), r.estadoResidencia(),
                 r.archivos());
     }
 
