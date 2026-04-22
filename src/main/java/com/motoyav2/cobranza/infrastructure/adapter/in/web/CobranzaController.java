@@ -10,10 +10,13 @@ import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.*;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosFiadorDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosTitularDocument;
+import com.motoyav2.notifications.infrastructure.adapter.out.storage.WhatsAppMediaStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
@@ -56,6 +59,7 @@ public class CobranzaController {
     private final ProcesarVoucherWhatsappService procesarVoucherWhatsappService;
     private final MoraDiariaService moraDiariaService;
     private final ConciliacionService conciliacionService;
+    private final WhatsAppMediaStorageService mediaStorageService;
 
     // =========================================================================
     // DASHBOARD
@@ -1077,4 +1081,45 @@ public class CobranzaController {
             String agenteAsignadoId,
             String agenteAsignadoNombre
     ) {}
+
+    // =========================================================================
+    // UPLOAD VOUCHER PARA PAGO MANUAL
+    // =========================================================================
+
+    /**
+     * Sube una imagen/PDF de comprobante a GCS y devuelve el gcsPath.
+     * El frontend lo usa para llamar luego a POST /pago-manual con imagenPath.
+     *
+     * POST /api/v1/cobranzas/casos/{contratoId}/voucher-upload
+     * Content-Type: multipart/form-data
+     * Body: archivo (FilePart)
+     *
+     * Response: { "gcsPath": "cobranzas-pagos-manuales/{contratoId}/{uuid}.jpg" }
+     */
+    @PostMapping(value = "/api/v1/cobranzas/casos/{contratoId}/voucher-upload",
+                 consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<Map<String, String>> subirVoucherPagoManual(
+            @PathVariable String contratoId,
+            @RequestPart("archivo") FilePart archivo) {
+
+        log.info("POST /casos/{}/voucher-upload filename={}", contratoId, archivo.filename());
+
+        return DataBufferUtils.join(archivo.content())
+                .map(buffer -> {
+                    byte[] bytes = new byte[buffer.readableByteCount()];
+                    buffer.read(bytes);
+                    DataBufferUtils.release(buffer);
+                    return bytes;
+                })
+                .flatMap(bytes -> {
+                    String filename = archivo.filename();
+                    String ext = filename != null && filename.contains(".")
+                            ? filename.substring(filename.lastIndexOf('.') + 1).toLowerCase()
+                            : "jpg";
+                    String mediaType = "pdf".equals(ext) ? "document" : "image";
+                    return mediaStorageService.subirBytes(bytes, mediaType, filename, contratoId);
+                })
+                .map(result -> Map.of("gcsPath", result.gcsPath()));
+    }
 }

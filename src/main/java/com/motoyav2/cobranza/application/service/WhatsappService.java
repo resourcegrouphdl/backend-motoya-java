@@ -174,6 +174,25 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
         return mensajePort.save(doc).then();
     }
 
+    /** Almacena un mensaje con imagen/documento entrante del cliente como INBOUND. */
+    public Mono<Void> registrarMediaEntrante(String contratoId, String clienteNombre, String telefono,
+                                              String mediaUrl, String mediaType, Date recibidoEn) {
+        MensajeWhatsappDocument doc = MensajeWhatsappDocument.builder()
+                .id(UUID.randomUUID().toString())
+                .contratoId(contratoId)
+                .clienteNombre(clienteNombre)
+                .telefono(telefono)
+                .direction("INBOUND")
+                .mediaUrl(mediaUrl)
+                .mediaType(mediaType)
+                .esVoucher(true)
+                .estado("RECIBIDO")
+                .recibidoEn(recibidoEn)
+                .automatico(false)
+                .build();
+        return mensajePort.save(doc).then();
+    }
+
     private String normalizarTelefono(String tel) {
         if (tel == null) return "";
         String digits = tel.replaceAll("\\D", "");

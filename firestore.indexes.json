@@ -402,6 +402,15 @@
       ]
     },
     {
+      "collectionGroup": "alertas_internas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado",   "order": "ASCENDING" },
+        { "fieldPath": "creadoEn", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "referencias",
       "queryScope": "COLLECTION",
       "fields": [

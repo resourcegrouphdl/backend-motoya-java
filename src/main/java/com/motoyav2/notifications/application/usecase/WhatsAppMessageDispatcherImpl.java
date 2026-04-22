@@ -1,6 +1,7 @@
 package com.motoyav2.notifications.application.usecase;
 
 import com.motoyav2.cobranza.application.port.in.ProcesarVoucherWhatsappUseCase;
+import com.motoyav2.cobranza.application.service.WhatsappService;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.repository.CasoCobranzaRepository;
 import com.motoyav2.evaluacion.domain.port.in.ProcesarPreferenciaEntrevistaUseCase;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -47,6 +49,7 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
     private final ProcesarVoucherWhatsappUseCase       procesarVoucherWhatsapp;
     private final RegistrarMensajeConversacionUseCase  registrarMensaje;
     private final NotificationFacade                   notificationFacade;
+    private final WhatsappService                      whatsappService;
 
     @Override
     public Mono<Void> dispatch(String fromPhone, String text, String mediaType, String mediaUrl) {
@@ -97,14 +100,21 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
                             log.info("[DISPATCHER] Mensaje de COBRANZA | contratoId={} phone={}",
                                     caso.getContratoId(), phone);
                             if (text != null) {
-                                // Texto: autorespuesta informando que el chat es solo notificaciones
+                                // Guardar mensaje de texto entrante en historial
+                                whatsappService.registrarMensajeEntrante(
+                                        caso.getContratoId(), phone, null, text, new Date())
+                                    .subscribe(null, e -> log.warn("[DISPATCHER] Error guardando texto cobranza: {}", e.getMessage()));
                                 String nombre = caso.getClienteNombre() != null
                                         ? caso.getClienteNombre() : "Cliente";
                                 return notificationFacade.notificarAutorespuestaCobranza(
                                         caso.getContratoId(), phone, nombre);
                             }
-                            // Media (imagen/PDF): procesar como comprobante de pago
+                            // Media (imagen/PDF): guardar en historial + procesar como comprobante
                             if (mediaUrl != null) {
+                                whatsappService.registrarMediaEntrante(
+                                        caso.getContratoId(), caso.getClienteNombre(), phone,
+                                        mediaUrl, mediaType, new Date())
+                                    .subscribe(null, e -> log.warn("[DISPATCHER] Error guardando media cobranza: {}", e.getMessage()));
                                 return procesarVoucherWhatsapp.procesar(
                                         caso.getContratoId(),
                                         caso.getStoreId(),
