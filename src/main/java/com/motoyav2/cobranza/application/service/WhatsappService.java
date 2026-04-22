@@ -7,6 +7,7 @@ import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.EventoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.MensajeWhatsappPort;
 import com.motoyav2.cobranza.application.port.out.PlantillaWhatsappPort;
+import com.motoyav2.cobranza.application.port.out.WhatsAppSenderPort;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.MensajeWhatsappDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.PlantillaWhatsappDocument;
@@ -34,9 +35,7 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
     private final MensajeWhatsappPort mensajePort;
     private final EventoCobranzaPort eventoPort;
     private final CasoCobranzaPort casoPort;
-
-    // TODO: inyectar TwilioService cuando esté implementado
-    // private final TwilioService twilioService;
+    private final WhatsAppSenderPort waSender;
 
     // -------------------------------------------------------------------------
     // EnviarMensajeWhatsappUseCase
@@ -44,56 +43,66 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
 
     @Override
     public Mono<String> ejecutar(EnviarMensajeWhatsappCommand command) {
+        boolean esLibre = command.plantillaId() == null || command.plantillaId().isBlank();
+        if (esLibre) {
+            if (command.mensajeLibre() == null || command.mensajeLibre().isBlank()) {
+                return Mono.error(new IllegalArgumentException("Debe indicar plantillaId o mensajeLibre"));
+            }
+            return guardarEnviarYAuditar(command, null, "Mensaje personalizado", command.mensajeLibre());
+        }
         return plantillaPort.findById(command.plantillaId())
                 .switchIfEmpty(Mono.error(new NotFoundException("Plantilla no encontrada: " + command.plantillaId())))
                 .flatMap(plantilla -> {
                     String mensajeReal = reemplazarVariables(plantilla.getCuerpo(), command.variables());
+                    return guardarEnviarYAuditar(command, command.plantillaId(), plantilla.getNombre(), mensajeReal);
+                });
+    }
 
-                    MensajeWhatsappDocument mensaje = MensajeWhatsappDocument.builder()
-                            .id(UUID.randomUUID().toString())
-                            .contratoId(command.contratoId())
-                            .telefono(command.telefono())
-                            .plantillaId(command.plantillaId())
-                            .plantillaNombre(plantilla.getNombre())
-                            .mensajeReal(mensajeReal)
-                            .estado("PENDIENTE")
-                            .automatico(false)
-                            .enviadoPor(command.agenteId())
-                            .storeId(command.storeId())
-                            .enviadoEn(new Date())
-                            .build();
+    private Mono<String> guardarEnviarYAuditar(EnviarMensajeWhatsappCommand cmd,
+                                                String plantillaId, String plantillaNombre, String mensajeReal) {
+        MensajeWhatsappDocument mensaje = MensajeWhatsappDocument.builder()
+                .id(UUID.randomUUID().toString())
+                .contratoId(cmd.contratoId())
+                .telefono(cmd.telefono())
+                .plantillaId(plantillaId)
+                .plantillaNombre(plantillaNombre)
+                .mensajeReal(mensajeReal)
+                .estado("PENDIENTE")
+                .direction("OUTBOUND")
+                .automatico(false)
+                .enviadoPor(cmd.agenteId())
+                .storeId(cmd.storeId())
+                .enviadoEn(new Date())
+                .build();
 
-                    return mensajePort.save(mensaje)
-                            .flatMap(savedMensaje -> {
-                                // TODO: llamar twilioService.sendWhatsApp(command.telefono(), mensajeReal)
-                                //   .flatMap(twilioResponse -> {
-                                //       savedMensaje.setWamid(twilioResponse.getSid());
-                                //       savedMensaje.setEstado("ENVIADO");
-                                //       return mensajePort.save(savedMensaje);
-                                //   })
-                                //
-                                // Por ahora se marca como ENVIADO directamente:
-                                savedMensaje.setEstado("ENVIADO");
-                                return mensajePort.save(savedMensaje);
-                            })
-                            .flatMap(savedMensaje -> {
-                                EventoCobranzaDocument evento = EventoCobranzaDocument.builder()
-                                        .contratoId(command.contratoId())
-                                        .tipo("MENSAJE_WHATSAPP")
-                                        .payload(Map.of(
-                                                "plantillaId", command.plantillaId(),
-                                                "mensajeEnviado", mensajeReal,
-                                                "estadoEnvio", "ENVIADO"
-                                        ))
-                                        .usuarioId(command.agenteId())
-                                        .usuarioNombre(command.agenteNombre() != null ? command.agenteNombre() : command.agenteId())
-                                        .automatico(false)
-                                        .creadoEn(new Date())
-                                        .build();
-
-                                return eventoPort.append(command.contratoId(), evento)
-                                        .thenReturn(savedMensaje.getId());
+        return mensajePort.save(mensaje)
+                .flatMap(saved -> {
+                    if (cmd.telefono() == null || cmd.telefono().isBlank()) {
+                        saved.setEstado("ENVIADO");
+                        return mensajePort.save(saved);
+                    }
+                    return waSender.enviarTexto(cmd.telefono(), mensajeReal)
+                            .flatMap(wamid -> {
+                                saved.setWamid(wamid.isBlank() ? null : wamid);
+                                saved.setEstado(wamid.isBlank() ? "FALLIDO" : "ENVIADO");
+                                return mensajePort.save(saved);
                             });
+                })
+                .flatMap(saved -> {
+                    EventoCobranzaDocument evento = EventoCobranzaDocument.builder()
+                            .contratoId(cmd.contratoId())
+                            .tipo("MENSAJE_WHATSAPP")
+                            .payload(Map.of(
+                                    "plantillaId", plantillaId != null ? plantillaId : "LIBRE",
+                                    "mensajeEnviado", mensajeReal,
+                                    "estadoEnvio", saved.getEstado()
+                            ))
+                            .usuarioId(cmd.agenteId())
+                            .usuarioNombre(cmd.agenteNombre() != null ? cmd.agenteNombre() : cmd.agenteId())
+                            .automatico(false)
+                            .creadoEn(new Date())
+                            .build();
+                    return eventoPort.append(cmd.contratoId(), evento).thenReturn(saved.getId());
                 });
     }
 

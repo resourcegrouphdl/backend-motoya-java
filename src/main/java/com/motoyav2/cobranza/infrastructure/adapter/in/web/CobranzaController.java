@@ -708,7 +708,7 @@ public class CobranzaController {
 
         EnviarMensajeWhatsappCommand command = new EnviarMensajeWhatsappCommand(
                 body.contratoId(), body.plantillaId(), body.variablesValores(),
-                userId, userNombre, storeId, body.telefonoDestino());
+                userId, userNombre, storeId, body.telefonoDestino(), body.mensajeLibre());
 
         return enviarMensajeWhatsappUseCase.ejecutar(command)
                 .map(mensajeId -> Map.<String, Object>of(
@@ -983,9 +983,12 @@ public class CobranzaController {
 
     public record EnviarWhatsappRequest(
             String contratoId,
+            /** null si se usa mensajeLibre */
             String plantillaId,
             Map<String, String> variablesValores,
-            String telefonoDestino
+            String telefonoDestino,
+            /** Texto libre para mensaje personalizado; ignorado si plantillaId está presente */
+            String mensajeLibre
     ) {}
 
     public record PreviewWhatsappRequest(
