@@ -102,7 +102,7 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
                             if (text != null) {
                                 // Guardar mensaje de texto entrante en historial
                                 whatsappService.registrarMensajeEntrante(
-                                        caso.getContratoId(), phone, null, text, new Date())
+                                        caso.getContratoId(), caso.getClienteNombre(), phone, null, text, new Date())
                                     .subscribe(null, e -> log.warn("[DISPATCHER] Error guardando texto cobranza: {}", e.getMessage()));
                                 String nombre = caso.getClienteNombre() != null
                                         ? caso.getClienteNombre() : "Cliente";

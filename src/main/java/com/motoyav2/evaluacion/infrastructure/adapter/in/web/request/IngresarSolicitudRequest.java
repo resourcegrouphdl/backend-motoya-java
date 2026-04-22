@@ -40,6 +40,12 @@ public record IngresarSolicitudRequest(
             String tipoVivienda,
             String licenciaConducir,
             String numeroLicencia,
+            String sexo,
+            String tipoTrabajo,
+            String relacionConFiador,
+            String relacionConTitular,
+            String nacionalidad,
+            String estadoResidencia,
             Map<String, String> archivos
     ) {}
 

@@ -892,7 +892,7 @@ public class CobranzaController {
                                 ? (String) ((Map<String, Object>) msg.get("text")).get("body")
                                 : "";
                         log.info("[WEBHOOK-WA] Texto entrante contratoId={} from={}", contratoId, fromPhone);
-                        return whatsappService.registrarMensajeEntrante(contratoId, fromPhone, wamid, texto, new Date(ts * 1000));
+                        return whatsappService.registrarMensajeEntrante(contratoId, null, fromPhone, wamid, texto, new Date(ts * 1000));
                     }
                 })
                 .onErrorResume(e -> {
