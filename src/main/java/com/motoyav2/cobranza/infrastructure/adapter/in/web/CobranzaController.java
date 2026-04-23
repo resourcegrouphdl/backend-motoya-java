@@ -23,6 +23,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -384,7 +385,7 @@ public class CobranzaController {
 
         RecibirVoucherCommand command = new RecibirVoucherCommand(
                 contratoId, storeId, imagenPath, thumbPath, montoDetectado,
-                null, null, userId);
+                null, null, userId, "ADMIN_UPLOAD");
 
         return recibirVoucherUseCase.ejecutar(command)
                 .map(voucherId -> Map.<String, Object>of(
@@ -487,14 +488,19 @@ public class CobranzaController {
         );
 
         return registrarPagoManualUseCase.ejecutar(command)
-                .map(result -> Map.<String, Object>of(
-                        "status",          "OK",
-                        "message",         "Pago manual registrado",
-                        "contratoId",      result.contratoId(),
-                        "saldoNuevo",      result.saldoNuevo(),
-                        "cuotasMarcadas",  result.cuotasMarcadas(),
-                        "voucherId",       result.voucherId() != null ? result.voucherId() : ""
-                ));
+                .map(result -> {
+                    Map<String, Object> resp = new HashMap<>();
+                    resp.put("status",             "OK");
+                    resp.put("message",            result.pendienteRevision()
+                            ? "Comprobante recibido. Quedará pendiente de revisión para su aprobación."
+                            : "Pago manual registrado correctamente.");
+                    resp.put("contratoId",         result.contratoId());
+                    resp.put("saldoNuevo",         result.saldoNuevo());
+                    resp.put("cuotasMarcadas",     result.cuotasMarcadas());
+                    resp.put("voucherId",          result.voucherId() != null ? result.voucherId() : "");
+                    resp.put("pendienteRevision",  result.pendienteRevision());
+                    return resp;
+                });
     }
 
     // =========================================================================
@@ -815,7 +821,7 @@ public class CobranzaController {
      * Payload Meta/Factiliza:
      * { "entry": [{ "changes": [{ "value": { "statuses": [...], "messages": [...] } }] }] }
      */
-    @PostMapping(value = "/webhooks/whatsapp",
+    @PostMapping(value = {"/webhooks/whatsapp", "/webhook/whatsapp"},
                  consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<Map<String, Object>> metaWhatsappWebhook(
             @RequestBody Map<String, Object> payload) {
@@ -881,12 +887,26 @@ public class CobranzaController {
                     boolean esMedia = "image".equals(tipo) || "document".equals(tipo) || "audio".equals(tipo);
                     if (esMedia) {
                         Map<String, Object> mediaMap = (Map<String, Object>) msg.get(tipo);
-                        String mediaId   = mediaMap != null ? (String) mediaMap.get("id") : null;
-                        String mimeType  = mediaMap != null ? (String) mediaMap.get("mime_type") : null;
-                        String mediaUrl  = "factiliza://media/" + mediaId; // URL lógica; WhatsappService descarga
-                        log.info("[WEBHOOK-WA] Media entrante contratoId={} tipo={} mediaId={}", contratoId, tipo, mediaId);
+                        String base64Data = mediaMap != null ? (String) mediaMap.get("data") : null;
+                        String mediaId    = mediaMap != null ? (String) mediaMap.get("id")   : null;
+                        String mimeType   = mediaMap != null ? (String) mediaMap.get("mime_type") : null;
+
+                        String mediaUrl;
+                        if (base64Data != null && !base64Data.isBlank()) {
+                            // Factiliza envía el binario como base64 en el campo 'data'
+                            String mime = mimeType != null ? mimeType : "application/octet-stream";
+                            mediaUrl = "data:" + mime + ";base64," + base64Data;
+                            log.info("[WEBHOOK-WA] Media base64 contratoId={} tipo={} mime={} bytes~{}",
+                                    contratoId, tipo, mime, base64Data.length() * 3 / 4);
+                        } else if (mediaId != null && !mediaId.isBlank()) {
+                            mediaUrl = "factiliza://media/" + mediaId;
+                            log.info("[WEBHOOK-WA] Media URL Factiliza contratoId={} tipo={} mediaId={}", contratoId, tipo, mediaId);
+                        } else {
+                            log.warn("[WEBHOOK-WA] Media sin 'data' ni 'id', descartando | contratoId={} tipo={}", contratoId, tipo);
+                            return Mono.empty();
+                        }
                         return procesarVoucherWhatsappService
-                                .procesar(contratoId, null, null, fromPhone, mediaUrl, mimeType);
+                                .procesar(contratoId, null, null, fromPhone, mediaUrl, tipo);
                     } else {
                         String texto = msg.containsKey("text")
                                 ? (String) ((Map<String, Object>) msg.get("text")).get("body")

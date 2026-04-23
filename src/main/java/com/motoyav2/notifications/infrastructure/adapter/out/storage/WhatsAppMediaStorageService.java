@@ -6,7 +6,9 @@ import com.google.cloud.storage.Storage;
 import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -36,9 +38,16 @@ public class WhatsAppMediaStorageService {
             "sticker",  "image/webp"
     );
 
+    private static final String FACTILIZA_MEDIA_SCHEME = "factiliza://media/";
+
     private final Storage storage;
     private final FactilizaProperties factilizaProperties;
     private final WebClient.Builder webClientBuilder;
+
+    /** WebClient pre-configurado con base URL y token de Factiliza. */
+    @Autowired
+    @Qualifier("factilizaWhatsAppWebClient")
+    private WebClient factilizaWebClient;
 
     @Value("${app.gcs.bucket-name:motoya-form.appspot.com}")
     private String bucketName;
@@ -127,30 +136,58 @@ public class WhatsAppMediaStorageService {
             return Mono.error(new IllegalArgumentException("mediaUrl es nulo o vacío"));
         }
 
-        WebClient client = webClientBuilder.build();
+        // Factiliza envía media como base64 en el campo 'data' del webhook.
+        // El webhook handler construye una data-URL para transportarlo aquí.
+        if (mediaUrl.startsWith("data:")) {
+            String cleanBase64 = mediaUrl.replaceAll("^data:[^;]+;base64,", "").trim();
+            return Mono.fromCallable(() -> Base64.getDecoder().decode(cleanBase64))
+                    .flatMap(bytes -> subirBytesAGcsVoucher(bytes, mediaType, contextId))
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .doOnError(e -> log.error("[WA-MEDIA] Error subiendo base64 a GCS: {}", e.getMessage()));
+        }
 
-        return client.get()
-                .uri(mediaUrl)
-                .header("Authorization", "Bearer " + factilizaProperties.getToken())
-                .retrieve()
-                .bodyToMono(byte[].class)
-                .flatMap(bytes -> Mono.fromCallable(() -> {
-                    String ext      = resolveExtension(mediaType, null);
-                    String filename = UUID.randomUUID() + "." + ext;
-                    String folder   = contextId != null ? contextId : UUID.randomUUID().toString();
-                    String gcsPath  = "cobranza-vouchers/" + folder + "/" + filename;
-                    String mime     = MIME_MAP.getOrDefault(
-                            mediaType != null ? mediaType.toLowerCase() : "", "application/octet-stream");
+        // Si la URL usa el esquema lógico factiliza://media/{mediaId}, descargamos
+        // el binario vía el WebClient de Factiliza (ya tiene base-url + Bearer token).
+        // Para cualquier otra URL HTTP descargamos con un cliente genérico.
+        Mono<byte[]> downloadMono;
+        if (mediaUrl.startsWith(FACTILIZA_MEDIA_SCHEME)) {
+            String mediaId = mediaUrl.substring(FACTILIZA_MEDIA_SCHEME.length());
+            log.debug("[WA-MEDIA] Descargando desde Factiliza | mediaId={}", mediaId);
+            downloadMono = factilizaWebClient.get()
+                    .uri("/media/" + mediaId)
+                    .retrieve()
+                    .bodyToMono(byte[].class);
+        } else {
+            downloadMono = webClientBuilder.build()
+                    .get()
+                    .uri(mediaUrl)
+                    .header("Authorization", "Bearer " + factilizaProperties.getToken())
+                    .retrieve()
+                    .bodyToMono(byte[].class);
+        }
 
-                    BlobId   blobId   = BlobId.of(bucketName, gcsPath);
-                    BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(mime).build();
-                    storage.create(blobInfo, bytes);
-
-                    log.info("[WA-MEDIA] Descargado y subido a GCS | path={} size={}KB",
-                            gcsPath, bytes.length / 1024);
-                    return new MediaUploadResult(gcsPath, "gs://" + bucketName + "/" + gcsPath);
-                }).subscribeOn(Schedulers.boundedElastic()))
+        return downloadMono
+                .flatMap(bytes -> subirBytesAGcsVoucher(bytes, mediaType, contextId))
                 .doOnError(e -> log.error("[WA-MEDIA] Error subiendo desde URL a GCS: {}", e.getMessage()));
+    }
+
+    private Mono<MediaUploadResult> subirBytesAGcsVoucher(byte[] bytes, String mediaType, String contextId) {
+        return Mono.fromCallable(() -> {
+            String ext      = resolveExtension(mediaType, null);
+            String filename = UUID.randomUUID() + "." + ext;
+            String folder   = contextId != null ? contextId : UUID.randomUUID().toString();
+            String gcsPath  = "cobranza-vouchers/" + folder + "/" + filename;
+            String mime     = MIME_MAP.getOrDefault(
+                    mediaType != null ? mediaType.toLowerCase() : "", "application/octet-stream");
+
+            BlobId   blobId   = BlobId.of(bucketName, gcsPath);
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(mime).build();
+            storage.create(blobInfo, bytes);
+
+            log.info("[WA-MEDIA] Descargado y subido a GCS | path={} size={}KB",
+                    gcsPath, bytes.length / 1024);
+            return new MediaUploadResult(gcsPath, "gs://" + bucketName + "/" + gcsPath);
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
     private String sanitize(String name) {

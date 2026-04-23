@@ -135,13 +135,17 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
         );
     }
 
-    /** hoy - fechaVencimientoPrimerCuotaImpaga en días. */
-    private int calcularDiasMora(Date fecha) {
-        if (fecha == null) return 0;
+    /** hoy - fechaVencimientoPrimerCuotaImpaga en días.
+     *  Soporta Date (docs nuevos con Timestamp) y String "YYYY-MM-DD" (docs migrados). */
+    private int calcularDiasMora(Object fechaObj) {
+        if (fechaObj == null) return 0;
         try {
-            java.time.LocalDate fechaLocal = fecha.toInstant()
-                    .atZone(java.time.ZoneId.of("America/Lima"))
-                    .toLocalDate();
+            java.time.LocalDate fechaLocal;
+            if (fechaObj instanceof java.util.Date d) {
+                fechaLocal = d.toInstant().atZone(java.time.ZoneId.of("America/Lima")).toLocalDate();
+            } else {
+                fechaLocal = java.time.LocalDate.parse(fechaObj.toString().substring(0, 10));
+            }
             return Math.max(0, (int) java.time.temporal.ChronoUnit.DAYS.between(fechaLocal, java.time.LocalDate.now(java.time.ZoneId.of("America/Lima"))));
         } catch (Exception e) {
             return 0;
