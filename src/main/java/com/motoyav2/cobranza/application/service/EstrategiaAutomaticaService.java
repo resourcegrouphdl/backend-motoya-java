@@ -212,11 +212,29 @@ public class EstrategiaAutomaticaService {
     /** Monto de la primera cuota vencida del cronograma (para el mensaje WA). */
     private double primeraCuotaVencida(CasoCobranzaDocument caso) {
         if (caso.getCronograma() == null) return 0.0;
-        return caso.getCronograma().stream()
+        LocalDate hoy = LocalDate.now(LIMA);
+
+        // 1. Buscar cuota explícitamente marcada VENCIDA
+        java.util.OptionalDouble vencida = caso.getCronograma().stream()
                 .filter(c -> "VENCIDA".equals(c.getEstado()))
                 .mapToDouble(c -> c.getMonto() != null ? c.getMonto() : 0.0)
+                .findFirst();
+        if (vencida.isPresent()) return vencida.getAsDouble();
+
+        // 2. Fallback: primera cuota no pagada con fecha ya vencida (aún sin marcar)
+        return caso.getCronograma().stream()
+                .filter(c -> !"PAGADA".equals(c.getEstado()) && c.getFechaVencimiento() != null)
+                .filter(c -> {
+                    try { return LocalDate.parse(c.getFechaVencimiento()).isBefore(hoy); }
+                    catch (Exception e) { return false; }
+                })
+                .mapToDouble(c -> c.getMonto() != null ? c.getMonto() : 0.0)
                 .findFirst()
-                .orElse(caso.getSaldoActual() != null ? caso.getSaldoActual() : 0.0);
+                .orElseGet(() -> {
+                    log.warn("[ESTRATEGIA-AUTO] Sin cuota vencida en cronograma para contrato={}; revisar datos",
+                            caso.getContratoId());
+                    return 0.0;   // nunca usar saldoActual (deuda total) como monto de cuota
+                });
     }
 
     private String fmt(double monto) {
