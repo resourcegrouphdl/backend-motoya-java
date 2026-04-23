@@ -9,6 +9,7 @@ import com.motoyav2.evaluacion.application.dto.NombreResuelto;
 import com.motoyav2.evaluacion.application.service.NombreVerificadoResolver;
 import com.motoyav2.evaluacion.domain.port.out.ClienteRepository;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
+import com.motoyav2.evaluacion.domain.port.out.TiendaNombrePort;
 import com.motoyav2.shared.security.FirebaseUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,10 +38,11 @@ public class ContratoController {
     private final CompletarContratoUseCase completarContratoUseCase;
     private final EliminarContratoUseCase eliminarContratoUseCase;
 
-    // ── Resolución de nombres verificados (RENIEC) ─────────────────────────
+    // ── Resolución de nombres verificados (RENIEC) y tienda ───────────────
     private final NombreVerificadoResolver nombreVerificadoResolver;
     private final SolicitudRepository solicitudRepository;
     private final ClienteRepository clienteRepository;
+    private final TiendaNombrePort tiendaNombrePort;
 
     @GetMapping("/contratos/lista")
     public Flux<ContratoListItemDto> listar() {
@@ -76,10 +78,25 @@ public class ContratoController {
                         request.fiador().nombres(), request.fiador().apellidos())
                 : Mono.just(new NombreResuelto("", "", false));
 
-        return Mono.zip(nombreTitularMono, nombreFiadorMono)
+        // ── 2. Limpiar tiendaId (eliminar corchetes y caracteres inválidos) ──
+        //    y resolver el nombre real desde tienda_profiles.
+        //    Si el frontend envió el ID como nombre (fallback erróneo o dato legacy
+        //    con corchetes "[abc123]"), lo detectamos y consultamos Firestore.
+        String rawTiendaId = request.tienda().tiendaId()
+                .replaceAll("[^a-zA-Z0-9_\\-]", "").trim();
+        String sentNombre  = request.tienda().nombreTienda() != null
+                ? request.tienda().nombreTienda().replaceAll("[^a-zA-Z0-9_\\-]", "").trim()
+                : "";
+        boolean nombreEsId = sentNombre.isBlank() || sentNombre.equalsIgnoreCase(rawTiendaId);
+        Mono<String> nombreTiendaMono = nombreEsId
+                ? tiendaNombrePort.resolverNombre(rawTiendaId)
+                : Mono.just(request.tienda().nombreTienda().trim());
+
+        return Mono.zip(nombreTitularMono, nombreFiadorMono, nombreTiendaMono)
                 .flatMap(tuple -> {
-                    NombreResuelto nTitular = tuple.getT1();
-                    NombreResuelto nFiador  = tuple.getT2();
+                    NombreResuelto nTitular  = tuple.getT1();
+                    NombreResuelto nFiador   = tuple.getT2();
+                    String         nombreTienda = tuple.getT3();
 
                     if (nTitular.desdeReniec()) {
                         log.info("Titular: nombres tomados de RENIEC → '{}' '{}'",
@@ -112,7 +129,7 @@ public class ContratoController {
                     }
 
                     TiendaInfo tienda = new TiendaInfo(
-                            request.tienda().tiendaId(), request.tienda().nombreTienda(),
+                            rawTiendaId, nombreTienda,
                             request.tienda().direccion(), request.tienda().ciudad()
                     );
 
