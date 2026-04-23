@@ -826,7 +826,7 @@ public class CobranzaController {
     public Mono<Map<String, Object>> metaWhatsappWebhook(
             @RequestBody Map<String, Object> payload) {
 
-        log.debug("Meta WA webhook received");
+        log.info("[WEBHOOK-WA] Payload recibido: {}", payload);
 
         try {
             @SuppressWarnings("unchecked")
