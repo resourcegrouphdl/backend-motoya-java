@@ -14,5 +14,7 @@ public record RecibirVoucherCommand(
         Double montoEsperado,
         /** Datos extraídos por Document AI + Claude — null si es upload manual sin OCR */
         OcrResultadoDocument ocrResultado,
-        String subioPor
+        String subioPor,
+        /** WHATSAPP | PAGO_MANUAL | ADMIN_UPLOAD */
+        String fuente
 ) {}

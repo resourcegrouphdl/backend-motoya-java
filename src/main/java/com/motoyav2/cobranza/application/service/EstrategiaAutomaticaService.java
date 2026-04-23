@@ -199,10 +199,15 @@ public class EstrategiaAutomaticaService {
     // ── Helpers de mora ──────────────────────────────────────────────────────
 
     private int calcularDiasMora(CasoCobranzaDocument caso, LocalDate hoy) {
-        if (caso.getFechaVencimientoPrimerCuotaImpaga() == null) return 0;
+        Object fechaObj = caso.getFechaVencimientoPrimerCuotaImpaga();
+        if (fechaObj == null) return 0;
         try {
-            LocalDate venc = caso.getFechaVencimientoPrimerCuotaImpaga()
-                    .toInstant().atZone(LIMA).toLocalDate();
+            LocalDate venc;
+            if (fechaObj instanceof java.util.Date d) {
+                venc = d.toInstant().atZone(LIMA).toLocalDate();
+            } else {
+                venc = LocalDate.parse(fechaObj.toString().substring(0, 10));
+            }
             return (int) Math.max(0, ChronoUnit.DAYS.between(venc, hoy));
         } catch (Exception e) {
             return 0;

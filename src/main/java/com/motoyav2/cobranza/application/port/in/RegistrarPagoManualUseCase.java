@@ -10,7 +10,9 @@ public interface RegistrarPagoManualUseCase {
             double saldoNuevo,
             int cuotasMarcadas,
             /** null si no se proporcionó imagen */
-            String voucherId
+            String voucherId,
+            /** true cuando hay imagen → el voucher queda PENDIENTE esperando aprobación normal */
+            boolean pendienteRevision
     ) {}
 
     Mono<Result> ejecutar(RegistrarPagoManualCommand command);

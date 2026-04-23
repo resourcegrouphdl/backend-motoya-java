@@ -58,7 +58,8 @@ public class CasoCobranzaDocument {
     private Double totalCondonado;
 
     // Cronograma
-    private Date fechaVencimientoPrimerCuotaImpaga;
+    // Object acepta tanto Timestamp (docs nuevos) como String "YYYY-MM-DD" (docs migrados)
+    private Object fechaVencimientoPrimerCuotaImpaga;
     private Integer numeroCuotasTotales;
     private Integer numeroCuotasPagadas;
     private List<CuotaCronogramaDocument> cronograma;

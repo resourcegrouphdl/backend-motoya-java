@@ -33,6 +33,9 @@ public class VoucherDocument {
     /** EstadoVoucher: PENDIENTE | APROBADO | RECHAZADO */
     private String estado;
 
+    /** Origen del voucher: WHATSAPP | PAGO_MANUAL | ADMIN_UPLOAD */
+    private String fuente;
+
     /** Ruta GCS: vouchers/{voucherId}/original.jpg */
     private String imagenPath;
     /** Ruta GCS: vouchers/{voucherId}/thumb.jpg */

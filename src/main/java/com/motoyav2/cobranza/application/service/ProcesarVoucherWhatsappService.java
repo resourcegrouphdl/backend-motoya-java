@@ -82,7 +82,8 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
                                         montoDetectado,
                                         montoEsperado,
                                         ocr,
-                                        "WHATSAPP_BOT"
+                                        "WHATSAPP_BOT",
+                                        "WHATSAPP"
                                 );
 
                                 return recibirVoucher.ejecutar(command)
