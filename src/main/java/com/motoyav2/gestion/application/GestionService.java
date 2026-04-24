@@ -211,6 +211,68 @@ public class GestionService {
                 .map(this::toTiendaResponse);
     }
 
+    public Mono<TiendaResponse> actualizarTienda(String uid, ActualizarTiendaRequest req) {
+        return tiendaRepository.findById(uid)
+                .switchIfEmpty(Mono.error(new NotFoundException("Tienda no encontrada: " + uid)))
+                .flatMap(doc -> Mono.fromCallable(() -> {
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("firstName",          req.firstName());
+                    updates.put("lastName",           req.lastName());
+                    updates.put("phone",              req.phone());
+                    updates.put("documentType",       req.documentType());
+                    updates.put("documentNumber",     req.documentNumber());
+                    updates.put("businessName",       req.businessName());
+                    updates.put("city",               req.city());
+                    updates.put("contactPersonName",  req.contactPersonName());
+                    updates.put("contactPersonPhone", req.contactPersonPhone());
+                    updates.put("taxId",              req.taxId());
+                    updates.put("address",            req.address());
+                    updates.put("district",           req.district());
+                    updates.put("postalCode",         req.postalCode());
+                    updates.put("bankAccount",        req.bankAccount());
+                    updates.put("legalRepresentative",req.legalRepresentative());
+                    updates.put("website",            req.website());
+                    updates.put("facebook",           req.facebook());
+                    updates.put("instagram",          req.instagram());
+                    updates.put("whatsapp",           req.whatsapp());
+                    updates.put("notes",              req.notes());
+                    updates.put("updatedAt",          Timestamp.now());
+                    firestore.collection("tienda_profiles").document(uid).update(updates).get();
+
+                    Map<String, Object> userUpdates = new HashMap<>();
+                    userUpdates.put("firstName",      req.firstName());
+                    userUpdates.put("lastName",       req.lastName());
+                    userUpdates.put("phone",          req.phone());
+                    userUpdates.put("documentType",   req.documentType());
+                    userUpdates.put("documentNumber", req.documentNumber());
+                    userUpdates.put("updatedAt",      Timestamp.now());
+                    firestore.collection("users").document(uid).update(userUpdates).get();
+
+                    doc.setFirstName(req.firstName());
+                    doc.setLastName(req.lastName());
+                    doc.setPhone(req.phone());
+                    doc.setDocumentType(req.documentType());
+                    doc.setDocumentNumber(req.documentNumber());
+                    doc.setBusinessName(req.businessName());
+                    doc.setCity(req.city());
+                    doc.setContactPersonName(req.contactPersonName());
+                    doc.setContactPersonPhone(req.contactPersonPhone());
+                    doc.setTaxId(req.taxId());
+                    doc.setAddress(req.address());
+                    doc.setDistrict(req.district());
+                    doc.setPostalCode(req.postalCode());
+                    doc.setBankAccount(req.bankAccount());
+                    doc.setLegalRepresentative(req.legalRepresentative());
+                    doc.setWebsite(req.website());
+                    doc.setFacebook(req.facebook());
+                    doc.setInstagram(req.instagram());
+                    doc.setWhatsapp(req.whatsapp());
+                    doc.setNotes(req.notes());
+                    return doc;
+                }).subscribeOn(Schedulers.boundedElastic()))
+                .map(this::toTiendaResponse);
+    }
+
     public Flux<VendedorResponse> listarVendedoresDeTienda(String tiendaId) {
         return vendedorRepository.findByTiendaId(tiendaId)
                 .map(v -> toVendedorResponse(v, null));
@@ -240,6 +302,72 @@ public class GestionService {
         return vendedorRepository.findById(uid)
                 .switchIfEmpty(Mono.error(new NotFoundException("Vendedor no encontrado: " + uid)))
                 .map(v -> toVendedorResponse(v, null));
+    }
+
+    public Mono<VendedorResponse> actualizarVendedor(String uid, ActualizarVendedorRequest req) {
+        return tiendaRepository.findById(req.tiendaId())
+                .switchIfEmpty(Mono.error(new BadRequestException("Tienda no encontrada: " + req.tiendaId())))
+                .flatMap(tienda -> vendedorRepository.findById(uid)
+                        .switchIfEmpty(Mono.error(new NotFoundException("Vendedor no encontrado: " + uid)))
+                        .flatMap(doc -> Mono.fromCallable(() -> {
+                            Map<String, Object> updates = new HashMap<>();
+                            updates.put("firstName",                    req.firstName());
+                            updates.put("lastName",                     req.lastName());
+                            updates.put("phone",                        req.phone());
+                            updates.put("documentType",                 req.documentType());
+                            updates.put("documentNumber",               req.documentNumber());
+                            updates.put("tiendaId",                     req.tiendaId());
+                            updates.put("position",                     req.position());
+                            updates.put("commissionRate",               req.commissionRate());
+                            updates.put("salesGoal",                    req.salesGoal());
+                            updates.put("employeeId",                   req.employeeId());
+                            updates.put("supervisorId",                 req.supervisorId());
+                            updates.put("experience",                   req.experience());
+                            updates.put("education",                    req.education());
+                            updates.put("emergencyContactName",         req.emergencyContactName());
+                            updates.put("emergencyContactPhone",        req.emergencyContactPhone());
+                            updates.put("emergencyContactRelationship", req.emergencyContactRelationship());
+                            updates.put("address",                      req.address());
+                            updates.put("city",                         req.city());
+                            updates.put("district",                     req.district());
+                            updates.put("gender",                       req.gender());
+                            updates.put("notes",                        req.notes());
+                            updates.put("updatedAt",                    Timestamp.now());
+                            firestore.collection("vendedor_profiles").document(uid).update(updates).get();
+
+                            Map<String, Object> userUpdates = new HashMap<>();
+                            userUpdates.put("firstName",    req.firstName());
+                            userUpdates.put("lastName",     req.lastName());
+                            userUpdates.put("phone",        req.phone());
+                            userUpdates.put("documentType", req.documentType());
+                            userUpdates.put("documentNumber", req.documentNumber());
+                            userUpdates.put("storeIds",     List.of(req.tiendaId()));
+                            userUpdates.put("updatedAt",    Timestamp.now());
+                            firestore.collection("users").document(uid).update(userUpdates).get();
+
+                            doc.setFirstName(req.firstName());
+                            doc.setLastName(req.lastName());
+                            doc.setPhone(req.phone());
+                            doc.setDocumentType(req.documentType());
+                            doc.setDocumentNumber(req.documentNumber());
+                            doc.setTiendaId(req.tiendaId());
+                            doc.setPosition(req.position());
+                            doc.setCommissionRate(req.commissionRate());
+                            doc.setSalesGoal(req.salesGoal());
+                            doc.setEmployeeId(req.employeeId());
+                            doc.setSupervisorId(req.supervisorId());
+                            doc.setExperience(req.experience());
+                            doc.setEducation(req.education());
+                            doc.setEmergencyContactName(req.emergencyContactName());
+                            doc.setEmergencyContactPhone(req.emergencyContactPhone());
+                            doc.setEmergencyContactRelationship(req.emergencyContactRelationship());
+                            doc.setAddress(req.address());
+                            doc.setCity(req.city());
+                            doc.setDistrict(req.district());
+                            doc.setGender(req.gender());
+                            doc.setNotes(req.notes());
+                            return toVendedorResponse(doc, tienda.getBusinessName());
+                        }).subscribeOn(Schedulers.boundedElastic())));
     }
 
     public Mono<VendedorResponse> cambiarEstadoVendedor(String uid, CambiarEstadoRequest req) {
@@ -484,17 +612,24 @@ public class GestionService {
                 doc.getLastName(),
                 doc.getEmail(),
                 doc.getPhone(),
+                doc.getDocumentType(),
+                doc.getDocumentNumber(),
                 doc.getBusinessName(),
                 doc.getTaxId(),
+                doc.getLegalRepresentative(),
                 doc.getCity(),
                 doc.getAddress(),
                 doc.getDistrict(),
+                doc.getPostalCode(),
                 doc.getTiendaStatus(),
                 doc.getIsActive(),
                 doc.getContactPersonName(),
                 doc.getContactPersonPhone(),
                 doc.getBankAccount(),
                 doc.getWebsite(),
+                doc.getFacebook(),
+                doc.getInstagram(),
+                doc.getWhatsapp(),
                 doc.getNotes(),
                 doc.getCreatedBy()
         );
@@ -507,6 +642,8 @@ public class GestionService {
                 doc.getLastName(),
                 doc.getEmail(),
                 doc.getPhone(),
+                doc.getDocumentType(),
+                doc.getDocumentNumber(),
                 doc.getTiendaId(),
                 tiendaBusinessName,
                 doc.getPosition(),
@@ -514,7 +651,18 @@ public class GestionService {
                 doc.getIsActive(),
                 doc.getCommissionRate(),
                 doc.getSalesGoal(),
+                doc.getEmployeeId(),
+                doc.getSupervisorId(),
+                doc.getExperience(),
+                doc.getEducation(),
+                doc.getEmergencyContactName(),
+                doc.getEmergencyContactPhone(),
+                doc.getEmergencyContactRelationship(),
+                doc.getAddress(),
                 doc.getCity(),
+                doc.getDistrict(),
+                doc.getGender(),
+                doc.getNotes(),
                 doc.getCreatedBy()
         );
     }

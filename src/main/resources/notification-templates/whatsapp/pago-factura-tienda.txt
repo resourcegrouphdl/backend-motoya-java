@@ -1,6 +1,6 @@
 ✅ *Pago registrado* — [(${tiendaNombre})]
 
-Hola, te informamos que *Motoya Digital* ha registrado un pago correspondiente a tu factura.
+Hola, te informamos que *Moto Ya Digital, S.A.C* ha registrado un pago correspondiente a tu factura.
 
 📄 *Factura N°:* [(${numeroFactura})]
 👤 *Cliente:* [(${clienteNombre})]
@@ -9,8 +9,8 @@ Hola, te informamos que *Motoya Digital* ha registrado un pago correspondiente a
 📅 *Fecha de pago:* [(${fechaPago})]
 🏦 *Método:* [(${metodoPago})]
 
-Puedes revisar el detalle y descargar el comprobante en el portal de Motoya Digital.
+Puedes revisar el detalle y descargar el comprobante en el portal de Moto Ya Digital, S.A.C.
 
 Si tienes alguna consulta, comunícate con el área de finanzas.
 
-*Motoya Digital* 🏍️
+*Moto Ya Digital, S.A.C* 🏍️

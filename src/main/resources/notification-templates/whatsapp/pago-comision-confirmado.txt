@@ -9,4 +9,4 @@ Hola [(${vendedor})], 👋
 [(${comprobanteUrl})]
 
 Gracias por tu trabajo. ¡Sigue adelante! 🚀
-— Equipo Motoya Digital
+— Equipo Moto Ya Digital, S.A.C

@@ -5,6 +5,6 @@ Te informamos que la solicitud de crédito *[(${codigoDeSolicitud})]* de tu clie
 📋 *Nuevo estado:* [(${estado})]
 [# th:if="${motivo != null && !motivo.isEmpty()}"]📝 *Motivo:* [(${motivo})]
 [/]
-Para más detalles ingresa al sistema Motoya Digital.
+Para más detalles ingresa al sistema Moto Ya Digital, S.A.C.
 
-_Motoya Digital_
+_Moto Ya Digital, S.A.C_
