@@ -31,11 +31,13 @@ public class DebugWaService {
     /** Guarda el payload raw del webhook — llamado ANTES de cualquier otra lógica. */
     public Mono<Void> guardarPayload(Map<String, Object> payload) {
         return Mono.fromCallable(() -> {
+            // Sanitizar base64 antes de serializar — evita límite de 1MB de Firestore
+            Map<String, Object> sanitized = sanitizarBase64(payload);
             String json;
             try {
-                json = objectMapper.writeValueAsString(payload);
+                json = objectMapper.writeValueAsString(sanitized);
             } catch (JsonProcessingException e) {
-                json = payload.toString();
+                json = sanitized.toString();
             }
             String evento       = String.valueOf(payload.getOrDefault("event",        "UNKNOWN"));
             String instanceName = String.valueOf(payload.getOrDefault("instanceName", ""));
@@ -79,6 +81,25 @@ public class DebugWaService {
             }
             return data;
         });
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> sanitizarBase64(Map<String, Object> payload) {
+        Object dataObj = payload.get("data");
+        if (!(dataObj instanceof Map)) return payload;
+        Object msgObj = ((Map<?, ?>) dataObj).get("Message");
+        if (!(msgObj instanceof Map)) return payload;
+        Object b64 = ((Map<?, ?>) msgObj).get("base64");
+        if (!(b64 instanceof String b64Str) || b64Str.isBlank()) return payload;
+
+        // Clonar sólo los niveles necesarios para no mutar el payload original
+        Map<String, Object> msgCopy  = new HashMap<>((Map<String, Object>) msgObj);
+        Map<String, Object> dataCopy = new HashMap<>((Map<String, Object>) dataObj);
+        Map<String, Object> root     = new HashMap<>(payload);
+        msgCopy.put("base64", "[BASE64_OMITIDO ~" + (b64Str.length() * 3 / 4 / 1024) + "kb]");
+        dataCopy.put("Message", msgCopy);
+        root.put("data", dataCopy);
+        return root;
     }
 
     /** Envía un mensaje de texto via Factiliza y lo guarda en el log de debug. */

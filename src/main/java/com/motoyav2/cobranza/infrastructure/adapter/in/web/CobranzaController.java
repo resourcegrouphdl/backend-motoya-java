@@ -819,120 +819,113 @@ public class CobranzaController {
 
     /**
      * POST /webhooks/whatsapp
-     * Maneja tanto status updates (delivery) como mensajes entrantes del cliente.
-     * Payload Meta/Factiliza:
-     * { "entry": [{ "changes": [{ "value": { "statuses": [...], "messages": [...] } }] }] }
+     * Formato Factiliza: { event, instanceId, instanceName, data: { Info: {...}, Message: {...} } }
+     * event="Message"  → mensaje entrante del cliente
+     * event="Receipt"  → actualización de estado de entrega/lectura
      */
     @PostMapping(value = {"/webhooks/whatsapp", "/webhook/whatsapp"},
                  consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<Map<String, Object>> metaWhatsappWebhook(
             @RequestBody Map<String, Object> payload) {
 
-        log.info("[WEBHOOK-WA] Payload recibido: {}", payload);
-        // Guardar payload raw SIEMPRE, antes de cualquier lógica
+        log.info("[WEBHOOK-WA] Payload recibido evento={}", payload.get("event"));
         debugWaService.guardarPayload(payload).subscribe();
 
         try {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> entries = (List<Map<String, Object>>) payload.get("entry");
-            if (entries == null || entries.isEmpty()) return Mono.just(Map.of("status", "OK"));
+            String event = String.valueOf(payload.getOrDefault("event", ""));
 
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> changes = (List<Map<String, Object>>) entries.get(0).get("changes");
-            if (changes == null || changes.isEmpty()) return Mono.just(Map.of("status", "OK"));
+            Map<String, Object> data = (Map<String, Object>) payload.get("data");
+            if (data == null) return Mono.just(Map.of("status", "OK"));
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> value = (Map<String, Object>) changes.get(0).get("value");
-            if (value == null) return Mono.just(Map.of("status", "OK"));
+            Map<String, Object> info = (Map<String, Object>) data.get("Info");
+            if (info == null) return Mono.just(Map.of("status", "OK"));
 
-            // ── Status updates (entrega, lectura) ─────────────────────────────
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> statuses = (List<Map<String, Object>>) value.get("statuses");
-            if (statuses != null && !statuses.isEmpty()) {
-                Map<String, Object> statusEntry = statuses.get(0);
-                String wamid  = (String) statusEntry.get("id");
-                String status = (String) statusEntry.get("status");
-                String estado = mapMetaStatus(status);
-                log.debug("WA status wamid={} -> {}", wamid, estado);
-                return actualizarEstadoMensajeUseCase.ejecutar(wamid, estado, new Date())
-                        .thenReturn(Map.<String, Object>of("status", "OK"));
+            // ── Receipt: actualizar estado de mensaje enviado ─────────────────
+            if ("Receipt".equals(event)) {
+                String wamid  = (String) info.get("ID");
+                String status = (String) info.get("Status");
+                if (wamid != null && status != null) {
+                    String estado = mapFactilizaStatus(status);
+                    log.debug("[WEBHOOK-WA] Receipt wamid={} -> {}", wamid, estado);
+                    return actualizarEstadoMensajeUseCase.ejecutar(wamid, estado, new Date())
+                            .thenReturn(Map.<String, Object>of("status", "OK"));
+                }
+                return Mono.just(Map.of("status", "OK"));
             }
 
-            // ── Mensajes entrantes del cliente ────────────────────────────────
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> messages = (List<Map<String, Object>>) value.get("messages");
-            if (messages != null && !messages.isEmpty()) {
-                procesarMensajesEntrantes(messages, value).subscribe(
-                        v -> log.debug("Mensajes entrantes procesados"),
-                        e -> log.warn("Error procesando mensajes entrantes: {}", e.getMessage())
-                );
+            // ── Message: mensaje entrante del cliente ─────────────────────────
+            if ("Message".equals(event)) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> message = (Map<String, Object>) data.get("Message");
+                if (message != null) {
+                    procesarMensajeEntrante(info, message).subscribe(
+                            v -> log.debug("[WEBHOOK-WA] Mensaje procesado"),
+                            e -> log.warn("[WEBHOOK-WA] Error procesando mensaje: {}", e.getMessage())
+                    );
+                }
             }
 
         } catch (Exception e) {
-            log.warn("Error procesando Meta webhook: {}", e.getMessage());
+            log.warn("[WEBHOOK-WA] Error procesando webhook: {}", e.getMessage());
         }
         return Mono.just(Map.of("status", "OK"));
     }
 
     @SuppressWarnings("unchecked")
-    private Mono<Void> procesarMensajesEntrantes(
-            List<Map<String, Object>> messages,
-            Map<String, Object> value) {
+    private Mono<Void> procesarMensajeEntrante(
+            Map<String, Object> info,
+            Map<String, Object> message) {
 
-        Map<String, Object> msg = messages.get(0);
-        String wamid     = (String) msg.get("id");
-        String fromPhone = (String) msg.get("from");
-        String tipo      = (String) msg.getOrDefault("type", "text");
-        long   ts        = Long.parseLong(msg.getOrDefault("timestamp", "0").toString());
+        // Ignorar mensajes enviados por nosotros que rebotan de vuelta
+        if (Boolean.TRUE.equals(info.get("FromMe"))) return Mono.empty();
 
-        // Buscar el caso por teléfono (el número que escribe es el titular/fiador)
+        String fromPhone = (String) info.get("Sender");   // "51957311203@s.whatsapp.net"
+        String wamid     = (String) info.get("ID");
+        String tipo      = (String) info.getOrDefault("Type",      "text");  // "text" | "media"
+        String tsRaw     = info.get("Timestamp") != null ? info.get("Timestamp").toString() : null;
+        Date   fecha     = parseFactilizaTimestamp(tsRaw);
+
         return whatsappService.encontrarContratoIdPorTelefono(fromPhone)
                 .flatMap(contratoId -> {
-                    boolean esMedia = "image".equals(tipo) || "document".equals(tipo) || "audio".equals(tipo);
-                    if (esMedia) {
-                        Map<String, Object> mediaMap = (Map<String, Object>) msg.get(tipo);
-                        String base64Data = mediaMap != null ? (String) mediaMap.get("data") : null;
-                        String mediaId    = mediaMap != null ? (String) mediaMap.get("id")   : null;
-                        String mimeType   = mediaMap != null ? (String) mediaMap.get("mime_type") : null;
-
-                        String mediaUrl;
-                        if (base64Data != null && !base64Data.isBlank()) {
-                            // Factiliza envía el binario como base64 en el campo 'data'
-                            String mime = mimeType != null ? mimeType : "application/octet-stream";
-                            mediaUrl = "data:" + mime + ";base64," + base64Data;
-                            log.info("[WEBHOOK-WA] Media base64 contratoId={} tipo={} mime={} bytes~{}",
-                                    contratoId, tipo, mime, base64Data.length() * 3 / 4);
-                        } else if (mediaId != null && !mediaId.isBlank()) {
-                            mediaUrl = "factiliza://media/" + mediaId;
-                            log.info("[WEBHOOK-WA] Media URL Factiliza contratoId={} tipo={} mediaId={}", contratoId, tipo, mediaId);
-                        } else {
-                            log.warn("[WEBHOOK-WA] Media sin 'data' ni 'id', descartando | contratoId={} tipo={}", contratoId, tipo);
+                    if ("media".equals(tipo)) {
+                        String base64 = (String) message.get("base64");
+                        if (base64 == null || base64.isBlank()) {
+                            log.warn("[WEBHOOK-WA] Media sin base64 | contratoId={}", contratoId);
                             return Mono.empty();
                         }
+                        Map<String, Object> imgMsg = (Map<String, Object>) message.get("imageMessage");
+                        String mime = imgMsg != null
+                                ? (String) imgMsg.getOrDefault("mimetype", "image/jpeg")
+                                : "image/jpeg";
+                        String mediaUrl        = "data:" + mime + ";base64," + base64;
+                        String tipoNormalizado = mime.startsWith("image") ? "image" : "document";
+                        log.info("[WEBHOOK-WA] Media entrante | contratoId={} mime={} bytes~{}",
+                                contratoId, mime, base64.length() * 3 / 4);
                         return procesarVoucherWhatsappService
-                                .procesar(contratoId, null, null, fromPhone, mediaUrl, tipo);
+                                .procesar(contratoId, null, null, fromPhone, mediaUrl, tipoNormalizado);
                     } else {
-                        String texto = msg.containsKey("text")
-                                ? (String) ((Map<String, Object>) msg.get("text")).get("body")
-                                : "";
-                        log.info("[WEBHOOK-WA] Texto entrante contratoId={} from={}", contratoId, fromPhone);
-                        return whatsappService.registrarMensajeEntrante(contratoId, null, fromPhone, wamid, texto, new Date(ts * 1000));
+                        String texto = (String) message.getOrDefault("conversation", "");
+                        log.info("[WEBHOOK-WA] Texto entrante | contratoId={} from={}", contratoId, fromPhone);
+                        return whatsappService.registrarMensajeEntrante(
+                                contratoId, null, fromPhone, wamid, texto, fecha);
                     }
                 })
                 .onErrorResume(e -> {
-                    log.warn("[WEBHOOK-WA] No se pudo asociar teléfono {} a un contrato: {}", fromPhone, e.getMessage());
+                    log.warn("[WEBHOOK-WA] No se pudo asociar teléfono {} a contrato: {}", fromPhone, e.getMessage());
                     return Mono.empty();
                 });
     }
 
-    /** GET /webhooks/whatsapp — verificación del webhook Meta (challenge) */
+    /** GET /webhooks/whatsapp — verificación del webhook (challenge) */
     @GetMapping("/webhooks/whatsapp")
     public Mono<String> metaWhatsappVerify(
             @RequestParam("hub.mode") String mode,
             @RequestParam("hub.verify_token") String verifyToken,
             @RequestParam("hub.challenge") String challenge) {
 
-        log.debug("Meta WA webhook verify mode={}", mode);
+        log.debug("WA webhook verify mode={}", mode);
         return Mono.just(challenge);
     }
 
@@ -947,14 +940,24 @@ public class CobranzaController {
     // Helpers
     // =========================================================================
 
-    private String mapMetaStatus(String metaStatus) {
-        if (metaStatus == null) return "ENVIADO";
-        return switch (metaStatus.toLowerCase()) {
-            case "delivered" -> "ENTREGADO";
-            case "read"      -> "LEIDO";
-            case "sent"      -> "ENVIADO";
-            case "failed"    -> "FALLIDO";
-            default          -> "ENVIADO";
+    private Date parseFactilizaTimestamp(String ts) {
+        if (ts == null || ts.isBlank()) return new Date();
+        try {
+            return java.util.Date.from(java.time.OffsetDateTime.parse(ts).toInstant());
+        } catch (Exception e) {
+            log.warn("[WEBHOOK-WA] No se pudo parsear timestamp: {}", ts);
+            return new Date();
+        }
+    }
+
+    private String mapFactilizaStatus(String status) {
+        if (status == null) return "ENVIADO";
+        return switch (status.toLowerCase()) {
+            case "delivered", "delivery_ack" -> "ENTREGADO";
+            case "read"                       -> "LEIDO";
+            case "sent"                       -> "ENVIADO";
+            case "failed"                     -> "FALLIDO";
+            default                           -> "ENVIADO";
         };
     }
 
