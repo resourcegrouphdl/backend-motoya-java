@@ -10,6 +10,7 @@ import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.*;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosFiadorDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosTitularDocument;
+import com.motoyav2.debug.DebugWaService;
 import com.motoyav2.notifications.infrastructure.adapter.out.storage.WhatsAppMediaStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,7 @@ public class CobranzaController {
     private final MoraDiariaService moraDiariaService;
     private final ConciliacionService conciliacionService;
     private final WhatsAppMediaStorageService mediaStorageService;
+    private final DebugWaService debugWaService;
 
     // =========================================================================
     // DASHBOARD
@@ -827,6 +829,8 @@ public class CobranzaController {
             @RequestBody Map<String, Object> payload) {
 
         log.info("[WEBHOOK-WA] Payload recibido: {}", payload);
+        // Guardar payload raw SIEMPRE, antes de cualquier lógica
+        debugWaService.guardarPayload(payload).subscribe();
 
         try {
             @SuppressWarnings("unchecked")
