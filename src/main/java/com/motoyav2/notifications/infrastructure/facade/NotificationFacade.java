@@ -198,7 +198,7 @@ public class NotificationFacade {
                   .onErrorResume(e -> { log.warn("[NotifFacade] WA titular solicitud error: {}", e.getMessage()); return Mono.empty(); })
                 : Mono.empty();
 
-        Mono<Void> mailTitular = (emailTitular != null && !emailTitular.isBlank())
+        Mono<Void> mailTitular = esEmailValido(emailTitular)
                 ? publishEvent.publish(
                         BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
                         NotificationChannel.EMAIL, emailTitular,
@@ -206,7 +206,7 @@ public class NotificationFacade {
                   .onErrorResume(e -> { log.warn("[NotifFacade] Email titular solicitud error: {}", e.getMessage()); return Mono.empty(); })
                 : Mono.empty();
 
-        Mono<Void> mailFiador = (emailFiador != null && !emailFiador.isBlank())
+        Mono<Void> mailFiador = esEmailValido(emailFiador)
                 ? publishEvent.publish(
                         BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
                         NotificationChannel.EMAIL, emailFiador,
@@ -214,7 +214,7 @@ public class NotificationFacade {
                   .onErrorResume(e -> { log.warn("[NotifFacade] Email fiador solicitud error: {}", e.getMessage()); return Mono.empty(); })
                 : Mono.empty();
 
-        Mono<Void> mailVendedor = (emailVendedor != null && !emailVendedor.isBlank())
+        Mono<Void> mailVendedor = esEmailValido(emailVendedor)
                 ? publishEvent.publish(
                         BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
                         NotificationChannel.EMAIL, emailVendedor,
@@ -226,7 +226,7 @@ public class NotificationFacade {
                 "cliente",           nombreTitular     != null ? nombreTitular     : "",
                 "codigoDeSolicitud", codigoDeSolicitud != null ? codigoDeSolicitud : solicitudId);
 
-        Mono<Void> mailEntrevistaTitular = (emailTitular != null && !emailTitular.isBlank())
+        Mono<Void> mailEntrevistaTitular = esEmailValido(emailTitular)
                 ? publishEvent.publish(
                         BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
                         NotificationChannel.EMAIL, emailTitular,
@@ -273,7 +273,7 @@ public class NotificationFacade {
                   .onErrorResume(e -> { log.warn("[NotifFacade] WA titular aprobado error: {}", e.getMessage()); return Mono.empty(); })
                 : Mono.empty();
 
-        Mono<Void> mailTitular = (emailTitular != null && !emailTitular.isBlank())
+        Mono<Void> mailTitular = esEmailValido(emailTitular)
                 ? publishEvent.publish(
                         BusinessEventType.CREDITO_APROBADO, solicitudId,
                         NotificationChannel.EMAIL, emailTitular,
@@ -296,7 +296,7 @@ public class NotificationFacade {
                   .onErrorResume(e -> { log.warn("[NotifFacade] WA fiador aprobado error: {}", e.getMessage()); return Mono.empty(); })
                 : Mono.empty();
 
-        Mono<Void> mailFiador = (emailFiador != null && !emailFiador.isBlank())
+        Mono<Void> mailFiador = esEmailValido(emailFiador)
                 ? publishEvent.publish(
                         BusinessEventType.CREDITO_APROBADO, solicitudId,
                         NotificationChannel.EMAIL, emailFiador,
@@ -551,5 +551,12 @@ public class NotificationFacade {
     private String formatMonto(java.math.BigDecimal monto) {
         if (monto == null) return "S/ 0.00";
         return "S/ " + monto.setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    /** Devuelve true solo si el email tiene formato mínimamente válido (contiene @ y dominio). */
+    private boolean esEmailValido(String email) {
+        return email != null && !email.isBlank()
+                && email.contains("@")
+                && email.indexOf("@") < email.lastIndexOf(".");
     }
 }

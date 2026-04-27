@@ -16,5 +16,7 @@ public record RecibirVoucherCommand(
         OcrResultadoDocument ocrResultado,
         String subioPor,
         /** WHATSAPP | PAGO_MANUAL | ADMIN_UPLOAD */
-        String fuente
+        String fuente,
+        /** Nombre del cliente — null en uploads manuales sin contexto */
+        String clienteNombre
 ) {}

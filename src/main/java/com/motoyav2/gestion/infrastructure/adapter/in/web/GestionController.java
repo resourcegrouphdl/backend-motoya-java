@@ -124,6 +124,14 @@ public class GestionController {
         return gestionService.obtenerTienda(uid);
     }
 
+    @PutMapping("/tiendas/{uid}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<TiendaResponse> actualizarTienda(
+            @PathVariable String uid,
+            @Valid @RequestBody ActualizarTiendaRequest req) {
+        return gestionService.actualizarTienda(uid, req);
+    }
+
     @PutMapping("/tiendas/{uid}/estado")
     @PreAuthorize("hasRole('ADMIN')")
     public Mono<TiendaResponse> cambiarEstadoTienda(
@@ -162,6 +170,14 @@ public class GestionController {
     @PreAuthorize("hasRole('ADMIN')")
     public Mono<VendedorResponse> obtenerVendedor(@PathVariable String uid) {
         return gestionService.obtenerVendedor(uid);
+    }
+
+    @PutMapping("/vendedores/{uid}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<VendedorResponse> actualizarVendedor(
+            @PathVariable String uid,
+            @Valid @RequestBody ActualizarVendedorRequest req) {
+        return gestionService.actualizarVendedor(uid, req);
     }
 
     @PutMapping("/vendedores/{uid}/estado")

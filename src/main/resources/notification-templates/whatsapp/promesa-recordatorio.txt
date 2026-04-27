@@ -1,14 +1,19 @@
-Hola [(${cliente})], te recordamos que *hoy* es el día que acordaste realizar tu pago de *[(${monto})]* a Motoya Digital.
+Hola [(${cliente})], te recordamos que *hoy* es el día que acordaste realizar tu pago de *[(${monto})]* a Moto Ya Digital, S.A.C.
 
 Para cumplir con tu compromiso, realiza tu depósito a cualquiera de nuestras cuentas:
 
-🏦 *BCP:* 191-22165738-0-53
-🏦 *Interbank:* 200-3003349-884
-🏦 *Scotiabank:* 071-7041758
-📱 *Yape/Plin:* 952 844 555
+🏦 *BCP:* 194-1058703-0-68
+    CCI: 002-19400105870306894
 
-Envíanos la foto del comprobante por este chat y un asesor confirmará tu pago.
+🏦 *Interbank:* 2003006691585
+    CCI: 00320000300669158538
 
-Si necesitas coordinar, contáctanos: *+51 912 301 507*
+🏦 *Scotiabank:* 000-4689149
+    CCI: 009-056-000004689149-35
 
-_Motoya Digital - Confianza en movimiento_
+📎 *Si ya realizaste tu pago, por favor haz caso omiso a este recordatorio.*
+Recuerda enviar la foto o captura de tu comprobante *por este mismo chat* para que nuestro equipo lo registre y procese a la brevedad.
+
+Si necesitas coordinar, contáctanos: *+51 996 185 956*
+
+_Moto Ya Digital, S.A.C - Confianza en movimiento_

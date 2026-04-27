@@ -94,7 +94,7 @@ public class CobranzaController {
 
     @PostMapping("/api/v1/cobranzas/mora/procesar")
     public Mono<Map<String, Object>> procesarMoraDiaria() {
-        return moraDiariaService.procesarMoraDiaria()
+        return moraDiariaService.procesarMora()
                 .count()
                 .map(total -> Map.<String, Object>of(
                         "status", "OK",
@@ -362,13 +362,35 @@ public class CobranzaController {
     // =========================================================================
 
     @GetMapping("/api/v1/cobranzas/vouchers")
-    public Flux<VoucherDocument> getVouchers(
+    public Flux<VoucherResponse> getVouchers(
             @RequestParam(required = false) String estado,
             ServerWebExchange exchange) {
 
         String storeId = (String) exchange.getAttributes().get("storeId");
         log.debug("GET /vouchers storeId={} estado={}", storeId, estado);
-        return listarVouchersUseCase.ejecutar(storeId, estado);
+
+        return listarVouchersUseCase.ejecutar(storeId, estado)
+                .flatMap(doc -> {
+                    Mono<String> urlMono = (doc.getImagenPath() != null && !doc.getImagenPath().isBlank())
+                            ? mediaStorageService.generarSignedUrl(doc.getImagenPath(), 15)
+                            : Mono.just("");
+                    return urlMono.map(url -> toVoucherResponse(doc, url));
+                });
+    }
+
+    private VoucherResponse toVoucherResponse(VoucherDocument doc, String imagenUrl) {
+        String fechaDeteccion = doc.getCreadoEn() != null
+                ? doc.getCreadoEn().toInstant().toString()
+                : null;
+        return new VoucherResponse(
+                doc.getId(), doc.getContratoId(), doc.getCliente(), doc.getClienteDni(),
+                doc.getStoreId(), doc.getEstado(), doc.getFuente(),
+                imagenUrl, doc.getImagenPath(),
+                doc.getMontoDetectado(), doc.getMontoEsperado(), doc.getOcrResultado(),
+                doc.getAprobadoPor(), doc.getAprobadoPorNombre(),
+                doc.getRechazadoPor(), doc.getMotivoRechazo(), doc.getObservacionesRechazo(),
+                doc.getComprobanteId(), fechaDeteccion, doc.getCreadoPor()
+        );
     }
 
     @PostMapping(value = "/api/v1/cobranzas/vouchers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -387,7 +409,7 @@ public class CobranzaController {
 
         RecibirVoucherCommand command = new RecibirVoucherCommand(
                 contratoId, storeId, imagenPath, thumbPath, montoDetectado,
-                null, null, userId, "ADMIN_UPLOAD");
+                null, null, userId, "ADMIN_UPLOAD", null);
 
         return recibirVoucherUseCase.ejecutar(command)
                 .map(voucherId -> Map.<String, Object>of(

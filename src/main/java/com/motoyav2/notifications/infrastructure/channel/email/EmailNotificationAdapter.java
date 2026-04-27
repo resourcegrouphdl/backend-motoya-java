@@ -34,9 +34,16 @@ public class EmailNotificationAdapter implements NotificationSenderPort {
 
     @Override
     public Mono<String> send(Notification notification) {
+        String recipient = notification.recipient();
+        if (recipient == null || !recipient.contains("@") || !recipient.contains(".")) {
+            log.warn("[EMAIL] Dirección inválida — omitiendo envío | to={} plantilla={}",
+                    recipient, notification.template());
+            return Mono.just("skipped-invalid-address");
+        }
+
         return Mono.fromCallable(() -> {
             log.info("[EMAIL] Intentando enviar | plantilla={} to={} from={}",
-                    notification.template(), notification.recipient(), fromAddress);
+                    notification.template(), recipient, fromAddress);
 
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
