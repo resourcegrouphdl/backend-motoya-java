@@ -1,12 +1,16 @@
 package com.motoyav2.cobranza.application.service;
 
+import com.motoyav2.cobranza.application.port.out.AlertaCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.EventoCobranzaPort;
-import com.motoyav2.cobranza.application.port.out.PromesaPort;
+import com.motoyav2.cobranza.domain.NivelMoraCalculadora;
+import com.motoyav2.cobranza.domain.enums.NivelAlerta;
+import com.motoyav2.cobranza.domain.enums.NivelEstrategia;
+import com.motoyav2.cobranza.domain.enums.TipoAlerta;
+import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.AlertaCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
-import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,8 +18,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -23,47 +25,39 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Servicio de procesamiento diario de mora.
+ * Cálculo diario de mora — responsabilidad única: números y estado.
  *
- * Responsabilidades:
- *  1. Marca cuotas como VENCIDA cuando su fecha de vencimiento ya pasó y no están pagadas.
- *  2. Calcula mora acumulada: días de mora × S/ 3.00 por día (regulación interna Motoya).
- *  3. Actualiza nivelEstrategia según tramos de días de mora.
- *  4. Envía recordatorio WhatsApp cada 3 días si el cliente no tiene promesa vigente.
+ * En cada ejecución (07:15 Lima vía CobranzaSchedulerOrchestrator):
+ *   1. Marca cuotas como VENCIDA cuando su fecha ya pasó.
+ *   2. Calcula mora acumulada (S/ 3.00/día).
+ *   3. Escala nivelEstrategia según tramos Motoya via NivelMoraCalculadora.
+ *   4. Si el nivel escala a MORA_CRITICA o JUDICIAL → crea alerta en cobranzas-alertas.
+ *
+ * NO envía WhatsApp — esa responsabilidad es exclusiva de CobranzaRecordatorioService.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MoraDiariaService {
 
-    private static final ZoneId    LIMA                        = ZoneId.of("America/Lima");
-    private static final double    MORA_DIARIA_SOLES           = 3.0;
-    private static final int       FRECUENCIA_RECORDATORIO_DIAS = 3;
-
     private final CasoCobranzaPort   casoPort;
     private final EventoCobranzaPort eventoPort;
-    private final PromesaPort        promesaPort;
-    private final NotificationFacade notificationFacade;
+    private final AlertaCobranzaPort alertaPort;
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Punto de entrada del scheduler. Procesa todos los casos activos en paralelo (concurrency=8).
-     * Los errores por caso son silenciados para que un documento corrupto no detenga el lote.
-     */
-    public Flux<String> procesarMoraDiaria() {
-        LocalDate hoy = LocalDate.now(LIMA);
-        log.info("[MORA-DIARIA] Iniciando procesamiento para {}", hoy);
+    public Flux<String> procesarMora() {
+        LocalDate hoy = LocalDate.now(NivelMoraCalculadora.LIMA);
+        log.info("[MORA] Iniciando cálculo diario para {}", hoy);
 
         return casoPort.findAll()
                 .filter(c -> esCasoGestionable(c.getCicloVida()))
                 .flatMap(caso -> procesarCaso(caso, hoy)
                         .onErrorResume(e -> {
-                            log.warn("[MORA-DIARIA] Caso {} omitido por error: {}",
-                                    caso.getContratoId(), e.getMessage());
+                            log.warn("[MORA] Caso {} omitido: {}", caso.getContratoId(), e.getMessage());
                             return Mono.empty();
                         }), 8)
-                .doOnComplete(() -> log.info("[MORA-DIARIA] Procesamiento completado para {}", hoy));
+                .doOnComplete(() -> log.info("[MORA] Cálculo completado para {}", hoy));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -72,133 +66,66 @@ public class MoraDiariaService {
         List<CuotaCronogramaDocument> cronograma = caso.getCronograma();
         if (cronograma == null || cronograma.isEmpty()) return Mono.empty();
 
-        // ── 1. Calcular mora y marcar cuotas VENCIDA ──────────────────────────
+        // ── 1. Marcar cuotas VENCIDA ─────────────────────────────────────────
         boolean cronogramaModificado = false;
-        int     diasMoraMax          = 0;
-        double  montoCuotaMasVieja   = 0.0;
-
         for (CuotaCronogramaDocument cuota : cronograma) {
-            if ("PAGADA".equals(cuota.getEstado())) continue;
-            if (cuota.getFechaVencimiento() == null)  continue;
-
+            if ("PAGADA".equals(cuota.getEstado()) || cuota.getFechaVencimiento() == null) continue;
             try {
                 LocalDate venc = LocalDate.parse(cuota.getFechaVencimiento());
-                if (!venc.isBefore(hoy)) continue;                           // aún no vence
-
-                long dias = ChronoUnit.DAYS.between(venc, hoy);
-                if (dias > diasMoraMax) {
-                    diasMoraMax        = (int) dias;
-                    montoCuotaMasVieja = cuota.getMonto() != null ? cuota.getMonto() : 0.0;
-                }
-                if (!"VENCIDA".equals(cuota.getEstado())) {
+                if (venc.isBefore(hoy) && !"VENCIDA".equals(cuota.getEstado())) {
                     cuota.setEstado("VENCIDA");
                     cronogramaModificado = true;
                 }
             } catch (Exception e) {
-                log.debug("[MORA-DIARIA] Fecha inválida cuota #{} contrato {}",
+                log.debug("[MORA] Fecha inválida cuota #{} contrato {}",
                         cuota.getCuota(), caso.getContratoId());
             }
         }
 
-        if (diasMoraMax == 0) return Mono.empty();   // caso sin mora
+        int diasMora = NivelMoraCalculadora.diasMora(caso, hoy);
+        if (diasMora == 0) return Mono.empty();
 
-        // ── 2. Valores derivados ──────────────────────────────────────────────
-        final int    diasMora   = diasMoraMax;
-        final double moraDiaria = diasMora * MORA_DIARIA_SOLES;
-        final double montoTotal = montoCuotaMasVieja + moraDiaria;
-        final double montoCuota = montoCuotaMasVieja;
+        // ── 2. Calcular nivel y mora ─────────────────────────────────────────
+        double moraSoles     = NivelMoraCalculadora.moraSoles(diasMora);
+        String nivelAnterior = caso.getNivelEstrategia();
+        String nuevoNivel    = NivelMoraCalculadora.calcularNivel(diasMora);
+        boolean nivelCambio  = nuevoNivel != null && !nuevoNivel.equals(nivelAnterior);
+        boolean esEscaladaCritica = nivelCambio
+                && (NivelEstrategia.MORA_CRITICA.name().equals(nuevoNivel)
+                    || NivelEstrategia.JUDICIAL.name().equals(nuevoNivel));
 
-        final String nivelAnterior = caso.getNivelEstrategia();
-        final String nuevoNivel    = calcularNivel(diasMora);
-        final boolean nivelCambio  = !nuevoNivel.equals(nivelAnterior);
-        final boolean cronoChanged = cronogramaModificado;
-
-        // ── 3. Mutar el caso (sin save aún) ──────────────────────────────────
-        caso.setTotalMora(moraDiaria);
-        caso.setNivelEstrategia(nuevoNivel);
+        // ── 3. Actualizar documento ──────────────────────────────────────────
+        caso.setTotalMora(moraSoles);
+        if (nuevoNivel != null) caso.setNivelEstrategia(nuevoNivel);
         caso.setActualizadoEn(new Date());
-        if (cronoChanged) caso.setCronograma(cronograma);
+        if (cronogramaModificado) caso.setCronograma(cronograma);
 
-        // ── 4. Verificar si tiene promesa vigente para decidir WA ─────────────
-        return promesaPort.findVigente(caso.getContratoId())
-                .hasElement()
-                .flatMap(tienePromesa -> {
-                    boolean debeNotificar = !tienePromesa
-                            && debeEnviarRecordatorio(caso.getUltimoRecordatorioMora());
+        // ── 4. Persistir y disparar efectos secundarios ──────────────────────
+        return casoPort.save(caso)
+                .flatMap(saved -> {
+                    Mono<Void> evNivel = nivelCambio
+                            ? appendEventoNivel(caso.getContratoId(), nivelAnterior,
+                                                nuevoNivel, diasMora, moraSoles)
+                            : Mono.empty();
 
-                    if (debeNotificar) {
-                        caso.setUltimoRecordatorioMora(new Date());
-                    }
+                    Mono<Void> alerta = esEscaladaCritica
+                            ? crearAlertaEscalada(caso, nuevoNivel, diasMora, moraSoles)
+                            : Mono.empty();
 
-                    return casoPort.save(caso)
-                            .flatMap(saved -> {
-                                Mono<Void> evNivel = nivelCambio
-                                        ? appendEventoNivelEscalado(
-                                                caso.getContratoId(), nivelAnterior,
-                                                nuevoNivel, diasMora, moraDiaria)
-                                        : Mono.empty();
-
-                                Mono<Void> notifWa = debeNotificar
-                                        ? enviarRecordatorioWa(
-                                                caso, diasMora, montoCuota, moraDiaria, montoTotal)
-                                        : Mono.empty();
-
-                                return Mono.when(evNivel, notifWa)
-                                        .thenReturn(caso.getContratoId());
-                            });
+                    return Mono.when(evNivel, alerta).thenReturn(caso.getContratoId());
                 });
     }
 
-    // ── WA recordatorio de mora ───────────────────────────────────────────────
+    // ── Evento de escalado ────────────────────────────────────────────────────
 
-    private Mono<Void> enviarRecordatorioWa(CasoCobranzaDocument caso,
-                                             int diasMora, double montoCuota,
-                                             double montoMora, double montoTotal) {
-        String telefono = caso.getClienteTelefono();
-        String cliente  = caso.getClienteNombre();
-        if (telefono == null || telefono.isBlank()) return Mono.empty();
-
-        Mono<Void> wa = notificationFacade.notificarCuotaVencida(
-                caso.getContratoId(), telefono, cliente,
-                fmt(montoCuota),
-                String.valueOf(diasMora),
-                fmt(montoMora),
-                fmt(montoTotal))
-                .onErrorResume(e -> {
-                    log.warn("[MORA-DIARIA] Error WA {}: {}", caso.getContratoId(), e.getMessage());
-                    return Mono.empty();
-                });
-
-        EventoCobranzaDocument ev = EventoCobranzaDocument.builder()
-                .id(UUID.randomUUID().toString())
-                .contratoId(caso.getContratoId())
-                .tipo("MENSAJE_WHATSAPP")
-                .payload(Map.of(
-                        "tipo",       "RECORDATORIO_MORA",
-                        "diasMora",   diasMora,
-                        "montoMora",  montoMora,
-                        "montoTotal", montoTotal
-                ))
-                .usuarioId("SISTEMA")
-                .usuarioNombre("Sistema Automático")
-                .automatico(true)
-                .creadoEn(new Date())
-                .build();
-
-        return wa.then(eventoPort.append(caso.getContratoId(), ev)).then();
-    }
-
-    // ── Evento de escalado de nivel ───────────────────────────────────────────
-
-    private Mono<Void> appendEventoNivelEscalado(String contratoId,
-                                                   String nivelAnterior, String nivelNuevo,
-                                                   int diasMora, double moraDiaria) {
+    private Mono<Void> appendEventoNivel(String contratoId, String anterior, String nuevo,
+                                          int diasMora, double moraSoles) {
         Map<String, Object> payload = new HashMap<>();
-        payload.put("nivelAnterior",   nivelAnterior != null ? nivelAnterior : "");
-        payload.put("nivelNuevo",      nivelNuevo);
+        payload.put("nivelAnterior",   anterior != null ? anterior : "");
+        payload.put("nivelNuevo",      nuevo);
         payload.put("diasMora",        diasMora);
-        payload.put("moraDiaria",      moraDiaria);
-        payload.put("moraDiariaSoles", MORA_DIARIA_SOLES);
+        payload.put("moraSoles",       moraSoles);
+        payload.put("moraDiariaSoles", NivelMoraCalculadora.MORA_DIARIA_SOLES);
 
         EventoCobranzaDocument ev = EventoCobranzaDocument.builder()
                 .id(UUID.randomUUID().toString())
@@ -214,6 +141,43 @@ public class MoraDiariaService {
         return eventoPort.append(contratoId, ev).then();
     }
 
+    // ── Alerta operativa cuando escala a CRITICA o JUDICIAL ──────────────────
+
+    private Mono<Void> crearAlertaEscalada(CasoCobranzaDocument caso,
+                                            String nuevoNivel, int diasMora, double moraSoles) {
+        boolean esJudicial = NivelEstrategia.JUDICIAL.name().equals(nuevoNivel);
+
+        AlertaCobranzaDocument alerta = AlertaCobranzaDocument.builder()
+                .id(UUID.randomUUID().toString())
+                .tipo(TipoAlerta.ESCALACION_REQUERIDA.name())
+                .nivel(esJudicial ? NivelAlerta.CRITICAL.name() : NivelAlerta.WARNING.name())
+                .titulo((esJudicial ? "🚨 Caso judicial: " : "⚠️ Mora crítica: ")
+                        + caso.getClienteNombre())
+                .descripcion(String.format("Escalado a %s — %d días de mora (%s)",
+                        nuevoNivel, diasMora, NivelMoraCalculadora.fmt(moraSoles)))
+                .contratoId(caso.getContratoId())
+                .clienteNombre(caso.getClienteNombre())
+                .storeId(caso.getStoreId())
+                .agenteId(caso.getAgenteAsignadoId())
+                .accionSugerida("Gestionar caso con urgencia")
+                .accionRuta("/cobranzas/vista360/" + caso.getContratoId())
+                .leida(false)
+                .descartada(false)
+                .creadoEn(new Date())
+                .expiraEn(new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000))
+                .build();
+
+        return alertaPort.save(alerta)
+                .doOnSuccess(a -> log.info("[MORA] Alerta operativa creada | contrato={} nivel={}",
+                        caso.getContratoId(), nuevoNivel))
+                .onErrorResume(e -> {
+                    log.warn("[MORA] Error creando alerta | contrato={}: {}",
+                            caso.getContratoId(), e.getMessage());
+                    return Mono.empty();
+                })
+                .then();
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private boolean esCasoGestionable(String cicloVida) {
@@ -222,23 +186,5 @@ public class MoraDiariaService {
             case "PAGADO_TOTAL", "CASTIGADO", "CERRADO", "CANCELADO" -> false;
             default -> true;
         };
-    }
-
-    private boolean debeEnviarRecordatorio(Date ultimoRecordatorio) {
-        if (ultimoRecordatorio == null) return true;
-        LocalDate ultima = ultimoRecordatorio.toInstant().atZone(LIMA).toLocalDate();
-        return ChronoUnit.DAYS.between(ultima, LocalDate.now(LIMA)) >= FRECUENCIA_RECORDATORIO_DIAS;
-    }
-
-    /** Tramos regulación interna Motoya: 1-15d TEMPRANA · 16-30d MEDIA · 31-60d CRITICA · 61+d JUDICIAL */
-    private String calcularNivel(int diasMora) {
-        if (diasMora >= 61) return "JUDICIAL";
-        if (diasMora >= 31) return "MORA_CRITICA";
-        if (diasMora >= 16) return "MORA_MEDIA";
-        return "MORA_TEMPRANA";
-    }
-
-    private String fmt(double monto) {
-        return String.format("S/ %.2f", monto);
     }
 }

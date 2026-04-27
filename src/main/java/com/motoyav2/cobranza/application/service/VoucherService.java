@@ -50,6 +50,7 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                 .id(UUID.randomUUID().toString())
                 .contratoId(command.contratoId())
                 .storeId(command.storeId())
+                .cliente(command.clienteNombre())
                 .estado("PENDIENTE")
                 .fuente(command.fuente())
                 .imagenPath(command.imagenPath())

@@ -190,6 +190,25 @@ public class WhatsAppMediaStorageService {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * Genera una Signed URL de lectura para un archivo ya almacenado en GCS.
+     * Bloqueante — se ejecuta en boundedElastic.
+     */
+    public Mono<String> generarSignedUrl(String gcsPath, int minutes) {
+        if (gcsPath == null || gcsPath.isBlank()) return Mono.just("");
+        return Mono.fromCallable(() -> {
+            BlobId   blobId   = BlobId.of(bucketName, gcsPath);
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
+            URL signed = storage.signUrl(blobInfo, minutes, TimeUnit.MINUTES,
+                    Storage.SignUrlOption.withV4Signature());
+            return signed.toString();
+        }).subscribeOn(Schedulers.boundedElastic())
+          .onErrorResume(e -> {
+              log.warn("[WA-MEDIA] No se pudo generar Signed URL | path={} err={}", gcsPath, e.getMessage());
+              return Mono.just("");
+          });
+    }
+
     private String sanitize(String name) {
         return name.replaceAll("[^a-zA-Z0-9._-]", "_");
     }

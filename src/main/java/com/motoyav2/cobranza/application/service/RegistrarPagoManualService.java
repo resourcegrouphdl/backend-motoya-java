@@ -154,7 +154,8 @@ public class RegistrarPagoManualService implements RegistrarPagoManualUseCase {
                             montoEsperado,
                             ocrHint,
                             command.registradoPor(),
-                            "PAGO_MANUAL"
+                            "PAGO_MANUAL",
+                            null
                     );
 
                     log.info("[PAGO-MANUAL] Con voucher | contratoId={} monto={} imagenPath={}",
