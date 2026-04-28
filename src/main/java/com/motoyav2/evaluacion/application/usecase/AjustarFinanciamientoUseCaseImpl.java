@@ -46,19 +46,13 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                             : solicitud.getPrecioCompraMoto();
 
                     // ── Validaciones de negocio ───────────────────────────────
-                    if (command.nuevaInicial().compareTo(originalInicial) < 0) {
+                    if (command.nuevaInicial().compareTo(BigDecimal.ZERO) < 0) {
                         return Mono.error(new BadRequestException(
-                                "La inicial ajustada no puede ser menor a la original (S/ "
-                                        + originalInicial.setScale(2, RoundingMode.HALF_UP) + ")"));
+                                "La inicial no puede ser negativa"));
                     }
                     if (!PLAZOS_VALIDOS.contains(command.nuevoPlazo())) {
                         return Mono.error(new BadRequestException(
                                 "El plazo debe ser 16, 20 o 24 quincenas"));
-                    }
-                    if (command.nuevoPlazo() > originalPlazo) {
-                        return Mono.error(new BadRequestException(
-                                "El plazo ajustado no puede ser mayor al original ("
-                                        + originalPlazo + " quincenas)"));
                     }
                     BigDecimal costoTotal = CalculadoraFinanciamientoService.calcularPrecioTotal(precio);
                     if (command.nuevaInicial().compareTo(costoTotal) >= 0) {

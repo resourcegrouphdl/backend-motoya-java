@@ -31,4 +31,9 @@ public class VehiculoRepositoryAdapter implements VehiculoRepository {
         return toMono(db.collection(COL).add(fields))
                 .map(ref -> ref.getId());
     }
+
+    @Override
+    public Mono<Void> updateFields(String id, Map<String, Object> fields) {
+        return toMono(db.collection(COL).document(id).update(fields)).then();
+    }
 }
