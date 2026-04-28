@@ -6,6 +6,7 @@ import com.motoyav2.voucherextraction.application.port.out.LlmEnriquecimientoPor
 import com.motoyav2.voucherextraction.domain.model.VoucherExtraccion;
 import com.motoyav2.voucherextraction.domain.model.VoucherRaw;
 import com.motoyav2.voucherextraction.domain.strategy.BancoStrategy;
+import com.motoyav2.voucherextraction.infrastructure.config.DocumentAiProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -34,28 +35,28 @@ public class VoucherExtractionService implements ExtraerVoucherUseCase {
     private static final Set<String> CAMPOS_CRITICOS = Set.of(
             "montoPagado", "fechaPago", "numeroOperacion");
 
-    private final DocumentAiRawPort documentAiRawPort;
-    private final LlmEnriquecimientoPort llmEnriquecimientoPort;
-    private final BancoStrategyRegistry strategyRegistry;
-
-    @Value("${app.documentai.enabled:false}")
-    private boolean documentAiEnabled;
+    private final DocumentAiRawPort       documentAiRawPort;
+    private final LlmEnriquecimientoPort  llmEnriquecimientoPort;
+    private final BancoStrategyRegistry   strategyRegistry;
+    private final DocumentAiProperties    documentAiProperties;
 
     @Value("${app.anthropic.enabled:true}")
     private boolean llmEnabled;
 
     public VoucherExtractionService(DocumentAiRawPort documentAiRawPort,
                                     LlmEnriquecimientoPort llmEnriquecimientoPort,
-                                    BancoStrategyRegistry strategyRegistry) {
-        this.documentAiRawPort = documentAiRawPort;
+                                    BancoStrategyRegistry strategyRegistry,
+                                    DocumentAiProperties documentAiProperties) {
+        this.documentAiRawPort      = documentAiRawPort;
         this.llmEnriquecimientoPort = llmEnriquecimientoPort;
-        this.strategyRegistry = strategyRegistry;
+        this.strategyRegistry       = strategyRegistry;
+        this.documentAiProperties   = documentAiProperties;
     }
 
     @Override
     public Mono<VoucherExtraccion> extraer(String gcsPath, String mimeType) {
-        if (!documentAiEnabled) {
-            log.debug("[VoucherExtraction] Document AI deshabilitado — omitiendo {}", gcsPath);
+        if (!documentAiProperties.isEnabled()) {
+            log.warn("[VoucherExtraction] Document AI DESHABILITADO — voucher sin OCR: {}", gcsPath);
             return Mono.just(VoucherExtraccion.omitido());
         }
 
