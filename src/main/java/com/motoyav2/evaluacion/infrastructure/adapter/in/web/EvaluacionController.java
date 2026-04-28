@@ -57,6 +57,8 @@ public class EvaluacionController {
     private final com.motoyav2.evaluacion.domain.port.in.ActualizarEmailClienteUseCase actualizarEmailClienteUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ActualizarDocumentoClienteUseCase actualizarDocumentoClienteUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ActualizarTelefonoClienteUseCase actualizarTelefonoClienteUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.ActualizarDireccionClienteUseCase actualizarDireccionClienteUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.ActualizarColorVehiculoUseCase actualizarColorVehiculoUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.ReenviarBienvenidaWaUseCase reenviarBienvenidaWaUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.AnalizarSentinelUseCase analizarSentinelUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.EliminarSolicitudUseCase eliminarSolicitudUseCase;
@@ -490,6 +492,36 @@ public class EvaluacionController {
                 nombre))
                 .onErrorMap(com.motoyav2.shared.exception.BadRequestException.class,
                         e -> new com.motoyav2.shared.exception.BadRequestException(e.getMessage()));
+    }
+
+    // ── PATCH /vehiculos/{vehiculoId}/color ──────────────────────────────
+    @PatchMapping("/vehiculos/{vehiculoId}/color")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> actualizarColorVehiculo(
+            @PathVariable String vehiculoId,
+            @RequestBody Map<String, String> body) {
+        String color = body.get("color");
+        if (color == null || color.isBlank()) {
+            return Mono.error(new BadRequestException("El campo 'color' es requerido"));
+        }
+        return actualizarColorVehiculoUseCase.actualizarColor(vehiculoId, color);
+    }
+
+    // ── PATCH /clientes/{clienteId}/direccion ─────────────────────────────
+    @PatchMapping("/clientes/{clienteId}/direccion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> actualizarDireccion(
+            @PathVariable String clienteId,
+            @RequestBody Map<String, String> body) {
+        String direccion    = body.get("direccion");
+        String distrito     = body.get("distrito");
+        String provincia    = body.get("provincia");
+        String departamento = body.get("departamento");
+        if (direccion == null || direccion.isBlank()) {
+            return Mono.error(new BadRequestException("El campo 'direccion' es requerido"));
+        }
+        return actualizarDireccionClienteUseCase.actualizarDireccion(
+                clienteId, direccion, distrito, provincia, departamento);
     }
 
     // ── POST /solicitudes/{solicitudId}/reemplazar-fiador ─────────────────

@@ -8,4 +8,5 @@ import java.util.Map;
 public interface VehiculoRepository {
     Mono<Vehiculo> findById(String id);
     Mono<String> create(Map<String, Object> fields);
+    Mono<Void> updateFields(String id, Map<String, Object> fields);
 }

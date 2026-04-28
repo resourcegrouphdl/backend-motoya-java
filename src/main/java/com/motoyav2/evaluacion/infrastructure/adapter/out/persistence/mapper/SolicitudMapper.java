@@ -120,7 +120,8 @@ public final class SolicitudMapper {
 
     private static String str(Map<String, Object> m, String key) {
         Object v = m.get(key);
-        return v != null ? v.toString() : null;
+        if (v instanceof String s) return s;
+        return null;
     }
 
     private static Double dbl(Map<String, Object> m, String key) {
