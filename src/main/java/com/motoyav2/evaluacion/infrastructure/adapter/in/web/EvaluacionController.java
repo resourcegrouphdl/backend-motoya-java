@@ -487,6 +487,7 @@ public class EvaluacionController {
                 solicitudId,
                 request.nuevaInicial(),
                 request.nuevoPlazo(),
+                request.nuevoPrecioMoto(),
                 request.tea(),
                 uid,
                 nombre))
