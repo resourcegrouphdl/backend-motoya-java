@@ -110,11 +110,11 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                         df.put("interesTotal",              opcion.getInteresTotal().doubleValue());
                         df.put("tasaLineal",                opcion.getTasa().doubleValue());
                         df.put("modoCalculadora",           "SIMPLIFICADO");
-                        // Precio y costo total — se actualizan solo cuando el precio cambió
-                        if (cambiaPrecio) {
-                            df.put("montoVehiculo", precio.doubleValue());
-                            df.put("costoTotal",    costoTotal.doubleValue());
-                        }
+                        // Siempre incluir precio y costo para no borrarlos del sub-documento
+                        // (Firestore update() con Map reemplaza todo el sub-documento)
+                        df.put("montoVehiculo",        precio.doubleValue());
+                        df.put("costoTotal",           costoTotal.doubleValue());
+                        df.put("soatCostosNotariales", costoTotal.subtract(precio).doubleValue());
                         updates.put("datosFinancieros", df);
                     }
 
