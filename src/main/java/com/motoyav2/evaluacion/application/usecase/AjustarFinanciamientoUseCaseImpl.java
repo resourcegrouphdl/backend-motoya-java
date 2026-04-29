@@ -34,18 +34,21 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                 .switchIfEmpty(Mono.error(new ExpedienteNotFoundException(command.solicitudId())))
                 .flatMap(solicitud -> {
 
-                    // ── Valores originales ────────────────────────────────────
-                    BigDecimal originalInicial = solicitud.getDatosFinancieros() != null
-                            ? solicitud.getDatosFinancieros().getInicial()
-                            : solicitud.getInicial();
-                    int originalPlazo = solicitud.getDatosFinancieros() != null
-                            ? solicitud.getDatosFinancieros().getNumeroCuotasQuincenales()
-                            : solicitud.getPlazoQuincenas();
-                    BigDecimal precio = solicitud.getDatosFinancieros() != null
+                    // ── Precio efectivo: usar el nuevo si viene, si no el almacenado ──
+                    BigDecimal precioOriginal = solicitud.getDatosFinancieros() != null
                             ? solicitud.getDatosFinancieros().getMontoVehiculo()
                             : solicitud.getPrecioCompraMoto();
+                    BigDecimal precio = command.nuevoPrecioMoto() != null
+                            ? command.nuevoPrecioMoto()
+                            : precioOriginal;
+                    boolean cambiaPrecio = command.nuevoPrecioMoto() != null
+                            && command.nuevoPrecioMoto().compareTo(precioOriginal) != 0;
 
                     // ── Validaciones de negocio ───────────────────────────────
+                    if (precio == null || precio.compareTo(BigDecimal.ZERO) <= 0) {
+                        return Mono.error(new BadRequestException(
+                                "El precio de la moto debe ser mayor a cero"));
+                    }
                     if (command.nuevaInicial().compareTo(BigDecimal.ZERO) < 0) {
                         return Mono.error(new BadRequestException(
                                 "La inicial no puede ser negativa"));
@@ -91,6 +94,11 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                     updates.put("plazoQuincenas", command.nuevoPlazo());
                     updates.put("updatedAt", Timestamp.now());
 
+                    // Precio legacy — se actualiza solo cuando el precio cambió
+                    if (cambiaPrecio) {
+                        updates.put("precioCompraMoto", precio.doubleValue());
+                    }
+
                     if (solicitud.getDatosFinancieros() != null) {
                         Map<String, Object> df = new HashMap<>();
                         df.put("inicial",                  command.nuevaInicial().doubleValue());
@@ -102,6 +110,11 @@ public class AjustarFinanciamientoUseCaseImpl implements AjustarFinanciamientoUs
                         df.put("interesTotal",              opcion.getInteresTotal().doubleValue());
                         df.put("tasaLineal",                opcion.getTasa().doubleValue());
                         df.put("modoCalculadora",           "SIMPLIFICADO");
+                        // Precio y costo total — se actualizan solo cuando el precio cambió
+                        if (cambiaPrecio) {
+                            df.put("montoVehiculo", precio.doubleValue());
+                            df.put("costoTotal",    costoTotal.doubleValue());
+                        }
                         updates.put("datosFinancieros", df);
                     }
 
