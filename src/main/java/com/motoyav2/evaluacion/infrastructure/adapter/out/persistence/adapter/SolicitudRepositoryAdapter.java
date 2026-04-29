@@ -49,6 +49,9 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
                 .mapNotNull(SolicitudMapper::toDomain);
     }
 
+    /** Máximo de documentos a cargar desde Firestore cuando hay búsqueda de texto. */
+    private static final int SEARCH_FETCH_LIMIT = 300;
+
     @Override
     public Flux<Solicitud> findAll(String estado, String prioridad, String search, String tiendaId, int limit, int offset) {
         var query = (Query) db.collection(COL)
@@ -64,9 +67,18 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
             query = query.whereEqualTo("vendedor.tienda", tiendaId);
         }
 
+        // Con búsqueda de texto: traer lote amplio desde el inicio, filtrar en memoria y paginar.
+        // Sin búsqueda: paginación directa en Firestore (más eficiente).
+        if (search != null && !search.isBlank()) {
+            return toFlux(query.limit(SEARCH_FETCH_LIMIT).get())
+                    .mapNotNull(SolicitudMapper::toDomain)
+                    .filter(s -> matchesSearch(s, search))
+                    .skip(offset)
+                    .take(limit);
+        }
+
         return toFlux(query.offset(offset).limit(limit).get())
-                .mapNotNull(SolicitudMapper::toDomain)
-                .filter(s -> matchesSearch(s, search));
+                .mapNotNull(SolicitudMapper::toDomain);
     }
 
     @Override
@@ -81,6 +93,16 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
         if (tiendaId != null && !tiendaId.isBlank()) {
             query = query.whereEqualTo("vendedor.tienda", tiendaId);
         }
+
+        // Con búsqueda de texto: contar sobre el mismo lote filtrado en memoria.
+        // Sin búsqueda: agregación nativa de Firestore (más eficiente).
+        if (search != null && !search.isBlank()) {
+            return toFlux(query.limit(SEARCH_FETCH_LIMIT).get())
+                    .mapNotNull(SolicitudMapper::toDomain)
+                    .filter(s -> matchesSearch(s, search))
+                    .count();
+        }
+
         return toMono(query.count().get()).map(agg -> agg.getCount());
     }
 
@@ -196,7 +218,10 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
     private boolean matchesSearch(Solicitud s, String search) {
         if (search == null || search.isBlank()) return true;
         String q = search.toLowerCase();
-        return (s.getNumeroSolicitud() != null && s.getNumeroSolicitud().toLowerCase().contains(q))
-                || (s.getVendedorNombre() != null && s.getVendedorNombre().toLowerCase().contains(q));
+        return (s.getNumeroSolicitud()        != null && s.getNumeroSolicitud().toLowerCase().contains(q))
+                || (s.getCodigoDeSolicitud()  != null && s.getCodigoDeSolicitud().toLowerCase().contains(q))
+                || (s.getTitularNombreCompleto() != null && s.getTitularNombreCompleto().toLowerCase().contains(q))
+                || (s.getTitularDni()         != null && s.getTitularDni().contains(q))
+                || (s.getVendedorNombre()     != null && s.getVendedorNombre().toLowerCase().contains(q));
     }
 }
