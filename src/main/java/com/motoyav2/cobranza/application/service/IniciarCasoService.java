@@ -59,24 +59,28 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                             .actualizadoPor(command.creadoPor())
                             .build();
 
-                    String tipoEvento = esNuevo ? "CASO_INICIADO" : "CASO_ACTUALIZADO";
-
                     return casoPort.save(doc)
-                            .flatMap(saved -> eventoPort.append(saved.getContratoId(),
-                                    EventoCobranzaDocument.builder()
-                                            .contratoId(saved.getContratoId())
-                                            .tipo(tipoEvento)
-                                            .payload(Map.of(
-                                                    "clienteNombre", saved.getClienteNombre() != null ? saved.getClienteNombre() : "",
-                                                    "saldoActual", saved.getSaldoActual() != null ? saved.getSaldoActual() : 0.0,
-                                                    "nivelEstrategia", saved.getNivelEstrategia() != null ? saved.getNivelEstrategia() : ""
-                                            ))
-                                            .usuarioId(command.creadoPor())
-                                            .usuarioNombre(command.creadoPor())
-                                            .automatico(false)
-                                            .creadoEn(new Date())
-                                            .build()
-                            ).thenReturn(saved));
+                            .flatMap(saved -> {
+                                // Solo registrar CASO_INICIADO cuando el caso es realmente nuevo;
+                                // una invocación duplicada (esNuevo=false) no genera evento para
+                                // evitar falsos CASO_ACTUALIZADO por race conditions en aprobación.
+                                if (!esNuevo) return reactor.core.publisher.Mono.just(saved);
+                                return eventoPort.append(saved.getContratoId(),
+                                        EventoCobranzaDocument.builder()
+                                                .contratoId(saved.getContratoId())
+                                                .tipo("CASO_INICIADO")
+                                                .payload(Map.of(
+                                                        "clienteNombre", saved.getClienteNombre() != null ? saved.getClienteNombre() : "",
+                                                        "saldoActual", saved.getSaldoActual() != null ? saved.getSaldoActual() : 0.0,
+                                                        "nivelEstrategia", saved.getNivelEstrategia() != null ? saved.getNivelEstrategia() : ""
+                                                ))
+                                                .usuarioId(command.creadoPor())
+                                                .usuarioNombre(command.creadoPor())
+                                                .automatico(false)
+                                                .creadoEn(new Date())
+                                                .build()
+                                ).thenReturn(saved);
+                            });
                 });
     }
 

@@ -13,6 +13,8 @@ public interface ContratoRepository {
 
     Flux<ContratoListItem> findByTiendaId(String tiendaId);
 
+    Mono<Contrato> findByEvaluacionId(String evaluacionId);
+
     Mono<Contrato> save(Contrato contrato);
 
     Mono<Void> deleteById(String id);

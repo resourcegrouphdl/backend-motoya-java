@@ -59,6 +59,7 @@ public class CobranzaController {
     private final ImportarCalendarioService importarCalendarioService;
     private final RegistrarPagoManualUseCase registrarPagoManualUseCase;
     private final ProcesarVoucherWhatsappService procesarVoucherWhatsappService;
+    private final ReprocesarVoucherOcrService reprocesarVoucherOcrService;
     private final MoraDiariaService moraDiariaService;
     private final ConciliacionService conciliacionService;
     private final WhatsAppMediaStorageService mediaStorageService;
@@ -470,6 +471,34 @@ public class CobranzaController {
                         "status", "OK",
                         "message", "Voucher rechazado"
                 ));
+    }
+
+    @PostMapping("/api/v1/cobranzas/vouchers/{id}/reprocesar-ocr")
+    public Mono<Map<String, Object>> reprocesarVoucherOcr(
+            @PathVariable String id,
+            ServerWebExchange exchange) {
+
+        log.info("POST /vouchers/{}/reprocesar-ocr userId={}", id,
+                exchange.getAttributes().get("userId"));
+
+        return reprocesarVoucherOcrService.ejecutar(id)
+                .map(r -> {
+                    Map<String, Object> resp = new HashMap<>();
+                    resp.put("status", "OK");
+                    resp.put("voucherId", r.voucherId());
+                    resp.put("montoDetectadoAnterior", r.montoDetectadoAnterior());
+                    resp.put("montoDetectadoNuevo", r.montoDetectadoNuevo());
+                    resp.put("banco", r.banco());
+                    resp.put("enriquecidoConLlm", r.enriquecidoConLlm());
+                    resp.put("montoModificado", r.montoModificado());
+                    resp.put("procesador", r.procesador());
+                    resp.put("campos", r.campos());
+                    return resp;
+                })
+                .onErrorResume(IllegalArgumentException.class, e ->
+                        Mono.just(Map.of("status", "ERROR", "message", e.getMessage())))
+                .onErrorResume(IllegalStateException.class, e ->
+                        Mono.just(Map.of("status", "ERROR", "message", e.getMessage())));
     }
 
     // =========================================================================

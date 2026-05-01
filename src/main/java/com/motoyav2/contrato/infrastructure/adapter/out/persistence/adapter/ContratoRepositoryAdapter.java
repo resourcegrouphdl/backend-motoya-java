@@ -23,6 +23,13 @@ public class ContratoRepositoryAdapter implements ContratoRepository {
     }
 
     @Override
+    public Mono<Contrato> findByEvaluacionId(String evaluacionId) {
+        return firestoreRepository.findByEvaluacionId(evaluacionId)
+                .next()
+                .map(ContratoDocumentMapper::toDomain);
+    }
+
+    @Override
     public Flux<ContratoListItem> findAll() {
         return firestoreRepository.findAll()
                 .map(ContratoDocumentMapper::toListItem);

@@ -1,5 +1,7 @@
 package com.motoyav2.cobranza.application.dto;
 
+import java.util.Date;
+
 /**
  * Proyección liviana para el listado de casos.
  * diasMora y prioridad se calculan en tiempo real — no se almacenan en Firestore.
@@ -17,5 +19,7 @@ public record CasoResumenDto(
         String ultimaGestion,
         String proximaAccion,
         String agenteAsignado,
-        String telefono
+        String telefono,
+        Integer mensajesNoLeidos,
+        Date ultimaRespuestaCliente
 ) {}

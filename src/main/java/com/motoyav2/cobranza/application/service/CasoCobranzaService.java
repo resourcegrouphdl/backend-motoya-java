@@ -131,7 +131,9 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
                 ultimaGestion,
                 d.getProximaAccion(),
                 d.getAgenteAsignadoNombre(),
-                d.getClienteTelefono()
+                d.getClienteTelefono(),
+                d.getMensajesNoLeidos(),
+                d.getUltimaRespuestaCliente()
         );
     }
 
