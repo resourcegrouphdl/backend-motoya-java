@@ -1,5 +1,6 @@
 package com.motoyav2.contrato.application;
 
+import com.google.cloud.firestore.Firestore;
 import com.motoyav2.contrato.application.applicatioMapper.ContratoParaDescargasMaper;
 import com.motoyav2.contrato.domain.enums.EstadoContrato;
 import com.motoyav2.contrato.domain.enums.EstadoValidacion;
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Instant;
 import java.util.List;
@@ -35,6 +37,7 @@ public class AprobarContratoService implements AprobarContratoUseCase {
   private final ObtenerRucDeStoreUseCase obtenerRucDeStoreUseCase;
   private final CrearEventoEnCalendar crearEventoEnCalendar;
   private final CobranzaIntegrationPort cobranzaIntegrationPort;
+  private final Firestore firestore;
 
 
   @Override
@@ -73,7 +76,10 @@ public class AprobarContratoService implements AprobarContratoUseCase {
               contrato.tive(), contrato.evidenciaSOAT(), contrato.evidenciaPlacaRodaje(), contrato.actasDeEntrega()
           );
 
-          return contratoRepository.save(enGeneracion)
+          // Bloqueo atómico: si dos requests concurrentes pasan las validaciones anteriores,
+          // solo uno podrá hacer la transición EN_VALIDACION→GENERANDO_CONTRATO.
+          return bloquearEstadoAtomico(contratoId)
+              .then(contratoRepository.save(enGeneracion))
               .flatMap(saved -> obtenerRucDeStoreUseCase.obtenerRucDeStore(saved.tienda().tiendaId())
                   .defaultIfEmpty("")
                   .flatMap(ruc -> {
@@ -128,5 +134,35 @@ public class AprobarContratoService implements AprobarContratoUseCase {
                   }));
 
         });
+  }
+
+  /**
+   * Transacción Firestore que verifica atómicamente que el contrato siga en EN_VALIDACION
+   * y lo marca como GENERANDO_CONTRATO. Si dos requests concurrentes llegan aquí, solo
+   * el primero en ejecutar la transacción tendrá éxito; el segundo recibirá BadRequestException.
+   */
+  private Mono<Void> bloquearEstadoAtomico(String contratoId) {
+    return Mono.fromCallable(() -> {
+          var docRef = firestore.collection("contratos").document(contratoId);
+          return firestore.runTransaction(tx -> {
+            var snap = tx.get(docRef).get();
+            String estadoActual = snap.getString("estado");
+            if (!EstadoContrato.EN_VALIDACION.name().equals(estadoActual)) {
+              throw new IllegalStateException(
+                  "El contrato ya está siendo procesado. Estado actual: " + estadoActual);
+            }
+            tx.update(docRef, "estado", EstadoContrato.GENERANDO_CONTRATO.name());
+            return null;
+          }).get();
+        })
+        .subscribeOn(Schedulers.boundedElastic())
+        .onErrorMap(ex -> {
+          Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+          if (cause instanceof IllegalStateException) {
+            return new BadRequestException(cause.getMessage());
+          }
+          return ex instanceof RuntimeException ? ex : new RuntimeException(ex);
+        })
+        .then();
   }
 }

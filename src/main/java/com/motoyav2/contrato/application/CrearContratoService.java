@@ -31,33 +31,37 @@ public class CrearContratoService implements CrearContratoUseCase {
         FacturaVehiculo factura,
         String evaluacionId
     ) {
-        return numberGenerator.generate(evaluacionId)
-                .flatMap(numeroContrato -> {
-                    Instant now = Instant.now();
-                    Contrato contrato = new Contrato(
-                            UUID.randomUUID().toString(),
-                            numeroContrato,
-                            EstadoContrato.PENDIENTE_DOCUMENTOS,
-                            FaseContrato.CREACION,
-                            titular,
-                            fiador,
-                            tienda,
-                            datosFinancieros,
-                            List.of(),
-                            factura,
-                            List.of(),
-                            List.of(),
-                            List.of(),
-                            List.of(),
-                            creadoPor,
-                            evaluacionId,
-                            null,
-                            now,
-                            now,
-                            ContratoParaImprimir.builder().build(),
-                            null, null, null, null, null, null
-                    );
-                    return contratoRepository.save(contrato);
-                });
+        // Idempotencia: si ya existe un contrato para esta evaluación, devuelve el existente.
+        return contratoRepository.findByEvaluacionId(evaluacionId)
+                .switchIfEmpty(
+                    numberGenerator.generate(evaluacionId)
+                        .flatMap(numeroContrato -> {
+                            Instant now = Instant.now();
+                            Contrato contrato = new Contrato(
+                                    UUID.randomUUID().toString(),
+                                    numeroContrato,
+                                    EstadoContrato.PENDIENTE_DOCUMENTOS,
+                                    FaseContrato.CREACION,
+                                    titular,
+                                    fiador,
+                                    tienda,
+                                    datosFinancieros,
+                                    List.of(),
+                                    factura,
+                                    List.of(),
+                                    List.of(),
+                                    List.of(),
+                                    List.of(),
+                                    creadoPor,
+                                    evaluacionId,
+                                    null,
+                                    now,
+                                    now,
+                                    ContratoParaImprimir.builder().build(),
+                                    null, null, null, null, null, null
+                            );
+                            return contratoRepository.save(contrato);
+                        })
+                );
     }
 }
