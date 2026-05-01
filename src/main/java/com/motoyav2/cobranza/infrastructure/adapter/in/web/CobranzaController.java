@@ -368,9 +368,12 @@ public class CobranzaController {
             ServerWebExchange exchange) {
 
         String storeId = (String) exchange.getAttributes().get("storeId");
-        log.debug("GET /vouchers storeId={} estado={}", storeId, estado);
+        String rol     = (String) exchange.getAttributes().get("userRol");
+        // ADMIN ve vouchers de todas las tiendas (mismo patrón que /casos)
+        String storeIdEfectivo = "ADMIN".equals(rol) ? null : storeId;
+        log.debug("GET /vouchers storeId={} rol={} estado={}", storeId, rol, estado);
 
-        return listarVouchersUseCase.ejecutar(storeId, estado)
+        return listarVouchersUseCase.ejecutar(storeIdEfectivo, estado)
                 .flatMap(doc -> {
                     Mono<String> urlMono = (doc.getImagenPath() != null && !doc.getImagenPath().isBlank())
                             ? mediaStorageService.generarSignedUrl(doc.getImagenPath(), 15)
