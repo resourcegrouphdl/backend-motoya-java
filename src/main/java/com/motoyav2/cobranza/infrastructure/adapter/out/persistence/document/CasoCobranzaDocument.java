@@ -80,6 +80,12 @@ public class CasoCobranzaDocument {
     /** Fecha del último recordatorio WA de mora enviado por el scheduler. */
     private Date ultimoRecordatorioMora;
 
+    // Contactabilidad
+    /** Mensajes INBOUND no leídos por el agente (se resetea al abrir el chat). */
+    private Integer mensajesNoLeidos;
+    /** Última vez que el cliente respondió un mensaje de WhatsApp. */
+    private Date ultimaRespuestaCliente;
+
     // Auditoría
     private Date creadoEn;
     private Date actualizadoEn;

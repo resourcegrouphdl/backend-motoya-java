@@ -20,8 +20,9 @@ public interface ProcesarVoucherWhatsappUseCase {
      * @param clienteTelefono Teléfono normalizado del cliente (formato +51XXXXXXXXX)
      * @param mediaUrl        URL de descarga del comprobante desde Factiliza
      * @param mediaType       Tipo de media: "image" o "document"
+     * @param mensajeId       ID del MensajeWhatsappDocument guardado previamente
      */
     Mono<Void> procesar(String contratoId, String storeId,
                         String clienteNombre, String clienteTelefono,
-                        String mediaUrl, String mediaType);
+                        String mediaUrl, String mediaType, String mensajeId);
 }

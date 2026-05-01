@@ -54,6 +54,8 @@ public class MensajeWhatsappDocument {
     /** true si el media fue procesado como voucher de pago */
     private Boolean esVoucher;
     private String voucherId;
+    /** URL en GCS — se rellena después de subir la imagen (accesible desde el frontend) */
+    private String gcsMediaUrl;
     /** Timestamp de recepción (mensajes INBOUND) */
     private Date recibidoEn;
     /** Texto del mensaje entrante si es tipo text */

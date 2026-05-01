@@ -2,6 +2,7 @@ package com.motoyav2.migracion.infrastructure.adapter.in.web;
 
 import com.motoyav2.migracion.application.dto.*;
 import com.motoyav2.migracion.application.service.ContratoBarridoService;
+import com.motoyav2.migracion.application.service.FixCasosUuidService;
 import com.motoyav2.migracion.application.service.MigracionEjecutorService;
 import com.motoyav2.migracion.application.service.MigracionImportarService;
 import com.motoyav2.migracion.application.service.MigracionStagingService;
@@ -38,6 +39,7 @@ public class MigracionController {
     private final MigracionStagingService  stagingService;
     private final MigracionEjecutorService ejecutorService;
     private final ContratoBarridoService   barridoService;
+    private final FixCasosUuidService      fixCasosUuidService;
 
     // ─── 1. Importar desde Google Calendar ───────────────────────────────────
 
@@ -160,6 +162,20 @@ public class MigracionController {
                 .cast(FirebaseUserDetails.class)
                 .map(FirebaseUserDetails::uid)
                 .defaultIfEmpty("SISTEMA");
+    }
+
+    // ─── 9. Fix casos con ID=UUID ─────────────────────────────────────────────
+
+    @PostMapping("/fix/casos-uuid")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(
+            summary = "Corregir documentos cobranzas-casos con ID=UUID",
+            description = "Para cada documento cuyo ID es un UUID (creados antes de @DocumentId), " +
+                    "recrea el documento usando el valor del field contratoId como ID y elimina el UUID original. " +
+                    "Idempotente: si ya existe un doc con ese contratoId, lo omite sin sobreescribir.")
+    public Mono<FixCasosUuidResponse> fixCasosUuid() {
+        log.info("[Migracion-API] POST /fix/casos-uuid");
+        return fixCasosUuidService.ejecutar();
     }
 
     // ─── Estado del módulo ────────────────────────────────────────────────────

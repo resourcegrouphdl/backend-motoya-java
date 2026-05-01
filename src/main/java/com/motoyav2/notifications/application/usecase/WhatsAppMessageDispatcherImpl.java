@@ -1,7 +1,9 @@
 package com.motoyav2.notifications.application.usecase;
 
 import com.motoyav2.cobranza.application.port.in.ProcesarVoucherWhatsappUseCase;
+import com.motoyav2.cobranza.application.port.out.AlertaCobranzaPort;
 import com.motoyav2.cobranza.application.service.WhatsappService;
+import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.AlertaCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.repository.CasoCobranzaRepository;
 import com.motoyav2.evaluacion.domain.port.in.ProcesarPreferenciaEntrevistaUseCase;
@@ -21,6 +23,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Enrutador central de mensajes entrantes de WhatsApp.
@@ -50,6 +53,7 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
     private final RegistrarMensajeConversacionUseCase  registrarMensaje;
     private final NotificationFacade                   notificationFacade;
     private final WhatsappService                      whatsappService;
+    private final AlertaCobranzaPort                   alertaPort;
 
     @Override
     public Mono<Void> dispatch(String fromPhone, String text, String mediaType, String mediaUrl) {
@@ -100,28 +104,30 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
                             log.info("[DISPATCHER] Mensaje de COBRANZA | contratoId={} phone={}",
                                     caso.getContratoId(), phone);
                             if (text != null) {
-                                // Guardar mensaje de texto entrante en historial
                                 whatsappService.registrarMensajeEntrante(
                                         caso.getContratoId(), caso.getClienteNombre(), phone, null, text, new Date())
+                                    .then(whatsappService.actualizarRespuestaCliente(caso.getContratoId()))
                                     .subscribe(null, e -> log.warn("[DISPATCHER] Error guardando texto cobranza: {}", e.getMessage()));
-                                String nombre = caso.getClienteNombre() != null
-                                        ? caso.getClienteNombre() : "Cliente";
-                                return notificationFacade.notificarAutorespuestaCobranza(
-                                        caso.getContratoId(), phone, nombre);
+                                crearAlertaInbound(caso, "Mensaje de texto recibido");
+                                String nombre = caso.getClienteNombre() != null ? caso.getClienteNombre() : "Cliente";
+                                return notificationFacade.notificarAutorespuestaCobranza(caso.getContratoId(), phone, nombre);
                             }
-                            // Media (imagen/PDF): guardar en historial + procesar como comprobante
+                            // Media (imagen/PDF): guardar en historial → procesar (encadenado para pasar mensajeId)
                             if (mediaUrl != null) {
-                                whatsappService.registrarMediaEntrante(
+                                return whatsappService.registrarMediaEntrante(
                                         caso.getContratoId(), caso.getClienteNombre(), phone,
                                         mediaUrl, mediaType, new Date())
-                                    .subscribe(null, e -> log.warn("[DISPATCHER] Error guardando media cobranza: {}", e.getMessage()));
-                                return procesarVoucherWhatsapp.procesar(
-                                        caso.getContratoId(),
-                                        caso.getStoreId(),
-                                        caso.getClienteNombre(),
-                                        phone,
-                                        mediaUrl,
-                                        mediaType);
+                                    .flatMap(mensajeId -> {
+                                        whatsappService.actualizarRespuestaCliente(caso.getContratoId())
+                                            .subscribe(null, e -> log.warn("[DISPATCHER] Error actualizando respuesta cliente: {}", e.getMessage()));
+                                        crearAlertaInbound(caso, "Imagen recibida — posible comprobante");
+                                        return procesarVoucherWhatsapp.procesar(
+                                                caso.getContratoId(), caso.getStoreId(),
+                                                caso.getClienteNombre(), phone,
+                                                mediaUrl, mediaType, mensajeId);
+                                    })
+                                    .doOnError(e -> log.warn("[DISPATCHER] Error procesando media cobranza: {}", e.getMessage()))
+                                    .onErrorResume(e -> Mono.empty());
                             }
                             return Mono.empty();
                         }))
@@ -188,5 +194,28 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
         if (digits.startsWith("51") && digits.length() == 11) digits = digits.substring(2);
         if (digits.length() == 9) return "+51" + digits;
         return digits;
+    }
+
+    private void crearAlertaInbound(CasoCobranzaDocument caso, String descripcion) {
+        if (caso.getAgenteAsignadoId() == null || caso.getAgenteAsignadoId().isBlank()) return;
+        AlertaCobranzaDocument alerta = AlertaCobranzaDocument.builder()
+                .id(UUID.randomUUID().toString())
+                .tipo("MENSAJE_INBOUND_WHATSAPP")
+                .nivel("INFO")
+                .titulo("Mensaje de " + (caso.getClienteNombre() != null ? caso.getClienteNombre() : "cliente"))
+                .descripcion(descripcion)
+                .contratoId(caso.getContratoId())
+                .clienteNombre(caso.getClienteNombre())
+                .storeId(caso.getStoreId())
+                .agenteId(caso.getAgenteAsignadoId())
+                .accionSugerida("Abrir chat y responder al cliente")
+                .accionRuta("/cobranzas/vista360/" + caso.getContratoId())
+                .leida(false)
+                .descartada(false)
+                .creadoEn(new Date())
+                .expiraEn(new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000))
+                .build();
+        alertaPort.save(alerta)
+                .subscribe(null, e -> log.warn("[DISPATCHER] Error creando alerta inbound contratoId={}: {}", caso.getContratoId(), e.getMessage()));
     }
 }
