@@ -5,5 +5,6 @@ public enum MotivoRechazoVoucher {
     IMAGEN_ILEGIBLE,
     DUPLICADO,
     DATOS_NO_COINCIDEN,
-    OTRO
+    OTRO,
+    NO_ES_VOUCHER
 }
