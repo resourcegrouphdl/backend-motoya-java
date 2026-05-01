@@ -176,9 +176,14 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
         return mensajePort.save(doc).then();
     }
 
-    /** Almacena un mensaje con imagen/documento entrante del cliente como INBOUND. */
-    public Mono<Void> registrarMediaEntrante(String contratoId, String clienteNombre, String telefono,
-                                              String mediaUrl, String mediaType, Date recibidoEn) {
+    /**
+     * Almacena un mensaje con imagen/documento entrante como INBOUND.
+     * esVoucher arranca en false — ProcesarVoucherWhatsappService lo actualiza
+     * a true si supera el umbral de confianza del OCR.
+     * Retorna el ID del documento creado para que el service de vouchers pueda actualizarlo.
+     */
+    public Mono<String> registrarMediaEntrante(String contratoId, String clienteNombre, String telefono,
+                                               String mediaUrl, String mediaType, Date recibidoEn) {
         MensajeWhatsappDocument doc = MensajeWhatsappDocument.builder()
                 .id(UUID.randomUUID().toString())
                 .contratoId(contratoId)
@@ -187,12 +192,34 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
                 .direction("INBOUND")
                 .mediaUrl(mediaUrl)
                 .mediaType(mediaType)
-                .esVoucher(true)
+                .esVoucher(false)
                 .estado("RECIBIDO")
                 .recibidoEn(recibidoEn)
                 .automatico(false)
                 .build();
-        return mensajePort.save(doc).then();
+        return mensajePort.save(doc).map(MensajeWhatsappDocument::getId);
+    }
+
+    /** Incrementa el contador de no leídos y actualiza ultimaRespuestaCliente en el caso. */
+    public Mono<Void> actualizarRespuestaCliente(String contratoId) {
+        return casoPort.findById(contratoId)
+                .flatMap(caso -> {
+                    caso.setUltimaRespuestaCliente(new Date());
+                    caso.setMensajesNoLeidos(
+                            caso.getMensajesNoLeidos() != null ? caso.getMensajesNoLeidos() + 1 : 1);
+                    return casoPort.save(caso);
+                })
+                .then();
+    }
+
+    /** Resetea el contador de mensajes no leídos (llamar cuando el agente abre el chat). */
+    public Mono<Void> marcarMensajesLeidos(String contratoId) {
+        return casoPort.findById(contratoId)
+                .flatMap(caso -> {
+                    caso.setMensajesNoLeidos(0);
+                    return casoPort.save(caso);
+                })
+                .then();
     }
 
     private String normalizarTelefono(String tel) {

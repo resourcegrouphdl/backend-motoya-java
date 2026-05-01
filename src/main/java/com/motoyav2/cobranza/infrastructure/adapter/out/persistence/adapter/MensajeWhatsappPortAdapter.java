@@ -20,6 +20,11 @@ public class MensajeWhatsappPortAdapter implements MensajeWhatsappPort {
     }
 
     @Override
+    public Mono<MensajeWhatsappDocument> findById(String id) {
+        return repository.findById(id);
+    }
+
+    @Override
     public Mono<MensajeWhatsappDocument> findByWamid(String wamid) {
         return repository.findByWamid(wamid);
     }

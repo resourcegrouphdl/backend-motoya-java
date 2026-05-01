@@ -760,6 +760,15 @@ public class CobranzaController {
         return whatsappService.listarMensajes(contratoId);
     }
 
+    @PatchMapping("/api/v1/cobranzas/casos/{contratoId}/whatsapp/marcar-leidos")
+    public Mono<Map<String, Object>> marcarMensajesLeidos(
+            @PathVariable String contratoId,
+            ServerWebExchange exchange) {
+        log.debug("PATCH /casos/{}/whatsapp/marcar-leidos", contratoId);
+        return whatsappService.marcarMensajesLeidos(contratoId)
+                .thenReturn(Map.<String, Object>of("status", "OK"));
+    }
+
     // =========================================================================
     // LLAMADAS (stub)
     // =========================================================================
@@ -925,13 +934,16 @@ public class CobranzaController {
                         String tipoNormalizado = mime.startsWith("image") ? "image" : "document";
                         log.info("[WEBHOOK-WA] Media entrante | contratoId={} mime={} bytes~{}",
                                 contratoId, mime, base64.length() * 3 / 4);
-                        return procesarVoucherWhatsappService
-                                .procesar(contratoId, null, null, fromPhone, mediaUrl, tipoNormalizado);
+                        return whatsappService.registrarMediaEntrante(
+                                        contratoId, null, fromPhone, mediaUrl, tipoNormalizado, fecha)
+                                .flatMap(mensajeId -> procesarVoucherWhatsappService
+                                        .procesar(contratoId, null, null, fromPhone, mediaUrl, tipoNormalizado, mensajeId));
                     } else {
                         String texto = (String) message.getOrDefault("conversation", "");
                         log.info("[WEBHOOK-WA] Texto entrante | contratoId={} from={}", contratoId, fromPhone);
                         return whatsappService.registrarMensajeEntrante(
-                                contratoId, null, fromPhone, wamid, texto, fecha);
+                                contratoId, null, fromPhone, wamid, texto, fecha)
+                                .then(whatsappService.actualizarRespuestaCliente(contratoId));
                     }
                 })
                 .onErrorResume(e -> {

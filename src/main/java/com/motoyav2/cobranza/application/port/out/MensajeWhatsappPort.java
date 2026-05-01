@@ -8,6 +8,8 @@ public interface MensajeWhatsappPort {
 
     Mono<MensajeWhatsappDocument> save(MensajeWhatsappDocument mensaje);
 
+    Mono<MensajeWhatsappDocument> findById(String id);
+
     Mono<MensajeWhatsappDocument> findByWamid(String wamid);
 
     Flux<MensajeWhatsappDocument> findByContratoId(String contratoId);
