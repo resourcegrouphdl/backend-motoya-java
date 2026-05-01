@@ -2,6 +2,7 @@ package com.motoyav2.shared.security;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
+import com.motoyav2.auth.domain.port.out.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -26,9 +27,13 @@ public class FirebaseAuthenticationFilter implements WebFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final FirebaseAuth firebaseAuth;
+    private final UserRepository userRepository;
 
-    public FirebaseAuthenticationFilter(@Autowired(required = false) FirebaseAuth firebaseAuth) {
-        this.firebaseAuth = firebaseAuth;
+    public FirebaseAuthenticationFilter(
+            @Autowired(required = false) FirebaseAuth firebaseAuth,
+            @Autowired(required = false) UserRepository userRepository) {
+        this.firebaseAuth   = firebaseAuth;
+        this.userRepository = userRepository;
         if (firebaseAuth == null) {
             log.warn("FirebaseAuth not available. Token verification is DISABLED.");
         }
@@ -55,14 +60,57 @@ public class FirebaseAuthenticationFilter implements WebFilter {
         return Mono.fromCallable(() -> firebaseAuth.verifyIdToken(token, false))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(firebaseToken -> {
-                    log.info("[FILTER] Token válido — uid={}, email={}", firebaseToken.getUid(), firebaseToken.getEmail());
+                    Map<String, Object> claims = firebaseToken.getClaims();
+                    String uid   = firebaseToken.getUid();
+                    String email = firebaseToken.getEmail();
+                    log.info("[FILTER] Token válido — uid={}, email={}", uid, email);
+
+                    exchange.getAttributes().put("userId",    uid);
+                    exchange.getAttributes().put("userEmail", email != null ? email : "");
+
+                    Object nombreObj = claims.get("name");
+                    String nombre = nombreObj instanceof String s ? s : email;
+                    exchange.getAttributes().put("userNombre", nombre != null ? nombre : "");
+
+                    String userType = (String) claims.get("userType");
+
                     FirebaseUserDetails userDetails = buildUserDetails(firebaseToken);
                     List<SimpleGrantedAuthority> authorities = extractAuthorities(firebaseToken);
                     FirebaseAuthenticationToken authentication =
                             new FirebaseAuthenticationToken(userDetails, authorities);
 
-                    return chain.filter(exchange)
+                    Mono<Void> continuar = chain.filter(exchange)
                             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
+
+                    if (userType != null) {
+                        exchange.getAttributes().put("userRol", userType);
+                        populateStoreId(claims, exchange);
+                        return continuar;
+                    }
+
+                    // Fallback: claims no tienen userType (Cloud Run sin permisos de custom claims)
+                    if (userRepository == null) {
+                        log.warn("[FILTER] userType ausente en claims y UserRepository no disponible — uid={}", uid);
+                        return continuar;
+                    }
+
+                    return userRepository.findByUid(uid)
+                            .doOnNext(user -> {
+                                if (user.userType() != null) {
+                                    exchange.getAttributes().put("userRol", user.userType());
+                                    log.info("[FILTER] userRol cargado desde Firestore — uid={}, rol={}", uid, user.userType());
+                                }
+                                if (!"ADMIN".equals(user.userType())
+                                        && user.storeIds() != null
+                                        && !user.storeIds().isEmpty()) {
+                                    exchange.getAttributes().put("storeId", user.storeIds().get(0));
+                                }
+                            })
+                            .onErrorResume(e -> {
+                                log.warn("[FILTER] Error al cargar usuario desde Firestore — uid={}: {}", uid, e.getMessage());
+                                return Mono.empty();
+                            })
+                            .then(continuar);
                 })
                 .onErrorResume(e -> {
                     log.warn("[FILTER] Token inválido para {} {}: {}", method, path, e.getMessage());
@@ -73,6 +121,16 @@ public class FirebaseAuthenticationFilter implements WebFilter {
                             Mono.just(exchange.getResponse().bufferFactory().wrap(body.getBytes()))
                     );
                 });
+    }
+
+    @SuppressWarnings("unchecked")
+    private void populateStoreId(Map<String, Object> claims, ServerWebExchange exchange) {
+        String userType = (String) claims.get("userType");
+        if ("ADMIN".equals(userType)) return;
+        Object storeIdsObj = claims.get("storeIds");
+        if (storeIdsObj instanceof List<?> list && !list.isEmpty()) {
+            exchange.getAttributes().put("storeId", list.get(0).toString());
+        }
     }
 
     private FirebaseUserDetails buildUserDetails(FirebaseToken token) {
