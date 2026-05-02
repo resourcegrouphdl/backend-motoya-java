@@ -105,10 +105,10 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
         return voucherPort.findById(command.voucherId())
                 .switchIfEmpty(Mono.error(new NotFoundException("Voucher no encontrado: " + command.voucherId())))
                 .flatMap(voucher -> {
-                    // IDEMPOTENCIA: ya fue aprobado — retornar comprobanteId existente
+                    // IDEMPOTENCIA: ya fue aprobado — retornar comprobanteId existente (puede ser "" si se aprobó sin comprobante)
                     if ("APROBADO".equals(voucher.getEstado())) {
                         log.info("[AprobarVoucher] Idempotente — voucher {} ya aprobado", command.voucherId());
-                        return Mono.just(voucher.getComprobanteId());
+                        return Mono.just(voucher.getComprobanteId() != null ? voucher.getComprobanteId() : "");
                     }
                     if (!"PENDIENTE".equals(voucher.getEstado())) {
                         return Mono.error(new ConflictException(
@@ -128,133 +128,154 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
     private Mono<String> procesarAprobacion(VoucherDocument voucher, AprobarVoucherCommand command) {
         return casoPort.findById(voucher.getContratoId())
                 .switchIfEmpty(Mono.error(new NotFoundException("Caso no encontrado: " + voucher.getContratoId())))
-                .flatMap(caso -> numeradorPort.siguienteNumero(command.serie())
-                        .flatMap(numeroCompleto -> {
-                            double monto = voucher.getMontoDetectado();
-                            double subTotal = monto / (1 + IGV);
-                            double igv = monto - subTotal;
-                            String[] partes = numeroCompleto.split("-");
+                .flatMap(caso -> command.serie() != null
+                        ? procesarConComprobante(voucher, command, caso)
+                        : procesarSinComprobante(voucher, command, caso));
+    }
 
-                            ComprobantePagoDocument comprobante = ComprobantePagoDocument.builder()
-                                    .id(UUID.randomUUID().toString())
-                                    .serie(partes[0])
-                                    .numero(partes[1])
-                                    .numeroCompleto(numeroCompleto)
-                                    .tipo(command.serie().startsWith("B") ? "BOLETA" : "FACTURA")
-                                    .estado("PENDIENTE")
-                                    .contratoId(voucher.getContratoId())
-                                    .voucherId(voucher.getId())
-                                    .storeId(caso.getStoreId())
-                                    .emisor(EmisorDocument.builder()
-                                            .ruc(command.rucEmisor())
-                                            .razonSocial(command.razonSocialEmisor())
-                                            .direccion(command.direccionEmisor())
-                                            .build())
-                                    .receptor(ReceptorComprobanteDocument.builder()
-                                            .tipoDocumento(command.tipoDocumentoReceptor())
-                                            .numeroDocumento(command.numeroDocumentoReceptor())
-                                            .nombreCompleto(command.nombreReceptor())
-                                            .build())
-                                    .items(List.of(ItemComprobanteDocument.builder()
-                                            .descripcion(command.descripcionItem() != null
-                                                    ? command.descripcionItem()
-                                                    : "Pago - Contrato " + voucher.getContratoId())
-                                            .cantidad(1)
-                                            .precioUnitario(subTotal)
-                                            .totalItem(subTotal)
-                                            .build()))
-                                    .subTotal(Math.round(subTotal * 100.0) / 100.0)
-                                    .igv(Math.round(igv * 100.0) / 100.0)
-                                    .total(monto)
-                                    .fechaEmision(LocalDate.now().toString())
-                                    .intentosSunat(0)
-                                    .creadoEn(new Date())
-                                    .build();
+    private Mono<String> procesarConComprobante(VoucherDocument voucher, AprobarVoucherCommand command,
+                                                 CasoCobranzaDocument caso) {
+        return numeradorPort.siguienteNumero(command.serie())
+                .flatMap(numeroCompleto -> {
+                    double monto    = voucher.getMontoDetectado();
+                    double subTotal = monto / (1 + IGV);
+                    double igv      = monto - subTotal;
+                    String[] partes = numeroCompleto.split("-");
 
-                            return comprobantePagoPort.save(comprobante);
-                        })
-                        .flatMap(comprobante -> {
-                            double saldoAnterior = caso.getSaldoActual() != null ? caso.getSaldoActual() : 0.0;
-                            double saldoNuevo = saldoAnterior - voucher.getMontoDetectado();
+                    ComprobantePagoDocument comprobante = ComprobantePagoDocument.builder()
+                            .id(UUID.randomUUID().toString())
+                            .serie(partes[0])
+                            .numero(partes[1])
+                            .numeroCompleto(numeroCompleto)
+                            .tipo(command.serie().startsWith("B") ? "BOLETA" : "FACTURA")
+                            .estado("PENDIENTE")
+                            .contratoId(voucher.getContratoId())
+                            .voucherId(voucher.getId())
+                            .storeId(caso.getStoreId())
+                            .emisor(EmisorDocument.builder()
+                                    .ruc(command.rucEmisor())
+                                    .razonSocial(command.razonSocialEmisor())
+                                    .direccion(command.direccionEmisor())
+                                    .build())
+                            .receptor(ReceptorComprobanteDocument.builder()
+                                    .tipoDocumento(command.tipoDocumentoReceptor())
+                                    .numeroDocumento(command.numeroDocumentoReceptor())
+                                    .nombreCompleto(command.nombreReceptor())
+                                    .build())
+                            .items(List.of(ItemComprobanteDocument.builder()
+                                    .descripcion(command.descripcionItem() != null
+                                            ? command.descripcionItem()
+                                            : "Pago - Contrato " + voucher.getContratoId())
+                                    .cantidad(1)
+                                    .precioUnitario(subTotal)
+                                    .totalItem(subTotal)
+                                    .build()))
+                            .subTotal(Math.round(subTotal * 100.0) / 100.0)
+                            .igv(Math.round(igv * 100.0) / 100.0)
+                            .total(monto)
+                            .fechaEmision(LocalDate.now().toString())
+                            .intentosSunat(0)
+                            .creadoEn(new Date())
+                            .build();
 
-                            MovimientoDocument movimiento = MovimientoDocument.builder()
-                                    .id(UUID.randomUUID().toString())
-                                    .contratoId(voucher.getContratoId())
-                                    .tipo("PAGO_CUOTA")
-                                    .monto(-voucher.getMontoDetectado())
-                                    .saldoAnterior(saldoAnterior)
-                                    .saldoNuevo(saldoNuevo)
-                                    .descripcion("Pago vía voucher - " + comprobante.getNumeroCompleto())
-                                    .voucherId(voucher.getId())
-                                    .comprobanteId(comprobante.getId())
-                                    .autorizadoPor(command.agenteId())
-                                    .creadoEn(new Date())
-                                    .build();
+                    return comprobantePagoPort.save(comprobante);
+                })
+                .flatMap(comprobante ->
+                        aplicarPago(voucher, command, caso, comprobante.getId(),
+                                "Pago vía voucher - " + comprobante.getNumeroCompleto())
+                                .thenReturn(comprobante.getId()));
+    }
 
-                            // Actualizar voucher
-                            voucher.setEstado("APROBADO");
-                            voucher.setAprobadoPor(command.agenteId());
-                            voucher.setAprobadoPorNombre(command.agenteNombre());
-                            voucher.setProcesadoEn(new Date());
-                            voucher.setActualizadoEn(new Date());
-                            voucher.setActualizadoPor(command.agenteId());
-                            voucher.setComprobanteId(comprobante.getId());
+    private Mono<String> procesarSinComprobante(VoucherDocument voucher, AprobarVoucherCommand command,
+                                                 CasoCobranzaDocument caso) {
+        log.info("[AprobarVoucher] Sin comprobante — facturación pendiente de implementación | voucherId={}",
+                voucher.getId());
+        return aplicarPago(voucher, command, caso, null, "Pago vía voucher")
+                .thenReturn("");
+    }
 
-                            // Marcar cuotas como PAGADA en el cronograma
-                            String fechaPago = resolveFechaPago(voucher, command);
-                            int cuotasMarcadas = CuotaAplicador.aplicar(
-                                    caso.getCronograma(), voucher.getMontoDetectado(), fechaPago, null);
-                            log.info("[AprobarVoucher] Cuotas marcadas PAGADA | contratoId={} count={} fechaPago={}",
-                                    voucher.getContratoId(), cuotasMarcadas, fechaPago);
+    private Mono<Void> aplicarPago(VoucherDocument voucher, AprobarVoucherCommand command,
+                                    CasoCobranzaDocument caso, String comprobanteId, String descripcion) {
+        double saldoAnterior = caso.getSaldoActual() != null ? caso.getSaldoActual() : 0.0;
+        double saldoNuevo    = saldoAnterior - voucher.getMontoDetectado();
 
-                            // Actualizar saldo del caso
-                            caso.setSaldoActual(saldoNuevo);
-                            caso.setTotalPagado((caso.getTotalPagado() != null ? caso.getTotalPagado() : 0.0)
-                                    + voucher.getMontoDetectado());
-                            caso.setUltimaGestion(new Date());
-                            caso.setUltimaGestionResumen("Pago aplicado: S/ " + voucher.getMontoDetectado());
-                            caso.setActualizadoEn(new Date());
-                            caso.setActualizadoPor(command.agenteId());
+        MovimientoDocument movimiento = MovimientoDocument.builder()
+                .id(UUID.randomUUID().toString())
+                .contratoId(voucher.getContratoId())
+                .tipo("PAGO_CUOTA")
+                .monto(-voucher.getMontoDetectado())
+                .saldoAnterior(saldoAnterior)
+                .saldoNuevo(saldoNuevo)
+                .descripcion(descripcion)
+                .voucherId(voucher.getId())
+                .comprobanteId(comprobanteId)
+                .autorizadoPor(command.agenteId())
+                .creadoEn(new Date())
+                .build();
 
-                            EventoCobranzaDocument eventoAprobado = EventoCobranzaDocument.builder()
-                                    .contratoId(voucher.getContratoId())
-                                    .tipo("VOUCHER_APROBADO")
-                                    .payload(Map.of(
-                                            "voucherId", voucher.getId(),
-                                            "montoAplicado", voucher.getMontoDetectado(),
-                                            "saldoAnterior", saldoAnterior,
-                                            "saldoNuevo", saldoNuevo,
-                                            "comprobanteId", comprobante.getId()
-                                    ))
-                                    .usuarioId(command.agenteId())
-                                    .usuarioNombre(command.agenteNombre())
-                                    .automatico(false)
-                                    .creadoEn(new Date())
-                                    .build();
+        voucher.setEstado("APROBADO");
+        voucher.setAprobadoPor(command.agenteId());
+        voucher.setAprobadoPorNombre(command.agenteNombre());
+        voucher.setProcesadoEn(new Date());
+        voucher.setActualizadoEn(new Date());
+        voucher.setActualizadoPor(command.agenteId());
+        voucher.setComprobanteId(comprobanteId);
 
-                            EventoCobranzaDocument eventoPago = EventoCobranzaDocument.builder()
-                                    .contratoId(voucher.getContratoId())
-                                    .tipo("PAGO_APLICADO")
-                                    .payload(Map.of(
-                                            "voucherId", voucher.getId(),
-                                            "montoAplicado", voucher.getMontoDetectado(),
-                                            "saldoAnterior", saldoAnterior,
-                                            "saldoNuevo", saldoNuevo
-                                    ))
-                                    .usuarioId(command.agenteId())
-                                    .usuarioNombre(command.agenteNombre())
-                                    .automatico(false)
-                                    .creadoEn(new Date())
-                                    .build();
+        String fechaPago       = resolveFechaPago(voucher, command);
+        int    cuotasMarcadas  = CuotaAplicador.aplicar(
+                caso.getCronograma(), voucher.getMontoDetectado(), fechaPago, null);
+        log.info("[AprobarVoucher] Cuotas marcadas PAGADA | contratoId={} count={} fechaPago={}",
+                voucher.getContratoId(), cuotasMarcadas, fechaPago);
 
-                            return movimientoPort.append(voucher.getContratoId(), movimiento)
-                                    .then(voucherPort.save(voucher))
-                                    .then(casoPort.save(caso))
-                                    .then(eventoPort.append(voucher.getContratoId(), eventoAprobado))
-                                    .then(eventoPort.append(voucher.getContratoId(), eventoPago))
-                                    .thenReturn(comprobante.getId());
-                        })
-                );
+        caso.setSaldoActual(saldoNuevo);
+        caso.setTotalPagado((caso.getTotalPagado() != null ? caso.getTotalPagado() : 0.0)
+                + voucher.getMontoDetectado());
+        caso.setUltimaGestion(new Date());
+        caso.setUltimaGestionResumen("Pago aplicado: S/ " + voucher.getMontoDetectado());
+        caso.setActualizadoEn(new Date());
+        caso.setActualizadoPor(command.agenteId());
+
+        // Payload del evento — comprobanteId es opcional (puede ser null si aún no hay facturación)
+        java.util.HashMap<String, Object> payloadAprobado = new java.util.HashMap<>();
+        payloadAprobado.put("voucherId",     voucher.getId());
+        payloadAprobado.put("montoAplicado", voucher.getMontoDetectado());
+        payloadAprobado.put("saldoAnterior", saldoAnterior);
+        payloadAprobado.put("saldoNuevo",    saldoNuevo);
+        if (comprobanteId != null && !comprobanteId.isEmpty()) {
+            payloadAprobado.put("comprobanteId", comprobanteId);
+        }
+
+        EventoCobranzaDocument eventoAprobado = EventoCobranzaDocument.builder()
+                .contratoId(voucher.getContratoId())
+                .tipo("VOUCHER_APROBADO")
+                .payload(payloadAprobado)
+                .usuarioId(command.agenteId())
+                .usuarioNombre(command.agenteNombre())
+                .automatico(false)
+                .creadoEn(new Date())
+                .build();
+
+        EventoCobranzaDocument eventoPago = EventoCobranzaDocument.builder()
+                .contratoId(voucher.getContratoId())
+                .tipo("PAGO_APLICADO")
+                .payload(Map.of(
+                        "voucherId",     voucher.getId(),
+                        "montoAplicado", voucher.getMontoDetectado(),
+                        "saldoAnterior", saldoAnterior,
+                        "saldoNuevo",    saldoNuevo
+                ))
+                .usuarioId(command.agenteId())
+                .usuarioNombre(command.agenteNombre())
+                .automatico(false)
+                .creadoEn(new Date())
+                .build();
+
+        return movimientoPort.append(voucher.getContratoId(), movimiento)
+                .then(voucherPort.save(voucher))
+                .then(casoPort.save(caso))
+                .then(eventoPort.append(voucher.getContratoId(), eventoAprobado))
+                .then(eventoPort.append(voucher.getContratoId(), eventoPago))
+                .then();
     }
 
     // -------------------------------------------------------------------------
