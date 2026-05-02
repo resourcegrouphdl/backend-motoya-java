@@ -18,9 +18,12 @@ import java.util.regex.Pattern;
 @Order(Integer.MAX_VALUE)
 public class GenericoStrategy implements BancoStrategy {
 
-    // Cualquier "S/ X,XXX.XX"
-    private static final Pattern P_MONTO = Pattern.compile(
-            "\\bS/\\.?\\s*([\\d,]+(?:\\.\\d{1,2})?)");
+    // "S/ X,XXX.XX" — formato estándar peruano
+    private static final Pattern P_MONTO_SOL = Pattern.compile(
+            "(?i)\\bS/\\.?\\s*([\\d,]+(?:\\.\\d{1,2})?)");
+    // "Monto: X,XXX.XX" o "Total: 289.40" — etiqueta explícita sin símbolo
+    private static final Pattern P_MONTO_LABEL = Pattern.compile(
+            "(?i)(?:monto|importe|total|amount)\\s*[:\\-]?\\s*(?:s/\\.?)?\\s*([\\d,]+(?:\\.\\d{1,2})?)");
 
     // Fecha en texto: "Martes, 17 marzo 2026"
     private static final Pattern P_FECHA_TEXTO = Pattern.compile(
@@ -63,7 +66,9 @@ public class GenericoStrategy implements BancoStrategy {
         Map<String, String> campos = new HashMap<>();
         if (fullText == null || fullText.isBlank()) return campos;
 
-        match(P_MONTO, fullText).ifPresent(v -> campos.put("montoPagado", "S/ " + v));
+        match(P_MONTO_SOL, fullText)
+                .or(() -> match(P_MONTO_LABEL, fullText))
+                .ifPresent(v -> campos.put("montoPagado", "S/ " + v));
 
         match(P_FECHA_TEXTO, fullText)
                 .or(() -> match(P_FECHA_NUM, fullText))

@@ -61,7 +61,7 @@ public class DocumentAiRawAdapter implements DocumentAiRawPort {
     @Override
     @CircuitBreaker(name = "documentAi", fallbackMethod = "fallbackObtenerRaw")
     public Mono<VoucherRaw> obtenerRaw(String gcsPath, String mimeType) {
-        String gcsUri = "gs://" + bucketName + "/" + gcsPath;
+        String gcsUri = gcsPath.startsWith("gs://") ? gcsPath : "gs://" + bucketName + "/" + gcsPath;
         String processorUri = String.format(
                 "/projects/%s/locations/%s/processors/%s:process",
                 projectId, location, processorId);

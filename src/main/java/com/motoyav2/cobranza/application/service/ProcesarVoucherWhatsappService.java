@@ -65,8 +65,10 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
 
                                 Double montoDetectado = parseMonto(extraccion.campos());
 
-                                // Umbral de confianza: necesitamos al menos monto O banco identificado
-                                boolean esVoucher = montoDetectado != null || extraccion.banco() != null;
+                                // Umbral de confianza: monto detectado O banco específico (no fallback GENERICO)
+                                boolean bancoCierto = extraccion.banco() != null
+                                        && !"GENERICO".equals(extraccion.banco());
+                                boolean esVoucher = montoDetectado != null || bancoCierto;
                                 if (!esVoucher) {
                                     log.info("[VOUCHER-WA] Imagen descartada — sin monto ni banco | contratoId={} mensajeId={}",
                                             contratoId, mensajeId);
@@ -155,15 +157,35 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
                 .build();
     }
 
+    private static final String[] MONTO_KEYS = {
+            "montoPagado", "monto", "importe", "total", "amount", "montoTotal", "montoOperacion"
+    };
+
     private Double parseMonto(Map<String, String> campos) {
         if (campos == null) return null;
-        String raw = campos.get("montoPagado");
-        if (raw == null || raw.isBlank()) return null;
+        String raw = null;
+        for (String key : MONTO_KEYS) {
+            String val = campos.get(key);
+            if (val != null && !val.isBlank()) { raw = val; break; }
+        }
+        if (raw == null) return null;
         try {
-            return Double.parseDouble(raw.replaceAll("[^0-9.]", ""));
+            String numeric = normalizarNumero(raw);
+            return numeric.isBlank() ? null : Double.parseDouble(numeric);
         } catch (NumberFormatException e) {
             log.warn("[VOUCHER-WA] No se pudo parsear monto: {}", raw);
             return null;
         }
+    }
+
+    private String normalizarNumero(String raw) {
+        // Quitar símbolo de moneda y espacios: "S/ 1,200.50" → "1,200.50"
+        String s = raw.replaceAll("[^0-9.,]", "");
+        // Formato europeo "1.200,50" → "1200.50"
+        if (s.matches("\\d{1,3}(\\.\\d{3})*(,\\d{1,2})?")) {
+            return s.replace(".", "").replace(",", ".");
+        }
+        // Formato estándar "1,200.50" → "1200.50"
+        return s.replace(",", "");
     }
 }
