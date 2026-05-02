@@ -89,15 +89,32 @@ public class ReprocesarVoucherOcrService implements ReprocesarVoucherOcrUseCase 
         return campos != null ? campos.get(key) : null;
     }
 
+    private static final String[] MONTO_KEYS = {
+            "montoPagado", "monto", "importe", "total", "amount", "montoTotal", "montoOperacion"
+    };
+
     private Double parseMonto(Map<String, String> campos) {
         if (campos == null) return null;
-        String raw = campos.get("montoPagado");
-        if (raw == null || raw.isBlank()) return null;
+        String raw = null;
+        for (String key : MONTO_KEYS) {
+            String val = campos.get(key);
+            if (val != null && !val.isBlank()) { raw = val; break; }
+        }
+        if (raw == null) return null;
         try {
-            return Double.parseDouble(raw.replaceAll("[^0-9.]", ""));
+            String numeric = normalizarNumero(raw);
+            return numeric.isBlank() ? null : Double.parseDouble(numeric);
         } catch (NumberFormatException e) {
             log.warn("[REPROCESAR-OCR] No se pudo parsear monto: {}", raw);
             return null;
         }
+    }
+
+    private String normalizarNumero(String raw) {
+        String s = raw.replaceAll("[^0-9.,]", "");
+        if (s.matches("\\d{1,3}(\\.\\d{3})*(,\\d{1,2})?")) {
+            return s.replace(".", "").replace(",", ".");
+        }
+        return s.replace(",", "");
     }
 }
