@@ -433,8 +433,9 @@ public class CobranzaController {
         String userNombre = (String) exchange.getAttributes().get("userNombre");
         log.debug("POST /vouchers/{id}/aprobar id={} userId={}", id, userId);
 
-        // Determine serie based on tipo
-        String serie = "FACTURA".equalsIgnoreCase(body.tipo()) ? "F001" : "B001";
+        // serie es null cuando no se elige tipo — el servicio omite la creación de comprobante
+        String serie = body.tipo() == null ? null
+                : ("FACTURA".equalsIgnoreCase(body.tipo()) ? "F001" : "B001");
 
         AprobarVoucherCommand command = new AprobarVoucherCommand(
                 id, userId, userNombre,
@@ -448,12 +449,16 @@ public class CobranzaController {
         );
 
         return aprobarVoucherUseCase.ejecutar(command)
-                .map(comprobanteId -> Map.<String, Object>of(
-                        "status", "OK",
-                        "message", "Voucher aprobado",
-                        "voucherId", id,
-                        "comprobanteId", comprobanteId
-                ));
+                .map(comprobanteId -> {
+                    java.util.LinkedHashMap<String, Object> resp = new java.util.LinkedHashMap<>();
+                    resp.put("status",   "OK");
+                    resp.put("message",  "Voucher aprobado");
+                    resp.put("voucherId", id);
+                    if (comprobanteId != null && !comprobanteId.isEmpty()) {
+                        resp.put("comprobanteId", comprobanteId);
+                    }
+                    return (Map<String, Object>) resp;
+                });
     }
 
     @PostMapping("/api/v1/cobranzas/vouchers/{id}/rechazar")

@@ -15,11 +15,14 @@ public class TiendaNombreAdapter implements TiendaNombrePort {
     @Override
     public Mono<String> resolverNombre(String tiendaId) {
         if (tiendaId == null || tiendaId.isBlank()) return Mono.just("");
-        return tiendaProfileRepository.findById(tiendaId)
+        // Algunos documentos migraron el tiendaId con corchetes desde JS (ej: "[uid_abc]" → "uid_abc")
+        String cleanId = tiendaId.trim().replaceAll("^\\[+|\\]+$", "").trim();
+        if (cleanId.isBlank()) return Mono.just("");
+        return tiendaProfileRepository.findById(cleanId)
                 .map(doc -> {
                     String name = doc.getBusinessName();
-                    return (name != null && !name.isBlank()) ? name : tiendaId;
+                    return (name != null && !name.isBlank()) ? name : cleanId;
                 })
-                .defaultIfEmpty(tiendaId);
+                .defaultIfEmpty(cleanId);
     }
 }
