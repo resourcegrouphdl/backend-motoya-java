@@ -83,6 +83,34 @@ public class MigracionController {
                 .flatMap(uid -> stagingService.completar(id, req, uid));
     }
 
+    // ─── 3b. Generar siguiente contratoId ─────────────────────────────────────
+
+    @GetMapping("/staging/siguiente-contrato-id")
+    @Operation(
+            summary = "Genera el siguiente contratoId disponible",
+            description = "Formato MIG-{YYYY}-{NNN}. Escanea staging y cobranzas-casos para " +
+                    "evitar colisiones. Útil para clientes anteriores al sistema sin ID formal.")
+    public Mono<Map<String, Object>> siguienteContratoId() {
+        return stagingService.generarSiguienteContratoId()
+                .map(id -> Map.<String, Object>of("contratoId", id));
+    }
+
+    // ─── 3d. Actualizar cronograma (corrección manual) ────────────────────────
+
+    @PutMapping("/staging/{id}/cronograma")
+    @Operation(
+            summary = "Corregir cronograma de un registro en staging",
+            description = "Permite corregir fechas, estado pagado/pendiente y montos individuales " +
+                    "por cuota. Recalcula totalCuotas, cuotasPagadas y capitalInferido. " +
+                    "No disponible para registros ya MIGRADO.")
+    public Mono<MigracionStagingDocument> actualizarCronograma(
+            @PathVariable String id,
+            @Valid @RequestBody ActualizarCronogramaRequest req) {
+        log.info("[Migracion-API] PUT /staging/{}/cronograma cuotas={}", id, req.cronograma().size());
+        return resolverUsuarioId()
+                .flatMap(uid -> stagingService.actualizarCronograma(id, req, uid));
+    }
+
     // ─── 4. Eliminar registro de staging ─────────────────────────────────────
 
     @DeleteMapping("/staging/{id}")

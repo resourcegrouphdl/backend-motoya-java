@@ -122,10 +122,14 @@ public class MigracionEjecutorService {
         List<CuotaStagingDocument> cuotas = staging.getCronogramaCalendar() != null
                 ? staging.getCronogramaCalendar() : List.of();
 
+        double montoGlobal = staging.getMontoCuota() != null ? staging.getMontoCuota() : 0.0;
+
         // Métricas
         long cuotasPagadas   = cuotas.stream().filter(c -> Boolean.TRUE.equals(c.getPagada())).count();
-        long cuotasPendientes = cuotas.size() - cuotasPagadas;
-        double saldoActual   = cuotasPendientes * staging.getMontoCuota();
+        double saldoActual   = cuotas.stream()
+                .filter(c -> !Boolean.TRUE.equals(c.getPagada()))
+                .mapToDouble(c -> c.getMonto() != null ? c.getMonto() : montoGlobal)
+                .sum();
         double capitalOriginal = staging.getCapitalInferido() != null ? staging.getCapitalInferido() : 0.0;
 
         int diasMora = cuotas.stream()
@@ -175,10 +179,11 @@ public class MigracionEjecutorService {
                     } else {
                         estadoCuota = "PENDIENTE";
                     }
+                    double montoCuota = c.getMonto() != null ? c.getMonto() : montoGlobal;
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("cuotaNum", c.getCuota());
                     m.put("cuota",    c.getCuota());
-                    m.put("monto",    staging.getMontoCuota());
+                    m.put("monto",    montoCuota);
                     m.put("fechaVencimiento", c.getFechaVencimiento() != null ? c.getFechaVencimiento() : "");
                     m.put("estado",   estadoCuota);
                     return m;
@@ -213,7 +218,11 @@ public class MigracionEjecutorService {
         caso.put("cicloVida",             "ACTIVO");
         caso.put("saldoActual",           saldoActual);
         caso.put("capitalOriginal",       capitalOriginal);
-        caso.put("totalPagado",           cuotasPagadas * staging.getMontoCuota());
+        double totalPagado = cuotas.stream()
+                .filter(c -> Boolean.TRUE.equals(c.getPagada()))
+                .mapToDouble(c -> c.getMonto() != null ? c.getMonto() : montoGlobal)
+                .sum();
+        caso.put("totalPagado",           totalPagado);
         caso.put("totalMora",             0.0);
         caso.put("totalCondonado",        0.0);
         com.google.cloud.Timestamp tsImpaga = toTimestamp(fechaPrimeraCuotaImpaga);
@@ -221,8 +230,28 @@ public class MigracionEjecutorService {
         caso.put("numeroCuotasTotales",   staging.getTotalCuotas());
         caso.put("numeroCuotasPagadas",   (int) cuotasPagadas);
         caso.put("cronograma",            cronogramaDoc);
+        // Referencias personales (si existen)
+        if (staging.getReferencias() != null && !staging.getReferencias().isEmpty()) {
+            List<Map<String, Object>> refsDoc = staging.getReferencias().stream()
+                    .map(r -> {
+                        Map<String, Object> ref = new LinkedHashMap<>();
+                        ref.put("nombre",     nvl(r.getNombre()));
+                        ref.put("telefono",   nvl(r.getTelefono()));
+                        ref.put("parentesco", nvl(r.getParentesco()));
+                        ref.put("direccion",  nvl(r.getDireccion()));
+                        return ref;
+                    })
+                    .collect(Collectors.toList());
+            caso.put("referencias", refsDoc);
+        }
+
         caso.put("ultimaGestion",         com.google.cloud.Timestamp.now());
-        caso.put("ultimaGestionResumen",  "Migrado desde Google Calendar");
+        String resumenBase = "Migrado desde Google Calendar";
+        String resumen = (staging.getObservaciones() != null && !staging.getObservaciones().isBlank())
+                ? resumenBase + " — " + staging.getObservaciones()
+                : resumenBase;
+        caso.put("ultimaGestionResumen",  resumen);
+        caso.put("observaciones",         staging.getObservaciones() != null ? staging.getObservaciones() : "");
         caso.put("proximaAccion",         diasMora > 0
                 ? "Contactar cliente — mora de " + diasMora + " días"
                 : "Contactar cliente — sin mora detectada");
@@ -297,10 +326,14 @@ public class MigracionEjecutorService {
     }
 
     private EjecutarMigracionResponse buildRespuestaOk(MigracionStagingDocument staging) {
-        long pendientes = staging.getCronogramaCalendar() != null
-                ? staging.getCronogramaCalendar().stream().filter(c -> !Boolean.TRUE.equals(c.getPagada())).count()
-                : 0;
-        double saldo = pendientes * (staging.getMontoCuota() != null ? staging.getMontoCuota() : 0.0);
+        List<CuotaStagingDocument> cuotas = staging.getCronogramaCalendar() != null
+                ? staging.getCronogramaCalendar() : List.of();
+        double montoGlobal = staging.getMontoCuota() != null ? staging.getMontoCuota() : 0.0;
+        long pendientes = cuotas.stream().filter(c -> !Boolean.TRUE.equals(c.getPagada())).count();
+        double saldo = cuotas.stream()
+                .filter(c -> !Boolean.TRUE.equals(c.getPagada()))
+                .mapToDouble(c -> c.getMonto() != null ? c.getMonto() : montoGlobal)
+                .sum();
         return new EjecutarMigracionResponse(
                 "OK",
                 staging.getContratoId(),
