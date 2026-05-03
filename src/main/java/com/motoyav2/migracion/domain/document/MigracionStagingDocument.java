@@ -58,6 +58,12 @@ public class MigracionStagingDocument {
     private String provincia;
     private String departamento;
 
+    // ── Referencias personales del cliente ───────────────────────────────────
+    private List<ReferenciaDocument> referencias;
+
+    // ── Observaciones internas ────────────────────────────────────────────────
+    private String observaciones;
+
     // ── Datos del fiador (para migración asistida) ────────────────────────────
     private String fiadorNombre;
     private String fiadorApellidos;

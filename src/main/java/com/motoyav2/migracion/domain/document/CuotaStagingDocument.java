@@ -20,6 +20,8 @@ public class CuotaStagingDocument {
     private String fechaVencimiento;
     /** true si el colorId indica cuota pagada */
     private Boolean pagada;
+    /** Monto individual de esta cuota. Null = usar staging.montoCuota global. */
+    private Double monto;
     /** Título original del evento para auditoría */
     private String tituloOriginal;
 }

@@ -64,6 +64,12 @@ public class CasoCobranzaDocument {
     private Integer numeroCuotasPagadas;
     private List<CuotaCronogramaDocument> cronograma;
 
+    /** Referencias personales del cliente para localización. */
+    private List<java.util.Map<String, Object>> referencias;
+
+    /** Observaciones internas del operador sobre este caso. */
+    private String observaciones;
+
     // Gestión
     private Date ultimaGestion;
     /** Texto corto para lista. Ej: "Llamada - Sin respuesta" */

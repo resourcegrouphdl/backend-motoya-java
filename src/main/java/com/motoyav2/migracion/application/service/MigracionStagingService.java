@@ -1,9 +1,11 @@
 package com.motoyav2.migracion.application.service;
 
+import com.motoyav2.migracion.application.dto.ActualizarCronogramaRequest;
 import com.motoyav2.migracion.application.dto.CompletarStagingRequest;
 import com.motoyav2.migracion.application.dto.PreviewCronogramaResponse;
 import com.motoyav2.migracion.domain.document.CuotaStagingDocument;
 import com.motoyav2.migracion.domain.document.MigracionStagingDocument;
+import com.motoyav2.migracion.domain.document.ReferenciaDocument;
 import com.motoyav2.migracion.domain.repository.MigracionStagingRepository;
 import com.motoyav2.shared.exception.ConflictException;
 import com.motoyav2.shared.exception.NotFoundException;
@@ -15,9 +17,13 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -63,6 +69,22 @@ public class MigracionStagingService {
                     doc.setFiadorTelefono(req.fiadorTelefono());
                     doc.setFiadorEmail(req.fiadorEmail());
                     doc.setFiadorParentesco(req.fiadorParentesco());
+
+                    // Referencias y observaciones
+                    if (req.referencias() != null) {
+                        List<ReferenciaDocument> refs = req.referencias().stream()
+                                .map(r -> ReferenciaDocument.builder()
+                                        .nombre(r.nombre())
+                                        .telefono(r.telefono())
+                                        .parentesco(r.parentesco())
+                                        .direccion(r.direccion())
+                                        .build())
+                                .toList();
+                        doc.setReferencias(refs);
+                    }
+                    if (req.observaciones() != null) {
+                        doc.setObservaciones(req.observaciones());
+                    }
                     doc.setErrorDetalle(null);
 
                     int completitud = calcularCompletitud(doc);
@@ -72,6 +94,102 @@ public class MigracionStagingService {
                     doc.setActualizadoPor(usuarioId);
 
                     return repository.save(doc);
+                });
+    }
+
+    public Mono<MigracionStagingDocument> actualizarCronograma(
+            String id, ActualizarCronogramaRequest req, String usuarioId) {
+
+        return repository.findById(id)
+                .switchIfEmpty(Mono.error(new NotFoundException("Staging no encontrado: " + id)))
+                .flatMap(doc -> {
+                    if ("MIGRADO".equals(doc.getEstado())) {
+                        return Mono.error(new ConflictException(
+                                "No se puede editar el cronograma de un registro ya migrado."));
+                    }
+
+                    // Actualiza montoCuota global si se proporcionó
+                    if (req.montoCuota() != null && req.montoCuota() > 0) {
+                        doc.setMontoCuota(req.montoCuota());
+                    }
+                    double montoGlobal = doc.getMontoCuota() != null ? doc.getMontoCuota() : 0.0;
+
+                    List<CuotaStagingDocument> cuotas = req.cronograma().stream()
+                            .map(c -> CuotaStagingDocument.builder()
+                                    .cuota(c.cuota())
+                                    .fechaVencimiento(c.fechaVencimiento())
+                                    .pagada(c.pagada())
+                                    .monto(c.monto())
+                                    .tituloOriginal("Corrección manual")
+                                    .build())
+                            .sorted(java.util.Comparator.comparingInt(CuotaStagingDocument::getCuota))
+                            .toList();
+
+                    doc.setCronogramaCalendar(cuotas);
+                    doc.setTotalCuotas(cuotas.size());
+
+                    List<Integer> pagadas = cuotas.stream()
+                            .filter(c -> Boolean.TRUE.equals(c.getPagada()))
+                            .map(CuotaStagingDocument::getCuota)
+                            .toList();
+                    doc.setCuotasPagadas(pagadas);
+
+                    // Recalcular capitalInferido con montos individuales
+                    double capital = cuotas.stream()
+                            .mapToDouble(c -> c.getMonto() != null ? c.getMonto() : montoGlobal)
+                            .sum();
+                    doc.setCapitalInferido(capital);
+
+                    // Fecha inicio = cuota 1
+                    cuotas.stream()
+                            .filter(c -> c.getCuota() != null && c.getCuota() == 1)
+                            .map(CuotaStagingDocument::getFechaVencimiento)
+                            .filter(f -> f != null)
+                            .findFirst()
+                            .ifPresent(doc::setFechaInicio);
+
+                    doc.setActualizadoEn(new Date());
+                    doc.setActualizadoPor(usuarioId);
+
+                    return repository.save(doc);
+                });
+    }
+
+    /**
+     * Genera el siguiente contratoId disponible con formato MIG-{YYYY}-{NNN}.
+     * Escanea staging + cobranzas-casos para evitar duplicados.
+     */
+    public Mono<String> generarSiguienteContratoId() {
+        int anio = Year.now().getValue();
+        String prefijo = "MIG-" + anio + "-";
+        Pattern patron = Pattern.compile("MIG-" + anio + "-(\\d+)");
+
+        Mono<Integer> maxStaging = repository.findAll()
+                .mapNotNull(MigracionStagingDocument::getContratoId)
+                .filter(id -> id.startsWith(prefijo))
+                .map(id -> {
+                    Matcher m = patron.matcher(id);
+                    return m.matches() ? Integer.parseInt(m.group(1)) : 0;
+                })
+                .reduce(0, Integer::max);
+
+        Mono<Integer> maxCasos = (adminFirestore == null) ? Mono.just(0) :
+                Mono.fromCallable(() ->
+                        adminFirestore.collection("cobranzas-casos")
+                                .get().get().getDocuments().stream()
+                                .map(d -> d.getId())
+                                .filter(id -> id.startsWith(prefijo))
+                                .map(id -> {
+                                    Matcher m = patron.matcher(id);
+                                    return m.matches() ? Integer.parseInt(m.group(1)) : 0;
+                                })
+                                .reduce(0, Integer::max))
+                        .subscribeOn(Schedulers.boundedElastic());
+
+        return Mono.zip(maxStaging, maxCasos)
+                .map(t -> {
+                    int siguiente = Math.max(t.getT1(), t.getT2()) + 1;
+                    return String.format("%s%03d", prefijo, siguiente);
                 });
     }
 
@@ -127,6 +245,13 @@ public class MigracionStagingService {
 
     private PreviewCronogramaResponse buildPreview(MigracionStagingDocument doc) {
         LocalDate hoy = LocalDate.now();
+        double montoGlobal = doc.getMontoCuota() != null ? doc.getMontoCuota() : 0.0;
+
+        if (doc.getCronogramaCalendar() == null || doc.getCronogramaCalendar().isEmpty()) {
+            return new PreviewCronogramaResponse(
+                    doc.getTotalCuotas() != null ? doc.getTotalCuotas() : 0,
+                    montoGlobal, 0.0, 0, 0, 0, 0.0, List.of());
+        }
 
         var cronograma = doc.getCronogramaCalendar().stream()
                 .map(c -> {
@@ -139,14 +264,17 @@ public class MigracionStagingService {
                     } else {
                         estado = "VIGENTE";
                     }
+                    double monto = c.getMonto() != null ? c.getMonto() : montoGlobal;
                     return new PreviewCronogramaResponse.CuotaPreviewDto(
-                            c.getCuota(), c.getFechaVencimiento(), estado, doc.getMontoCuota());
+                            c.getCuota(), c.getFechaVencimiento(), estado, monto);
                 })
                 .toList();
 
         long pagadas    = cronograma.stream().filter(c -> "PAGADA".equals(c.estado())).count();
-        long pendientes = cronograma.size() - pagadas;
-        double saldo    = pendientes * doc.getMontoCuota();
+        double saldo    = cronograma.stream()
+                .filter(c -> !"PAGADA".equals(c.estado()))
+                .mapToDouble(PreviewCronogramaResponse.CuotaPreviewDto::monto)
+                .sum();
 
         // Días mora = desde la primera cuota VENCIDA no pagada hasta hoy
         int diasMora = cronograma.stream()
@@ -157,10 +285,10 @@ public class MigracionStagingService {
 
         return new PreviewCronogramaResponse(
                 doc.getTotalCuotas(),
-                doc.getMontoCuota(),
+                montoGlobal,
                 doc.getCapitalInferido() != null ? doc.getCapitalInferido() : 0.0,
                 (int) pagadas,
-                (int) pendientes,
+                (int) (cronograma.size() - pagadas),
                 diasMora,
                 saldo,
                 cronograma

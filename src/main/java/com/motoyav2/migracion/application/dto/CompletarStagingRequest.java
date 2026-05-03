@@ -1,8 +1,11 @@
 package com.motoyav2.migracion.application.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import java.util.List;
 
 public record CompletarStagingRequest(
 
@@ -17,8 +20,10 @@ public record CompletarStagingRequest(
         @Pattern(regexp = "\\d{8}", message = "clienteDni debe tener exactamente 8 dígitos")
         String clienteDni,
 
+        // Formato flexible: acepta +51XXXXXXXXX, 9XXXXXXXX, números con espacios/guiones.
+        // El agente puede corregir el formato desde el caso de cobranza.
         @NotBlank(message = "telefono es requerido")
-        @Pattern(regexp = "\\+51\\d{9}", message = "telefono debe tener formato +51XXXXXXXXX")
+        @Size(min = 7, message = "telefono debe tener al menos 7 caracteres")
         String telefono,
 
         @NotBlank(message = "moto es requerida")
@@ -28,13 +33,21 @@ public record CompletarStagingRequest(
         // Opcionales — enriquecen la migración pero no bloquean COMPLETO
         String email,
 
-        // Dirección del titular (para estrategias de cobranza)
+        // Dirección del titular
         String storeId,
         String direccion,
         String distrito,
         String provincia,
         String departamento,
 
+        // Referencias personales del cliente
+        @Valid
+        List<ReferenciaDto> referencias,
+
+        // Observaciones internas del operador
+        String observaciones,
+
+        // Fiador
         String fiadorNombre,
         String fiadorApellidos,
         String fiadorTipoDocumento,
@@ -42,4 +55,14 @@ public record CompletarStagingRequest(
         String fiadorTelefono,
         String fiadorEmail,
         String fiadorParentesco
-) {}
+
+) {
+    public record ReferenciaDto(
+            @NotBlank(message = "nombre de la referencia es requerido")
+            String nombre,
+            @NotBlank(message = "teléfono de la referencia es requerido")
+            String telefono,
+            String parentesco,
+            String direccion
+    ) {}
+}
