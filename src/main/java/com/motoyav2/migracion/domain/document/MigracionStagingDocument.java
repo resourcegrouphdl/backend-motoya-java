@@ -46,6 +46,7 @@ public class MigracionStagingDocument {
 
     private String contratoId;
     private String clienteNombre;
+    private String titularTipoDocumento;
     private String clienteDni;
     private String telefono;
     private String email;

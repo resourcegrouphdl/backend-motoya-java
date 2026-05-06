@@ -53,6 +53,7 @@ public class MigracionStagingService {
                 .flatMap(doc -> {
                     doc.setContratoId(req.contratoId());
                     doc.setClienteNombre(req.clienteNombre());
+                    doc.setTitularTipoDocumento(req.titularTipoDocumento());
                     doc.setClienteDni(req.clienteDni());
                     doc.setTelefono(req.telefono());
                     doc.setEmail(req.email());

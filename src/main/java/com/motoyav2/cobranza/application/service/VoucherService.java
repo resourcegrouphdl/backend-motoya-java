@@ -1,13 +1,17 @@
 package com.motoyav2.cobranza.application.service;
 
+import com.motoyav2.cobranza.application.dto.ContextoDuplicadosDto;
+import com.motoyav2.cobranza.application.dto.VoucherResumenDto;
 import com.motoyav2.cobranza.application.port.in.*;
 import com.motoyav2.cobranza.application.port.in.command.AprobarVoucherCommand;
 import com.motoyav2.cobranza.application.port.in.command.RecibirVoucherCommand;
 import com.motoyav2.cobranza.application.port.in.command.RechazarVoucherCommand;
 import com.motoyav2.cobranza.application.port.out.*;
+import com.motoyav2.cobranza.domain.exception.OperacionDuplicadaException;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.*;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.EmisorDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.ItemComprobanteDocument;
+import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.OcrResultadoDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.ReceptorComprobanteDocument;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.ConflictException;
@@ -28,7 +32,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseCase,
-        RechazarVoucherUseCase, ListarVouchersUseCase {
+        RechazarVoucherUseCase, ListarVouchersUseCase, ConsultarDuplicadosVoucherUseCase {
 
     private static final double IGV = 0.18;
 
@@ -39,6 +43,7 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
     private final AlertaCobranzaPort alertaPort;
     private final EventoCobranzaPort eventoPort;
     private final NumeradorPort numeradorPort;
+    private final OperacionBancariaIndexPort operacionIndexPort;
 
     // -------------------------------------------------------------------------
     // RecibirVoucherUseCase
@@ -105,7 +110,6 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
         return voucherPort.findById(command.voucherId())
                 .switchIfEmpty(Mono.error(new NotFoundException("Voucher no encontrado: " + command.voucherId())))
                 .flatMap(voucher -> {
-                    // IDEMPOTENCIA: ya fue aprobado — retornar comprobanteId existente (puede ser "" si se aprobó sin comprobante)
                     if ("APROBADO".equals(voucher.getEstado())) {
                         log.info("[AprobarVoucher] Idempotente — voucher {} ya aprobado", command.voucherId());
                         return Mono.just(voucher.getComprobanteId() != null ? voucher.getComprobanteId() : "");
@@ -121,8 +125,74 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                     if (voucher.getMontoDetectado() == null || voucher.getMontoDetectado() <= 0) {
                         return Mono.error(new BadRequestException("El voucher no tiene monto detectado válido."));
                     }
-                    return procesarAprobacion(voucher, command);
+                    // Opción A: registro atómico en el índice de deduplicación
+                    return protegerContraOperacionDuplicada(voucher)
+                            .then(Mono.defer(() -> procesarAprobacion(voucher, command)
+                                    .onErrorResume(
+                                            e -> !(e instanceof OperacionDuplicadaException),
+                                            e -> rollbackIndiceOperacion(voucher).then(Mono.error(e))
+                                    )
+                            ));
                 });
+    }
+
+    // -------------------------------------------------------------------------
+    // ConsultarDuplicadosVoucherUseCase — Opciones A + B (consulta de solo lectura)
+    // -------------------------------------------------------------------------
+
+    @Override
+    public Mono<ContextoDuplicadosDto> ejecutar(String voucherId) {
+        return voucherPort.findById(voucherId)
+                .switchIfEmpty(Mono.error(new NotFoundException("Voucher no encontrado: " + voucherId)))
+                .flatMap(voucher -> {
+                    OcrResultadoDocument ocr = voucher.getOcrResultado();
+
+                    // Opción A: búsqueda exacta en el índice por banco + numero de operacion
+                    Mono<OperacionBancariaIndexDocument> exactoMono = tieneOperacionValida(ocr)
+                            ? operacionIndexPort.buscarDuplicado(ocr.getBanco(), ocr.getNumeroOperacion())
+                                    .filter(d -> !voucherId.equals(d.getVoucherId()))
+                            : Mono.empty();
+
+                    // Opción B: vouchers ya aprobados del mismo contrato con monto y fecha similares
+                    Mono<List<VoucherResumenDto>> similaresMono =
+                            (voucher.getContratoId() != null && voucher.getMontoDetectado() != null)
+                                    ? buscarVoucheresSimilares(voucher)
+                                    : Mono.just(List.of());
+
+                    return exactoMono
+                            .map(java.util.Optional::of)
+                            .defaultIfEmpty(java.util.Optional.empty())
+                            .flatMap(exacto -> similaresMono.map(similares ->
+                                    new ContextoDuplicadosDto(
+                                            exacto.isPresent(),
+                                            exacto.map(OperacionBancariaIndexDocument::getVoucherId).orElse(null),
+                                            ocr != null ? ocr.getBanco() : null,
+                                            ocr != null ? ocr.getNumeroOperacion() : null,
+                                            similares
+                                    )
+                            ));
+                });
+    }
+
+    private Mono<List<VoucherResumenDto>> buscarVoucheresSimilares(VoucherDocument voucher) {
+        return voucherPort.findByContratoId(voucher.getContratoId())
+                .filter(v -> "APROBADO".equals(v.getEstado()))
+                .filter(v -> !v.getId().equals(voucher.getId()))
+                .filter(v -> esMontoCercano(v.getMontoDetectado(), voucher.getMontoDetectado()))
+                .filter(v -> esFechaCercana(
+                        v.getOcrResultado() != null ? v.getOcrResultado().getFecha() : null,
+                        voucher.getOcrResultado() != null ? voucher.getOcrResultado().getFecha() : null
+                ))
+                .map(v -> new VoucherResumenDto(
+                        v.getId(),
+                        v.getEstado(),
+                        v.getMontoDetectado(),
+                        v.getOcrResultado() != null ? v.getOcrResultado().getFecha() : null,
+                        v.getOcrResultado() != null ? v.getOcrResultado().getBanco() : null,
+                        v.getOcrResultado() != null ? v.getOcrResultado().getNumeroOperacion() : null,
+                        v.getProcesadoEn() != null ? v.getProcesadoEn().toInstant().toString() : null
+                ))
+                .collectList();
     }
 
     private Mono<String> procesarAprobacion(VoucherDocument voucher, AprobarVoucherCommand command) {
@@ -347,5 +417,82 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
     @Override
     public Flux<VoucherDocument> ejecutar(String storeId, String estado) {
         return voucherPort.findByStoreIdAndEstado(storeId, estado);
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers — deduplicación (Opciones A + B)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Opción A (bloqueo atómico): registra la operación en el índice de dedup ANTES de aplicar
+     * el pago. Si ya existe → lanza OperacionDuplicadaException.
+     * Si es el mismo voucherId (reintento) → permite continuar.
+     */
+    private Mono<Void> protegerContraOperacionDuplicada(VoucherDocument voucher) {
+        OcrResultadoDocument ocr = voucher.getOcrResultado();
+        if (!tieneOperacionValida(ocr)) {
+            log.debug("[AprobarVoucher] Sin numero de operacion valido — omitiendo verificacion | voucherId={}", voucher.getId());
+            return Mono.empty();
+        }
+
+        OperacionBancariaIndexDocument indexDoc = OperacionBancariaIndexDocument.builder()
+                .bancoRaw(ocr.getBanco())
+                .numeroOperacionRaw(ocr.getNumeroOperacion())
+                .voucherId(voucher.getId())
+                .contratoId(voucher.getContratoId())
+                .monto(voucher.getMontoDetectado())
+                .fechaOperacion(ocr.getFecha())
+                .build();
+
+        return operacionIndexPort.registrarSiNueva(ocr.getBanco(), ocr.getNumeroOperacion(), indexDoc)
+                .flatMap(esNueva -> {
+                    if (esNueva) return Mono.<Void>empty();
+                    // Ya existía — puede ser el mismo voucher (reintento) o uno distinto (fraude)
+                    return operacionIndexPort.buscarDuplicado(ocr.getBanco(), ocr.getNumeroOperacion())
+                            .flatMap(existing -> {
+                                if (voucher.getId().equals(existing.getVoucherId())) {
+                                    log.debug("[AprobarVoucher] Mismo voucher en indice (reintento permitido) | voucherId={}", voucher.getId());
+                                    return Mono.<Void>empty();
+                                }
+                                return Mono.<Void>error(new OperacionDuplicadaException(
+                                        ocr.getNumeroOperacion(), ocr.getBanco(), existing.getVoucherId()
+                                ));
+                            })
+                            .switchIfEmpty(Mono.<Void>error(new OperacionDuplicadaException(
+                                    ocr.getNumeroOperacion(), ocr.getBanco(), "desconocido"
+                            )));
+                });
+    }
+
+    /** Rollback del índice si la saga de aprobación falla después de haber registrado la operación. */
+    private Mono<Void> rollbackIndiceOperacion(VoucherDocument voucher) {
+        OcrResultadoDocument ocr = voucher.getOcrResultado();
+        if (!tieneOperacionValida(ocr)) return Mono.empty();
+        log.warn("[AprobarVoucher] Rollback del indice de operacion | banco={} numOp={}", ocr.getBanco(), ocr.getNumeroOperacion());
+        return operacionIndexPort.eliminar(ocr.getBanco(), ocr.getNumeroOperacion());
+    }
+
+    private boolean tieneOperacionValida(OcrResultadoDocument ocr) {
+        return ocr != null
+                && ocr.getNumeroOperacion() != null && !ocr.getNumeroOperacion().isBlank()
+                && ocr.getBanco() != null && !ocr.getBanco().isBlank()
+                && !"GENERICO".equalsIgnoreCase(ocr.getBanco());
+    }
+
+    /** Opción B — tolerancia ±5% en el monto. */
+    private boolean esMontoCercano(Double m1, Double m2) {
+        if (m1 == null || m2 == null || m2 == 0) return false;
+        return Math.abs(m1 - m2) <= m2 * 0.05;
+    }
+
+    /** Opción B — misma fecha o a 1 día de diferencia. */
+    private boolean esFechaCercana(String f1, String f2) {
+        if (f1 == null || f2 == null) return false;
+        try {
+            long diff = Math.abs(LocalDate.parse(f1).toEpochDay() - LocalDate.parse(f2).toEpochDay());
+            return diff <= 1;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
