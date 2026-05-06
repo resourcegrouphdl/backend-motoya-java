@@ -4,6 +4,7 @@ import com.motoyav2.cobranza.application.dto.ContextoDuplicadosDto;
 import com.motoyav2.cobranza.application.dto.VoucherResumenDto;
 import com.motoyav2.cobranza.application.port.in.*;
 import com.motoyav2.cobranza.application.port.in.command.AprobarVoucherCommand;
+import com.motoyav2.cobranza.domain.NivelMoraCalculadora;
 import com.motoyav2.cobranza.application.port.in.command.RecibirVoucherCommand;
 import com.motoyav2.cobranza.application.port.in.command.RechazarVoucherCommand;
 import com.motoyav2.cobranza.application.port.out.*;
@@ -296,6 +297,20 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                 caso.getCronograma(), voucher.getMontoDetectado(), fechaPago, null);
         log.info("[AprobarVoucher] Cuotas marcadas PAGADA | contratoId={} count={} fechaPago={}",
                 voucher.getContratoId(), cuotasMarcadas, fechaPago);
+
+        // Recalcular mora en el mismo request, sin esperar al scheduler del día siguiente
+        LocalDate hoy = LocalDate.now(NivelMoraCalculadora.LIMA);
+        int diasMoraActual = NivelMoraCalculadora.diasMora(caso, hoy);
+        caso.setFechaVencimientoPrimerCuotaImpaga(
+            caso.getCronograma() == null ? null :
+            caso.getCronograma().stream()
+                .filter(c -> !"PAGADA".equalsIgnoreCase(c.getEstado()) && c.getFechaVencimiento() != null)
+                .map(c -> c.getFechaVencimiento())
+                .min(java.util.Comparator.naturalOrder())
+                .orElse(null)
+        );
+        caso.setNivelEstrategia(NivelMoraCalculadora.calcularNivel(diasMoraActual));
+        caso.setTotalMora(NivelMoraCalculadora.moraSoles(diasMoraActual));
 
         caso.setSaldoActual(saldoNuevo);
         caso.setTotalPagado((caso.getTotalPagado() != null ? caso.getTotalPagado() : 0.0)

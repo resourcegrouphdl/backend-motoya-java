@@ -402,8 +402,10 @@ public class GestionService {
                 log.info("[Gestion] Firebase Auth user creado: uid={}, email={}", record.getUid(), email);
                 return record.getUid();
             } catch (FirebaseAuthException e) {
-                if ("EMAIL_EXISTS".equals(e.getAuthErrorCode().name()) ||
-                    e.getMessage().contains("EMAIL_EXISTS")) {
+                String authCode = e.getAuthErrorCode() != null ? e.getAuthErrorCode().name() : "";
+                if ("EMAIL_ALREADY_EXISTS".equals(authCode) ||
+                    "EMAIL_EXISTS".equals(authCode) ||
+                    (e.getMessage() != null && e.getMessage().contains("EMAIL_EXISTS"))) {
                     throw new ConflictException("El email ya está registrado: " + email);
                 }
                 throw new RuntimeException("Error creando usuario en Firebase: " + e.getMessage(), e);

@@ -8,9 +8,11 @@ import com.motoyav2.cobranza.application.port.in.ObtenerCasoUseCase;
 import com.motoyav2.cobranza.application.port.in.command.AsignarAgenteCommand;
 import com.motoyav2.cobranza.application.port.in.query.ListarCasosQuery;
 import com.motoyav2.cobranza.application.port.out.*;
+import com.motoyav2.cobranza.domain.NivelMoraCalculadora;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
 import com.motoyav2.shared.exception.NotFoundException;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -112,7 +114,7 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
     // -------------------------------------------------------------------------
 
     private CasoResumenDto toResumen(CasoCobranzaDocument d) {
-        int diasMora = calcularDiasMora(d.getFechaVencimientoPrimerCuotaImpaga());
+        int diasMora = NivelMoraCalculadora.diasMora(d, LocalDate.now(NivelMoraCalculadora.LIMA));
         String prioridad = calcularPrioridad(d.getNivelEstrategia(), diasMora);
         String ultimaGestion = d.getUltimaGestion() != null
                 ? d.getUltimaGestion().toInstant().toString()
@@ -135,23 +137,6 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
                 d.getMensajesNoLeidos(),
                 d.getUltimaRespuestaCliente()
         );
-    }
-
-    /** hoy - fechaVencimientoPrimerCuotaImpaga en días.
-     *  Soporta Date (docs nuevos con Timestamp) y String "YYYY-MM-DD" (docs migrados). */
-    private int calcularDiasMora(Object fechaObj) {
-        if (fechaObj == null) return 0;
-        try {
-            java.time.LocalDate fechaLocal;
-            if (fechaObj instanceof java.util.Date d) {
-                fechaLocal = d.toInstant().atZone(java.time.ZoneId.of("America/Lima")).toLocalDate();
-            } else {
-                fechaLocal = java.time.LocalDate.parse(fechaObj.toString().substring(0, 10));
-            }
-            return Math.max(0, (int) java.time.temporal.ChronoUnit.DAYS.between(fechaLocal, java.time.LocalDate.now(java.time.ZoneId.of("America/Lima"))));
-        } catch (Exception e) {
-            return 0;
-        }
     }
 
     /**

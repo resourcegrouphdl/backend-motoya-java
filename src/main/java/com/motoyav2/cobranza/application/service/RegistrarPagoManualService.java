@@ -12,12 +12,14 @@ import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.Eve
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.MovimientoDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.VoucherDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.OcrResultadoDocument;
+import com.motoyav2.cobranza.domain.NivelMoraCalculadora;
 import com.motoyav2.shared.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -72,6 +74,20 @@ public class RegistrarPagoManualService implements RegistrarPagoManualUseCase {
 
                     log.info("[PAGO-MANUAL] Directo | contratoId={} cuotas={} monto={}",
                             command.contratoId(), cuotasMarcadas, command.monto());
+
+                    // Recalcular mora inmediatamente tras aplicar pago
+                    LocalDate hoy = LocalDate.now(NivelMoraCalculadora.LIMA);
+                    int diasMoraActual = NivelMoraCalculadora.diasMora(caso, hoy);
+                    caso.setFechaVencimientoPrimerCuotaImpaga(
+                        caso.getCronograma() == null ? null :
+                        caso.getCronograma().stream()
+                            .filter(c -> !"PAGADA".equalsIgnoreCase(c.getEstado()) && c.getFechaVencimiento() != null)
+                            .map(c -> c.getFechaVencimiento())
+                            .min(java.util.Comparator.naturalOrder())
+                            .orElse(null)
+                    );
+                    caso.setNivelEstrategia(NivelMoraCalculadora.calcularNivel(diasMoraActual));
+                    caso.setTotalMora(NivelMoraCalculadora.moraSoles(diasMoraActual));
 
                     double saldoAnterior = caso.getSaldoActual() != null ? caso.getSaldoActual() : 0.0;
                     double saldoNuevo    = saldoAnterior - command.monto();
