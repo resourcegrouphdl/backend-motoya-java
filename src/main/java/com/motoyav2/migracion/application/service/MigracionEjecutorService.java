@@ -158,7 +158,7 @@ public class MigracionEjecutorService {
         Map<String, Object> titular = new LinkedHashMap<>();
         titular.put("nombres", nombres);
         titular.put("apellidos", apellidos);
-        titular.put("tipoDocumento", "DNI");
+        titular.put("tipoDocumento", nvl(staging.getTitularTipoDocumento(), "DNI"));
         titular.put("numeroDocumento", staging.getClienteDni());
         titular.put("telefono", staging.getTelefono());
         titular.put("email", staging.getEmail() != null ? staging.getEmail() : "");
@@ -259,6 +259,7 @@ public class MigracionEjecutorService {
         caso.put("creadoEn",              com.google.cloud.Timestamp.now());
         caso.put("actualizadoEn",         com.google.cloud.Timestamp.now());
         caso.put("creadoPor",             "MIGRACION_CALENDAR");
+        caso.put("actualizadoPor",        "MIGRACION_CALENDAR");
 
         // ── 2. Movimiento SALDO_INICIAL ───────────────────────────────────────
         String movId = UUID.randomUUID().toString();

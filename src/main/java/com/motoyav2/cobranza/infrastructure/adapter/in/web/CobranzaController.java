@@ -33,6 +33,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CobranzaController {
 
+    private final ConsultarDuplicadosVoucherUseCase consultarDuplicadosVoucherUseCase;
     private final ListarCasosUseCase listarCasosUseCase;
     private final ObtenerCasoUseCase obtenerCasoUseCase;
     private final AsignarAgenteUseCase asignarAgenteUseCase;
@@ -479,6 +480,12 @@ public class CobranzaController {
                         "status", "OK",
                         "message", "Voucher rechazado"
                 ));
+    }
+
+    @GetMapping("/api/v1/cobranzas/vouchers/{id}/contexto-duplicados")
+    public Mono<ContextoDuplicadosDto> consultarDuplicados(@PathVariable String id) {
+        log.debug("GET /vouchers/{}/contexto-duplicados", id);
+        return consultarDuplicadosVoucherUseCase.ejecutar(id);
     }
 
     @PostMapping("/api/v1/cobranzas/vouchers/{id}/reprocesar-ocr")
