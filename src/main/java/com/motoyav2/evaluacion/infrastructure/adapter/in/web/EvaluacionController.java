@@ -78,6 +78,8 @@ public class EvaluacionController {
     /**
      * Resuelve el nombre comercial de la tienda desde tienda_profiles
      * y lo inyecta en DatosVendedorResponse.tiendaNombre.
+     * Si el campo tienda contiene el UID del vendedor en lugar del UID de la tienda,
+     * lo corrige buscando en vendedor_profiles para obtener el tiendaId real.
      */
     private Mono<ExpedienteCompletoResponse> enriquecerTiendaNombre(ExpedienteCompletoResponse resp) {
         ExpedienteCompletoResponse.SolicitudResponse sol = resp.getSolicitud();
@@ -87,22 +89,50 @@ public class EvaluacionController {
         if (tiendaId == null || tiendaId.isBlank()) return Mono.just(resp);
 
         return FirestoreUtils.toMono(firestore.collection("tienda_profiles").document(tiendaId).get())
-                .map(snap -> {
-                    String businessName = snap.exists()
-                            ? (String) snap.get("businessName")
-                            : null;
-                    if (businessName == null || businessName.isBlank()) return resp;
+                .flatMap(snap -> {
+                    if (snap.exists()) {
+                        String businessName = (String) snap.get("businessName");
+                        return Mono.just(buildRespConTienda(resp, sol, tiendaId, businessName));
+                    }
+                    // No encontrado en tienda_profiles: el campo puede ser el UID del vendedor.
+                    // Buscar en vendedor_profiles para obtener el tiendaId real.
+                    return FirestoreUtils.toMono(firestore.collection("vendedor_profiles").document(tiendaId).get())
+                            .flatMap(vendSnap -> {
+                                if (!vendSnap.exists()) return Mono.just(resp);
+                                String realTiendaId = (String) vendSnap.get("tiendaId");
+                                if (realTiendaId == null || realTiendaId.isBlank()) return Mono.just(resp);
+                                return FirestoreUtils.toMono(firestore.collection("tienda_profiles").document(realTiendaId).get())
+                                        .map(tiendaSnap -> {
+                                            String businessName = tiendaSnap.exists()
+                                                    ? (String) tiendaSnap.get("businessName") : null;
+                                            return buildRespConTienda(resp, sol, realTiendaId, businessName);
+                                        });
+                            });
+                })
+                .onErrorResume(ex -> {
+                    log.warn("[TIENDA] No se pudo resolver nombre de tienda {}: {}", tiendaId, ex.getMessage());
+                    return Mono.just(resp);
+                });
+    }
 
-                    // Reconstruir vendedor con tiendaNombre resuelto
-                    ExpedienteCompletoResponse.DatosVendedorResponse vendedorEnriquecido =
-                            ExpedienteCompletoResponse.DatosVendedorResponse.builder()
-                                    .id(sol.getVendedor().getId())
-                                    .nombre(sol.getVendedor().getNombre())
-                                    .tienda(tiendaId)
-                                    .tiendaNombre(businessName)
-                                    .email(sol.getVendedor().getEmail())
-                                    .telefono(sol.getVendedor().getTelefono())
-                                    .build();
+    private ExpedienteCompletoResponse buildRespConTienda(
+            ExpedienteCompletoResponse resp,
+            ExpedienteCompletoResponse.SolicitudResponse sol,
+            String resolvedTiendaId,
+            String businessName) {
+
+        if (businessName == null || businessName.isBlank()) return resp;
+
+        // Reconstruir vendedor con tiendaId corregido y tiendaNombre resuelto
+        ExpedienteCompletoResponse.DatosVendedorResponse vendedorEnriquecido =
+                ExpedienteCompletoResponse.DatosVendedorResponse.builder()
+                        .id(sol.getVendedor().getId())
+                        .nombre(sol.getVendedor().getNombre())
+                        .tienda(resolvedTiendaId)
+                        .tiendaNombre(businessName)
+                        .email(sol.getVendedor().getEmail())
+                        .telefono(sol.getVendedor().getTelefono())
+                        .build();
 
                     ExpedienteCompletoResponse.SolicitudResponse solEnriquecida =
                             ExpedienteCompletoResponse.SolicitudResponse.builder()
@@ -146,20 +176,15 @@ public class EvaluacionController {
                                     .updatedAt(sol.getUpdatedAt())
                                     .build();
 
-                    return ExpedienteCompletoResponse.builder()
-                            .solicitud(solEnriquecida)
-                            .titular(resp.getTitular())
-                            .fiador(resp.getFiador())
-                            .vehiculo(resp.getVehiculo())
-                            .referencias(resp.getReferencias())
-                            .datosCompletos(resp.getDatosCompletos())
-                            .asesorAsignado(resp.getAsesorAsignado())
-                            .build();
-                })
-                .onErrorResume(ex -> {
-                    log.warn("[TIENDA] No se pudo resolver nombre de tienda {}: {}", tiendaId, ex.getMessage());
-                    return Mono.just(resp);
-                });
+        return ExpedienteCompletoResponse.builder()
+                .solicitud(solEnriquecida)
+                .titular(resp.getTitular())
+                .fiador(resp.getFiador())
+                .vehiculo(resp.getVehiculo())
+                .referencias(resp.getReferencias())
+                .datosCompletos(resp.getDatosCompletos())
+                .asesorAsignado(resp.getAsesorAsignado())
+                .build();
     }
 
     // ── GET /solicitudes ──────────────────────────────────────────────────
