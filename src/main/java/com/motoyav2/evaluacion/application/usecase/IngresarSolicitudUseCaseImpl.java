@@ -44,6 +44,7 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
     private final EnviarVerificacionWhatsAppUseCase enviarVerificacion;
     private final DetectarDuplicadosUseCase detectarDuplicados;
     private final com.motoyav2.evaluacion.domain.port.out.PersonaRepository personaRepository;
+    private final com.motoyav2.gestion.infrastructure.adapter.out.persistence.repository.VendedorProfileRepository vendedorProfileRepository;
 
     @Override
     public Mono<IngresarSolicitudResult> ejecutar(IngresarSolicitudCommand cmd) {
@@ -90,12 +91,23 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
 
                     return referenciasIdsMono.flatMap(referenciasIds -> {
 
+                        // Resolver tiendaId correcto: si el form no lo envió, buscar en vendedor_profiles
+                        IngresarSolicitudCommand.VendedorData vend = cmd.vendedor();
+                        Mono<String> tiendaIdResolvedMono =
+                                (vend.tienda() == null || vend.tienda().isBlank())
+                                        ? vendedorProfileRepository.findById(vend.id())
+                                                .map(vp -> vp.getTiendaId() != null ? vp.getTiendaId() : "")
+                                                .defaultIfEmpty("")
+                                        : Mono.just(vend.tienda());
+
+                        return tiendaIdResolvedMono.flatMap(resolvedTiendaId -> {
+
                         // 5. Crear solicitud
                         Map<String, Object> solMap = buildSolicitudMap(
                                 cmd, titularId,
                                 fiadorId.isEmpty() ? null : fiadorId,
                                 vehiculoId, referenciasIds,
-                                codigoDeSolicitud, ahora);
+                                codigoDeSolicitud, ahora, resolvedTiendaId);
 
                         return solicitudRepository.create(solMap)
                                 .flatMap(solicitudId -> {
@@ -107,7 +119,8 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
                                     return Mono.just(new IngresarSolicitudResult(
                                             solicitudId, codigoDeSolicitud, "pendiente"));
                                 });
-                    });
+                        }); // tiendaIdResolvedMono
+                    }); // referenciasIdsMono
                 });
             });
         });
@@ -361,7 +374,8 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
     private Map<String, Object> buildSolicitudMap(IngresarSolicitudCommand cmd,
                                                    String titularId, String fiadorId,
                                                    String vehiculoId, List<String> referenciasIds,
-                                                   String codigo, Timestamp ahora) {
+                                                   String codigo, Timestamp ahora,
+                                                   String resolvedTiendaId) {
         Map<String, Object> m = new HashMap<>();
         m.put("codigoDeSolicitud", codigo);
         m.put("estado", "pendiente");
@@ -421,7 +435,7 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
         Map<String, Object> vendedorMap = new HashMap<>();
         vendedorMap.put("id", v.id());
         vendedorMap.put("nombre", v.nombre());
-        vendedorMap.put("tienda", v.tienda());
+        vendedorMap.put("tienda", resolvedTiendaId);
         if (v.email() != null && !v.email().isBlank()) vendedorMap.put("email", v.email());
         m.put("vendedor", vendedorMap);
         m.put("mensajeOpcional", cmd.mensajeOpcional());
