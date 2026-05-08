@@ -10,12 +10,15 @@ import java.util.List;
 
 /**
  * DTO de respuesta para la Vista 360 de un caso de cobranza.
- * Agrega el caso raíz con todas sus sub-colecciones.
+ * Agrega el caso raíz con todas sus sub-colecciones más datos del vehículo financiado.
+ * {@code vehiculo} puede ser null si el contrato aún no tiene factura cargada.
  */
 public record Vista360CasoDto(
         CasoCobranzaDocument caso,
         List<EventoCobranzaDocument> eventos,
         List<MovimientoDocument> movimientos,
         List<PromesaDocument> promesas,
-        List<AcuerdoDocument> acuerdos
+        List<AcuerdoDocument> acuerdos,
+        VehiculoDto vehiculo,
+        List<VoucherVista360Dto> vouchers
 ) {}

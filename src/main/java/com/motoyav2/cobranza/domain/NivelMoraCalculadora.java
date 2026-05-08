@@ -123,14 +123,14 @@ public final class NivelMoraCalculadora {
 
     /**
      * Nivel de estrategia según días de mora.
-     * Devuelve null si diasMora == 0 (sin mora).
+     * Devuelve AL_DIA si diasMora == 0.
      */
     public static String calcularNivel(int diasMora) {
         if (diasMora >= 61) return NivelEstrategia.JUDICIAL.name();
         if (diasMora >= 31) return NivelEstrategia.MORA_CRITICA.name();
         if (diasMora >= 16) return NivelEstrategia.MORA_MEDIA.name();
         if (diasMora >= 1)  return NivelEstrategia.MORA_TEMPRANA.name();
-        return null;
+        return NivelEstrategia.AL_DIA.name();
     }
 
     // ── Formato ───────────────────────────────────────────────────────────────

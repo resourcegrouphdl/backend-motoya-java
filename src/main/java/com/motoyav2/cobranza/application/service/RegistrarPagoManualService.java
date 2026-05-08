@@ -89,11 +89,30 @@ public class RegistrarPagoManualService implements RegistrarPagoManualUseCase {
                     caso.setNivelEstrategia(NivelMoraCalculadora.calcularNivel(diasMoraActual));
                     caso.setTotalMora(NivelMoraCalculadora.moraSoles(diasMoraActual));
 
+                    // Un pago registrado es señal de compromiso activo: salir de estados urgentes
+                    String estadoActual = caso.getEstadoCaso();
+                    if (diasMoraActual == 0
+                            || "INTERVENCION_REQUERIDA".equals(estadoActual)
+                            || "PROMESA_INCUMPLIDA".equals(estadoActual)) {
+                        caso.setEstadoCaso("EN_SEGUIMIENTO");
+                    }
+
                     double saldoAnterior = caso.getSaldoActual() != null ? caso.getSaldoActual() : 0.0;
                     double saldoNuevo    = saldoAnterior - command.monto();
 
                     caso.setSaldoActual(saldoNuevo);
                     caso.setTotalPagado((caso.getTotalPagado() != null ? caso.getTotalPagado() : 0.0) + command.monto());
+
+                    int cuotasPagadas = caso.getCronograma() != null
+                            ? (int) caso.getCronograma().stream()
+                                    .filter(c -> "PAGADA".equalsIgnoreCase(c.getEstado())).count()
+                            : 0;
+                    caso.setNumeroCuotasPagadas(cuotasPagadas);
+
+                    if (saldoNuevo <= 0.01) {
+                        caso.setCicloVida("PAGADO_TOTAL");
+                    }
+
                     caso.setUltimaGestion(new Date());
                     caso.setUltimaGestionResumen("Pago manual: S/ " + String.format("%.2f", command.monto()));
                     caso.setActualizadoEn(new Date());

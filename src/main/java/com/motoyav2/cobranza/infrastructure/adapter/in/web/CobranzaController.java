@@ -23,6 +23,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +47,7 @@ public class CobranzaController {
     private final EnviarMensajeWhatsappUseCase enviarMensajeWhatsappUseCase;
     private final ActualizarEstadoMensajeUseCase actualizarEstadoMensajeUseCase;
 
+    private final CasoCobranzaService casoCobranzaService;
     private final PromesaGlobalService promesaGlobalService;
     private final DashboardService dashboardService;
     private final RecalcularMetricasService recalcularMetricasService;
@@ -153,6 +155,21 @@ public class CobranzaController {
             ServerWebExchange exchange) {
         log.debug("GET /casos/{contratoId}/vista360 contratoId={}", contratoId);
         return obtenerCasoUseCase.ejecutar(contratoId);
+    }
+
+    @PatchMapping("/api/v1/cobranzas/casos/{contratoId}/estado")
+    public Mono<Map<String, Object>> patchEstadoCaso(
+            @PathVariable String contratoId,
+            @RequestBody Map<String, String> body,
+            ServerWebExchange exchange) {
+        String userId      = (String) exchange.getAttributes().get("userId");
+        String nuevoEstado = body.get("estadoCaso");
+        if (nuevoEstado == null || nuevoEstado.isBlank()) {
+            return Mono.just(Map.of("status", "ERROR", "message", "estadoCaso requerido"));
+        }
+        log.info("PATCH /casos/{}/estado -> {} by {}", contratoId, nuevoEstado, userId);
+        return casoCobranzaService.actualizarEstadoCaso(contratoId, nuevoEstado, userId)
+                .thenReturn(Map.<String, Object>of("status", "OK", "estadoCaso", nuevoEstado));
     }
 
     @GetMapping("/api/v1/cobranzas/casos/urgentes")
@@ -632,10 +649,12 @@ public class CobranzaController {
             ServerWebExchange exchange) {
         log.debug("GET /comprobantes/{id}/pdf id={}", id);
         return comprobantesService.findById(id)
-                .map(c -> Map.<String, Object>of(
-                        "url", c.getPdfPath() != null ? c.getPdfPath() : "",
-                        "expiraEn", (Object) null
-                ));
+                .flatMap(c -> {
+                    if (c.getPdfPath() == null || c.getPdfPath().isBlank())
+                        return Mono.just(Map.<String, Object>of("url", "", "expiraEn", (Object) null));
+                    return mediaStorageService.generarSignedUrl(c.getPdfPath(), 60)
+                            .map(url -> Map.<String, Object>of("url", url, "expiraEn", (Object) null));
+                });
     }
 
     @PostMapping("/api/v1/cobranzas/comprobantes/{id}/anular")
@@ -802,6 +821,28 @@ public class CobranzaController {
             ServerWebExchange exchange) {
         log.debug("GET /casos/{contratoId}/whatsapp contratoId={}", contratoId);
         return whatsappService.listarMensajes(contratoId);
+    }
+
+    /**
+     * Genera una Signed URL para un archivo de media almacenado en GCS
+     * y redirige con 302. El browser / <img> sigue la redirección automáticamente.
+     *
+     * Uso: GET /api/v1/cobranzas/media?path=cobranza-vouchers/{contratoId}/{file}.jpg
+     */
+    @GetMapping("/api/v1/cobranzas/media")
+    public Mono<Void> servirMedia(
+            @RequestParam String path,
+            ServerWebExchange exchange) {
+        return mediaStorageService.generarSignedUrl(path, 60)
+                .flatMap(url -> {
+                    if (url == null || url.isBlank()) {
+                        exchange.getResponse().setStatusCode(org.springframework.http.HttpStatus.NOT_FOUND);
+                        return exchange.getResponse().setComplete();
+                    }
+                    exchange.getResponse().setStatusCode(org.springframework.http.HttpStatus.FOUND);
+                    exchange.getResponse().getHeaders().setLocation(java.net.URI.create(url));
+                    return exchange.getResponse().setComplete();
+                });
     }
 
     @PatchMapping("/api/v1/cobranzas/casos/{contratoId}/whatsapp/marcar-leidos")
@@ -1186,6 +1227,37 @@ public class CobranzaController {
             String agenteAsignadoId,
             String agenteAsignadoNombre
     ) {}
+
+    // =========================================================================
+    // BOLETA MANUAL — sube PDF y crea ComprobantePagoDocument con fuente=BOLETA_MANUAL
+    // =========================================================================
+
+    @PostMapping(value = "/api/v1/cobranzas/casos/{contratoId}/boleta-manual",
+                 consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<ComprobantePagoDocument> subirBoletaManual(
+            @PathVariable String contratoId,
+            @RequestPart("archivo") FilePart archivo,
+            @RequestPart(value = "monto", required = false) String monto,
+            @RequestPart(value = "fechaEmision", required = false) String fechaEmision) {
+
+        log.info("POST /casos/{}/boleta-manual filename={}", contratoId, archivo.filename());
+
+        return DataBufferUtils.join(archivo.content())
+                .map(buffer -> {
+                    byte[] bytes = new byte[buffer.readableByteCount()];
+                    buffer.read(bytes);
+                    DataBufferUtils.release(buffer);
+                    return bytes;
+                })
+                .flatMap(bytes -> mediaStorageService.subirBytes(bytes, "document", archivo.filename(), contratoId))
+                .flatMap(result -> {
+                    Double montoVal = (monto != null && !monto.isBlank()) ? Double.parseDouble(monto) : null;
+                    String fechaVal = (fechaEmision != null && !fechaEmision.isBlank())
+                            ? fechaEmision : LocalDate.now().toString();
+                    return comprobantesService.registrarBoletaManual(contratoId, result.gcsPath(), montoVal, fechaVal);
+                });
+    }
 
     // =========================================================================
     // UPLOAD VOUCHER PARA PAGO MANUAL

@@ -6,6 +6,7 @@ import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.Com
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
 import com.motoyav2.shared.exception.ConflictException;
 import com.motoyav2.shared.exception.NotFoundException;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,27 @@ public class ComprobantesService {
     public Mono<ComprobantePagoDocument> findById(String id) {
         return comprobantePagoPort.findById(id)
                 .switchIfEmpty(Mono.error(new NotFoundException("Comprobante no encontrado: " + id)));
+    }
+
+    // -------------------------------------------------------------------------
+    // Registrar boleta manual (PDF subido por administrador)
+    // -------------------------------------------------------------------------
+
+    public Mono<ComprobantePagoDocument> registrarBoletaManual(
+            String contratoId, String pdfPath, Double monto, String fechaEmision) {
+        String shortId = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        ComprobantePagoDocument doc = ComprobantePagoDocument.builder()
+                .tipo("BOLETA")
+                .estado("EMITIDO")
+                .fuente("BOLETA_MANUAL")
+                .contratoId(contratoId)
+                .numeroCompleto("BM-" + shortId)
+                .pdfPath(pdfPath)
+                .total(monto != null ? monto : 0.0)
+                .fechaEmision(fechaEmision)
+                .creadoEn(new Date())
+                .build();
+        return comprobantePagoPort.save(doc);
     }
 
     // -------------------------------------------------------------------------

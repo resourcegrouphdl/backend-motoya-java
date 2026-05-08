@@ -83,20 +83,35 @@ public class MoraDiariaService {
         }
 
         int diasMora = NivelMoraCalculadora.diasMora(caso, hoy);
-        if (diasMora == 0) return Mono.empty();
+
+        // Sin mora activa: corregir nivel a AL_DIA si estaba en otro estado (caso saldado)
+        if (diasMora == 0) {
+            String nivelActual = caso.getNivelEstrategia();
+            String nivelAlDia  = NivelEstrategia.AL_DIA.name();
+            if (nivelAlDia.equals(nivelActual) && !cronogramaModificado) return Mono.empty();
+            caso.setNivelEstrategia(nivelAlDia);
+            caso.setTotalMora(0.0);
+            caso.setActualizadoEn(new Date());
+            if (cronogramaModificado) caso.setCronograma(cronograma);
+            return casoPort.save(caso)
+                    .flatMap(saved -> !nivelAlDia.equals(nivelActual)
+                            ? appendEventoNivel(caso.getContratoId(), nivelActual, nivelAlDia, 0, 0.0)
+                                    .thenReturn(caso.getContratoId())
+                            : Mono.just(caso.getContratoId()));
+        }
 
         // ── 2. Calcular nivel y mora ─────────────────────────────────────────
         double moraSoles     = NivelMoraCalculadora.moraSoles(diasMora);
         String nivelAnterior = caso.getNivelEstrategia();
         String nuevoNivel    = NivelMoraCalculadora.calcularNivel(diasMora);
-        boolean nivelCambio  = nuevoNivel != null && !nuevoNivel.equals(nivelAnterior);
+        boolean nivelCambio  = !nuevoNivel.equals(nivelAnterior);
         boolean esEscaladaCritica = nivelCambio
                 && (NivelEstrategia.MORA_CRITICA.name().equals(nuevoNivel)
                     || NivelEstrategia.JUDICIAL.name().equals(nuevoNivel));
 
         // ── 3. Actualizar documento ──────────────────────────────────────────
         caso.setTotalMora(moraSoles);
-        if (nuevoNivel != null) caso.setNivelEstrategia(nuevoNivel);
+        caso.setNivelEstrategia(nuevoNivel);
         caso.setActualizadoEn(new Date());
         if (cronogramaModificado) caso.setCronograma(cronograma);
 

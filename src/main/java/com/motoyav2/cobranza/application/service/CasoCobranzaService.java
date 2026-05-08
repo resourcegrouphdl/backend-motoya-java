@@ -1,7 +1,9 @@
 package com.motoyav2.cobranza.application.service;
 
 import com.motoyav2.cobranza.application.dto.CasoResumenDto;
+import com.motoyav2.cobranza.application.dto.VehiculoDto;
 import com.motoyav2.cobranza.application.dto.Vista360CasoDto;
+import com.motoyav2.cobranza.application.dto.VoucherVista360Dto;
 import com.motoyav2.cobranza.application.port.in.AsignarAgenteUseCase;
 import com.motoyav2.cobranza.application.port.in.ListarCasosUseCase;
 import com.motoyav2.cobranza.application.port.in.ObtenerCasoUseCase;
@@ -11,6 +13,8 @@ import com.motoyav2.cobranza.application.port.out.*;
 import com.motoyav2.cobranza.domain.NivelMoraCalculadora;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
+import com.motoyav2.contrato.domain.model.FacturaVehiculo;
+import com.motoyav2.contrato.domain.port.in.ObtenerContratoUseCase;
 import com.motoyav2.shared.exception.NotFoundException;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +37,8 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
     private final MovimientoPort movimientoPort;
     private final PromesaPort promesaPort;
     private final AcuerdoPort acuerdoPort;
+    private final VoucherPort voucherPort;
+    private final ObtenerContratoUseCase obtenerContratoUseCase;
 
     // -------------------------------------------------------------------------
     // ListarCasosUseCase
@@ -63,13 +69,43 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
         Mono<CasoCobranzaDocument> casoMono = casoPort.findById(contratoId)
                 .switchIfEmpty(Mono.error(new NotFoundException("Caso no encontrado: " + contratoId)));
 
+        // Datos del vehículo opcionales: si el contrato no existe o no tiene factura → null
+        Mono<VehiculoDto> vehiculoMono = obtenerContratoUseCase.obtenerPorId(contratoId)
+                .mapNotNull(c -> c.facturaVehiculo() != null ? toVehiculoDto(c.facturaVehiculo()) : null)
+                .onErrorResume(e -> {
+                    log.debug("[Vista360] Sin datos de vehículo contratoId={}: {}", contratoId, e.getMessage());
+                    return Mono.empty();
+                });
+
         return Mono.zip(
                 casoMono,
                 eventoPort.findByContratoId(contratoId).collectList(),
                 movimientoPort.findByContratoId(contratoId).collectList(),
                 promesaPort.findByContratoId(contratoId).collectList(),
-                acuerdoPort.findByContratoId(contratoId).collectList()
-        ).map(t -> new Vista360CasoDto(t.getT1(), t.getT2(), t.getT3(), t.getT4(), t.getT5()));
+                acuerdoPort.findByContratoId(contratoId).collectList(),
+                voucherPort.findByContratoId(contratoId)
+                           .map(v -> new VoucherVista360Dto(v.getId(), v.getEstado(), v.getFuente(),
+                                                           v.getThumbPath(), v.getImagenPath(),
+                                                           v.getMontoDetectado(), v.getComprobanteId(),
+                                                           v.getCreadoEn()))
+                           .collectList()
+        ).flatMap(t -> vehiculoMono
+                .map(veh -> new Vista360CasoDto(t.getT1(), t.getT2(), t.getT3(), t.getT4(), t.getT5(), veh, t.getT6()))
+                .defaultIfEmpty(new Vista360CasoDto(t.getT1(), t.getT2(), t.getT3(), t.getT4(), t.getT5(), null, t.getT6()))
+        );
+    }
+
+    private VehiculoDto toVehiculoDto(FacturaVehiculo f) {
+        return new VehiculoDto(
+                f.marcaVehiculo(),
+                f.modeloVehiculo(),
+                f.anioVehiculo(),
+                f.colorVehiculo(),
+                f.serieMotor(),
+                f.serieChasis(),
+                f.numeroFactura(),
+                f.fechaEmision() != null ? f.fechaEmision().toString() : null
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -105,6 +141,38 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
 
                     return casoPort.save(caso)
                             .then(eventoPort.append(command.contratoId(), evento))
+                            .then();
+                });
+    }
+
+    // -------------------------------------------------------------------------
+    // Actualizar estadoCaso manualmente (admin)
+    // -------------------------------------------------------------------------
+
+    public Mono<Void> actualizarEstadoCaso(String contratoId, String nuevoEstado, String userId) {
+        return casoPort.findById(contratoId)
+                .switchIfEmpty(Mono.error(new NotFoundException("Caso no encontrado: " + contratoId)))
+                .flatMap(caso -> {
+                    String estadoAnterior = caso.getEstadoCaso();
+                    caso.setEstadoCaso(nuevoEstado);
+                    caso.setActualizadoEn(new Date());
+                    caso.setActualizadoPor(userId);
+
+                    EventoCobranzaDocument evento = EventoCobranzaDocument.builder()
+                            .contratoId(contratoId)
+                            .tipo("ESTADO_CASO_ACTUALIZADO")
+                            .payload(Map.of(
+                                    "estadoAnterior", estadoAnterior != null ? estadoAnterior : "",
+                                    "estadoNuevo",    nuevoEstado
+                            ))
+                            .usuarioId(userId)
+                            .usuarioNombre(userId)
+                            .automatico(false)
+                            .creadoEn(new Date())
+                            .build();
+
+                    return casoPort.save(caso)
+                            .then(eventoPort.append(contratoId, evento))
                             .then();
                 });
     }

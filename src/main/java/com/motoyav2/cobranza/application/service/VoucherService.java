@@ -312,9 +312,28 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
         caso.setNivelEstrategia(NivelMoraCalculadora.calcularNivel(diasMoraActual));
         caso.setTotalMora(NivelMoraCalculadora.moraSoles(diasMoraActual));
 
+        // Un pago aprobado es señal de compromiso activo: salir de estados urgentes
+        String estadoActual = caso.getEstadoCaso();
+        if (diasMoraActual == 0
+                || "INTERVENCION_REQUERIDA".equals(estadoActual)
+                || "PROMESA_INCUMPLIDA".equals(estadoActual)) {
+            caso.setEstadoCaso("EN_SEGUIMIENTO");
+        }
+
         caso.setSaldoActual(saldoNuevo);
         caso.setTotalPagado((caso.getTotalPagado() != null ? caso.getTotalPagado() : 0.0)
                 + voucher.getMontoDetectado());
+
+        int cuotasPagadas = caso.getCronograma() != null
+                ? (int) caso.getCronograma().stream()
+                        .filter(c -> "PAGADA".equalsIgnoreCase(c.getEstado())).count()
+                : 0;
+        caso.setNumeroCuotasPagadas(cuotasPagadas);
+
+        if (saldoNuevo <= 0.01) {
+            caso.setCicloVida("PAGADO_TOTAL");
+        }
+
         caso.setUltimaGestion(new Date());
         caso.setUltimaGestionResumen("Pago aplicado: S/ " + voucher.getMontoDetectado());
         caso.setActualizadoEn(new Date());

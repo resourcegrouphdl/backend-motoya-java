@@ -38,6 +38,8 @@ public class ComprobantePagoDocument {
     private String tipo;
     /** EstadoComprobante: EMITIDO | ANULADO | PENDIENTE | ERROR_SUNAT */
     private String estado;
+    /** Origen: SUNAT_ELECTRONICO | BOLETA_MANUAL */
+    private String fuente;
 
     private String contratoId;
     private String voucherId;

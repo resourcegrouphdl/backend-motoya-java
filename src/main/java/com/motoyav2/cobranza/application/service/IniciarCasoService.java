@@ -30,6 +30,19 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                 .flatMap(existente -> {
                     boolean esNuevo = existente.getContratoId() == null;
 
+                    int cuotasTotales = command.cronograma() != null ? command.cronograma().size() : 0;
+                    int cuotasPagadas = command.cronograma() != null
+                            ? (int) command.cronograma().stream()
+                                    .filter(c -> "PAGADA".equalsIgnoreCase(c.getEstado())).count()
+                            : 0;
+                    // totalPagado calculado desde el cronograma para reflejar cuotas ya pagadas en la importación
+                    double totalPagadoCronograma = command.cronograma() != null
+                            ? command.cronograma().stream()
+                                    .filter(c -> "PAGADA".equalsIgnoreCase(c.getEstado()))
+                                    .mapToDouble(c -> c.getMonto() != null ? c.getMonto() : 0.0)
+                                    .sum()
+                            : 0.0;
+
                     CasoCobranzaDocument doc = CasoCobranzaDocument.builder()
                             .contratoId(command.contratoId())
                             .storeId(command.storeId())
@@ -46,13 +59,27 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                             .capitalOriginal(command.capitalOriginal())
                             .saldoActual(command.saldoActual())
                             .nivelEstrategia(command.nivelEstrategia() != null
-                                    ? command.nivelEstrategia() : "MORA_TEMPRANA")
+                                    ? command.nivelEstrategia() : "AL_DIA")
                             .estadoCaso(command.estadoCaso() != null
                                     ? command.estadoCaso() : "EN_SEGUIMIENTO")
+                            .cicloVida(esNuevo ? "ACTIVO"
+                                    : (existente.getCicloVida() != null ? existente.getCicloVida() : "ACTIVO"))
                             .agenteAsignadoId(command.agenteAsignadoId())
                             .agenteAsignadoNombre(command.agenteAsignadoNombre())
                             .fechaVencimientoPrimerCuotaImpaga(parseFecha(command.fechaVencimientoPrimerCuotaImpaga()))
                             .cronograma(command.cronograma())
+                            .numeroCuotasTotales(cuotasTotales > 0 ? cuotasTotales
+                                    : (existente.getNumeroCuotasTotales() != null ? existente.getNumeroCuotasTotales() : 0))
+                            .numeroCuotasPagadas(esNuevo ? cuotasPagadas
+                                    : (existente.getNumeroCuotasPagadas() != null ? existente.getNumeroCuotasPagadas() : cuotasPagadas))
+                            .totalMora(esNuevo ? 0.0
+                                    : (existente.getTotalMora() != null ? existente.getTotalMora() : 0.0))
+                            .totalPagado(esNuevo ? totalPagadoCronograma
+                                    : (existente.getTotalPagado() != null ? existente.getTotalPagado() : totalPagadoCronograma))
+                            .totalCondonado(esNuevo ? 0.0
+                                    : (existente.getTotalCondonado() != null ? existente.getTotalCondonado() : 0.0))
+                            .mensajesNoLeidos(esNuevo ? 0
+                                    : (existente.getMensajesNoLeidos() != null ? existente.getMensajesNoLeidos() : 0))
                             .creadoEn(esNuevo ? new Date() : existente.getCreadoEn())
                             .actualizadoEn(new Date())
                             .creadoPor(esNuevo ? command.creadoPor() : existente.getCreadoPor())
