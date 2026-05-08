@@ -45,6 +45,7 @@ public class SecurityConfig {
                             .pathMatchers("/api/v1/simulacion/**").permitAll()
                             .pathMatchers("/api/v1/solicitudes-publicas/**").permitAll()
                             .pathMatchers("/api/v1/alertas/evento").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/cobranzas/media").permitAll()
                             .anyExchange().authenticated()
                     )
                     .addFilterAt(firebaseAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);

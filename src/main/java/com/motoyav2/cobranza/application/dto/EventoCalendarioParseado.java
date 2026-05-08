@@ -8,11 +8,13 @@ import java.time.LocalDate;
  * numeroCuota:   8
  * monto:         339.00
  * fechaVencimiento: 2026-02-23
+ * pagada: true si el colorId del evento indica cuota pagada (mismo criterio que migración)
  */
 public record EventoCalendarioParseado(
         String nombreCompleto,
         int numeroCuota,
         double monto,
         LocalDate fechaVencimiento,
-        String tituloOriginal
+        String tituloOriginal,
+        boolean pagada
 ) {}

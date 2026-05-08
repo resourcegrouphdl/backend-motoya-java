@@ -8,6 +8,7 @@ import com.motoyav2.migracion.application.dto.EjecutarMigracionResponse;
 import com.motoyav2.migracion.domain.document.CuotaStagingDocument;
 import com.motoyav2.migracion.domain.document.MigracionStagingDocument;
 import com.motoyav2.migracion.domain.repository.MigracionStagingRepository;
+import com.motoyav2.cobranza.domain.NivelMoraCalculadora;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.ConflictException;
 import com.motoyav2.shared.exception.NotFoundException;
@@ -138,8 +139,7 @@ public class MigracionEjecutorService {
                 .mapToInt(c -> (int) LocalDate.parse(c.getFechaVencimiento()).until(hoy, ChronoUnit.DAYS))
                 .max().orElse(0);
 
-        String nivelEstrategia = diasMora >= 90 ? "MORA_CRITICA"
-                : diasMora >= 30 ? "MORA_MEDIA" : "MORA_TEMPRANA";
+        String nivelEstrategia = NivelMoraCalculadora.calcularNivel(diasMora);
 
         String fechaPrimeraCuotaImpaga = cuotas.stream()
                 .filter(c -> !Boolean.TRUE.equals(c.getPagada()))

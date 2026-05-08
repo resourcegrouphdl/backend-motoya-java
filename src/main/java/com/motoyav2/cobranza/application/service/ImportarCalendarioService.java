@@ -4,6 +4,7 @@ import com.motoyav2.cobranza.application.dto.EventoCalendarioParseado;
 import com.motoyav2.cobranza.application.dto.ImportarCalendarioResultDto;
 import com.motoyav2.cobranza.application.port.in.IniciarCasoUseCase;
 import com.motoyav2.cobranza.application.port.in.command.IniciarCasoCommand;
+import com.motoyav2.cobranza.domain.NivelMoraCalculadora;
 import com.motoyav2.cobranza.infrastructure.adapter.out.calendar.GoogleCalendarService;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosTitularDocument;
@@ -12,7 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,29 +48,67 @@ public class ImportarCalendarioService {
                                 // Generar contratoId temporal basado en nombre
                                 String contratoId = "CAL-" + nombre.replaceAll("\\s+", "-").toUpperCase();
 
-                                // Construir cronograma desde los eventos del calendario
+                                LocalDate hoy = LocalDate.now(NivelMoraCalculadora.LIMA);
+
+                                // Construir cronograma con estados correctos:
+                                // pagada → PAGADA, vencida → VENCIDA, futura → PENDIENTE
                                 List<CuotaCronogramaDocument> cronograma = cuotas.stream()
-                                        .map(c -> CuotaCronogramaDocument.builder()
-                                                .cuotaNum(c.numeroCuota())
-                                                .monto(c.monto())
-                                                .fechaVencimiento(c.fechaVencimiento() != null
-                                                        ? c.fechaVencimiento().toString() : null)
-                                                .estado("VENCIDA")
-                                                .build())
+                                        .map(c -> {
+                                            String estado;
+                                            if (c.pagada()) {
+                                                estado = "PAGADA";
+                                            } else if (c.fechaVencimiento() != null
+                                                    && c.fechaVencimiento().isBefore(hoy)) {
+                                                estado = "VENCIDA";
+                                            } else {
+                                                estado = "PENDIENTE";
+                                            }
+                                            return CuotaCronogramaDocument.builder()
+                                                    .cuota(c.numeroCuota())
+                                                    .cuotaNum(c.numeroCuota())
+                                                    .monto(c.monto())
+                                                    .fechaVencimiento(c.fechaVencimiento() != null
+                                                            ? c.fechaVencimiento().toString() : null)
+                                                    .estado(estado)
+                                                    .build();
+                                        })
                                         .collect(Collectors.toList());
 
+                                // Saldo = suma solo de cuotas no pagadas
                                 double saldoTotal = cuotas.stream()
-                                        .mapToDouble(EventoCalendarioParseado::monto).sum();
+                                        .filter(c -> !c.pagada())
+                                        .mapToDouble(EventoCalendarioParseado::monto)
+                                        .sum();
 
-                                // Fecha de la primera cuota como referencia de mora
-                                String fechaPrimeraCuota = cuotas.get(0).fechaVencimiento() != null
-                                        ? cuotas.get(0).fechaVencimiento().toString() : null;
+                                // capitalOriginal = suma de todas las cuotas (incluyendo pagadas)
+                                double capitalOriginal = cuotas.stream()
+                                        .mapToDouble(EventoCalendarioParseado::monto)
+                                        .sum();
 
-                                // Split nombre en partes (apellidos primero en Perú)
-                                String[] partes = nombre.trim().split("\\s+", 3);
+                                // Fecha de la PRIMERA cuota impaga (para calcular mora)
+                                String fechaPrimeraCuotaImpaga = cuotas.stream()
+                                        .filter(c -> !c.pagada() && c.fechaVencimiento() != null)
+                                        .map(c -> c.fechaVencimiento().toString())
+                                        .findFirst()
+                                        .orElse(null);
+
+                                // Días de mora = días desde la cuota vencida más antigua no pagada
+                                int diasMora = cuotas.stream()
+                                        .filter(c -> !c.pagada() && c.fechaVencimiento() != null
+                                                && c.fechaVencimiento().isBefore(hoy))
+                                        .mapToInt(c -> (int) ChronoUnit.DAYS.between(c.fechaVencimiento(), hoy))
+                                        .max()
+                                        .orElse(0);
+
+                                String nivelEstrategia = NivelMoraCalculadora.calcularNivel(diasMora);
+                                String estadoCaso = diasMora > 0 ? "INTERVENCION_REQUERIDA" : "EN_SEGUIMIENTO";
+
+                                // Split nombre (apellidos primero en Perú): "VALDEZ MOTA RAFAEL DANIEL"
+                                String[] partes = nombre.trim().split("\\s+");
                                 String apellidos = partes.length >= 2
-                                        ? partes[0] + (partes.length > 2 ? " " + partes[1] : "") : nombre;
-                                String nombres = partes.length >= 3 ? partes[2]
+                                        ? partes[0] + " " + partes[1] : partes[0];
+                                String nombres = partes.length >= 3
+                                        ? String.join(" ", Arrays.copyOfRange(partes, 2, partes.length))
                                         : (partes.length == 2 ? partes[1] : "");
 
                                 DatosTitularDocument titular = DatosTitularDocument.builder()
@@ -78,10 +120,10 @@ public class ImportarCalendarioService {
                                         contratoId, storeId, titular,
                                         null,   // fiador — no disponible desde calendario
                                         null,   // motoDescripcion — no disponible desde calendario
-                                        saldoTotal, saldoTotal,
-                                        "MORA_TEMPRANA", "EN_SEGUIMIENTO",
+                                        capitalOriginal, saldoTotal,
+                                        nivelEstrategia, estadoCaso,
                                         agenteAsignadoId, agenteNombre,
-                                        fechaPrimeraCuota, cronograma, usuarioId
+                                        fechaPrimeraCuotaImpaga, cronograma, usuarioId
                                 );
 
                                 return iniciarCasoUseCase.ejecutar(command)
