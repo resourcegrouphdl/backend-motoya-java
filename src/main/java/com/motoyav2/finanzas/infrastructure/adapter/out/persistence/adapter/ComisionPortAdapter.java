@@ -32,6 +32,15 @@ public class ComisionPortAdapter implements ComisionPort {
     private final Firestore db;
 
     @Override
+    public Flux<ComisionVendedor> findByVendedor(String vendedorId) {
+        return toFlux(db.collection(COL)
+                .whereEqualTo("vendedorId", vendedorId)
+                .orderBy("periodoFin", Query.Direction.DESCENDING)
+                .get())
+                .map(doc -> toComision(doc.toObject(ComisionDocument.class)));
+    }
+
+    @Override
     public Flux<ComisionVendedor> findByPagoId(String pagoId) {
         return toFlux(db.collection(COL).whereEqualTo("pagoId", pagoId).get())
                 .map(doc -> toComision(doc.toObject(ComisionDocument.class)));
@@ -113,6 +122,9 @@ public class ComisionPortAdapter implements ComisionPort {
         return ComisionVendedor.builder()
                 .id(doc.getId())
                 .contratoId(doc.getContratoId())
+                .solicitudId(doc.getSolicitudId())
+                .clienteNombre(doc.getClienteNombre())
+                .clienteDocumento(doc.getClienteDocumento())
                 .vendedorId(doc.getVendedorId())
                 .vendedorNombre(doc.getVendedorNombre())
                 .vendedorEmail(doc.getVendedorEmail())

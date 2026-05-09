@@ -1,5 +1,6 @@
 package com.motoyav2.finanzas.infrastructure.adapter.in.web;
 
+import com.motoyav2.finanzas.application.port.in.BackfillClienteComisionUseCase;
 import com.motoyav2.finanzas.application.port.in.ExportarComisionesUseCase;
 import com.motoyav2.finanzas.application.port.in.ListarComisionesUseCase;
 import com.motoyav2.finanzas.application.port.in.PagarComisionUseCase;
@@ -21,9 +22,10 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 @RequiredArgsConstructor
 public class ComisionController {
 
-    private final ListarComisionesUseCase    listarComisiones;
-    private final PagarComisionUseCase       pagarComision;
-    private final ExportarComisionesUseCase  exportarComisiones;
+    private final ListarComisionesUseCase         listarComisiones;
+    private final PagarComisionUseCase            pagarComision;
+    private final ExportarComisionesUseCase       exportarComisiones;
+    private final BackfillClienteComisionUseCase  backfillClienteComision;
 
     @GetMapping({"", "/listar"})
     public Flux<ComisionVendedor> listar(
@@ -49,5 +51,11 @@ public class ComisionController {
     public Mono<FinanzasActionResponse> pagar(@PathVariable String id) {
         return pagarComision.ejecutar(id)
                 .thenReturn(FinanzasActionResponse.ok("Comisión pagada correctamente"));
+    }
+
+    @PostMapping("/backfill-clientes")
+    public Mono<FinanzasActionResponse> backfillClientes() {
+        return backfillClienteComision.ejecutar()
+                .map(n -> FinanzasActionResponse.ok("Backfill completado: " + n + " comisiones actualizadas"));
     }
 }

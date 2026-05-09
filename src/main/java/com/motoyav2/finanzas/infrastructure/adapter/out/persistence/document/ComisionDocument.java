@@ -12,6 +12,10 @@ import lombok.NoArgsConstructor;
 public class ComisionDocument {
     private String id;
     private String contratoId;
+    private String solicitudId;
+    // Datos del cliente (snapshot al momento de creación)
+    private String clienteNombre;
+    private String clienteDocumento;
     // Datos del vendedor (de users)
     private String vendedorId;
     private String vendedorNombre;
