@@ -286,9 +286,16 @@ public class FinanzasIntegrationAdapter implements FinanzasIntegrationPort {
         String tiendaId       = contrato.tienda() != null ? contrato.tienda().tiendaId()     : "";
         String tiendaNombre   = contrato.tienda() != null ? contrato.tienda().nombreTienda() : "";
 
+        String clienteNombre    = buildNombreCliente(contrato);
+        String clienteDocumento = contrato.titular() != null
+                ? nvl(contrato.titular().numeroDocumento()) : "";
+
         Map<String, Object> comision = new HashMap<>();
         comision.put("id",                   comisionId);
         comision.put("contratoId",           contrato.id());
+        comision.put("solicitudId",          nvl(contrato.evaluacionId()));
+        comision.put("clienteNombre",        clienteNombre);
+        comision.put("clienteDocumento",     clienteDocumento);
         comision.put("vendedorId",           vendedorId);
         comision.put("vendedorNombre",       vendedorNombre);
         comision.put("vendedorEmail",        vendedor.get("email"));

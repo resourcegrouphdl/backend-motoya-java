@@ -13,6 +13,10 @@ import java.time.LocalDateTime;
 public class ComisionVendedor {
     String id;
     String contratoId;
+    String solicitudId;
+    // Datos del cliente (snapshot al momento de creación)
+    String clienteNombre;
+    String clienteDocumento;
     // Datos del vendedor (de users)
     String vendedorId;
     String vendedorNombre;
