@@ -46,6 +46,11 @@ public class SecurityConfig {
                             .pathMatchers("/api/v1/solicitudes-publicas/**").permitAll()
                             .pathMatchers("/api/v1/alertas/evento").permitAll()
                             .pathMatchers(HttpMethod.GET, "/api/v1/cobranzas/media").permitAll()
+                            .pathMatchers(HttpMethod.POST, "/api/v1/cobranzas/admin/migrar-ids").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/cobranzas/admin/recuperar-casos").permitAll()
+                            .pathMatchers(HttpMethod.POST, "/api/v1/cobranzas/admin/limpiar-campo-contrato-id").permitAll()
+                            .pathMatchers(HttpMethod.POST, "/api/v1/cobranzas/admin/auto-reconstruir").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/cobranzas/conciliacion").permitAll()
                             .anyExchange().authenticated()
                     )
                     .addFilterAt(firebaseAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);
