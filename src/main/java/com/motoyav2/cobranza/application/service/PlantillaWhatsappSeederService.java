@@ -33,19 +33,12 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        plantillaPort.findActivas()
-                .hasElements()
-                .flatMapMany(tieneActivas -> {
-                    if (tieneActivas) {
-                        log.info("[SEEDER-PLANTILLAS-WA] Plantillas ya existentes — omitiendo seed");
-                        return Flux.empty();
-                    }
-                    log.info("[SEEDER-PLANTILLAS-WA] Sin plantillas — sembrando {} por defecto", plantillasPorDefecto().size());
-                    return Flux.fromIterable(plantillasPorDefecto())
-                            .flatMap(plantillaPort::save);
-                })
+        // Upsert siempre: garantiza que el contenido canónico (sin Yape) esté en Firestore
+        log.info("[SEEDER-PLANTILLAS-WA] Sincronizando {} plantillas por defecto", plantillasPorDefecto().size());
+        Flux.fromIterable(plantillasPorDefecto())
+                .flatMap(plantillaPort::save)
                 .subscribe(
-                        p -> log.info("[SEEDER-PLANTILLAS-WA] Plantilla creada: {}", p.getNombre()),
+                        p -> log.info("[SEEDER-PLANTILLAS-WA] Plantilla sincronizada: {}", p.getNombre()),
                         err -> log.error("[SEEDER-PLANTILLAS-WA] Error: {}", err.getMessage())
                 );
     }
@@ -71,11 +64,13 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
 
                     💰 *Monto a pagar:* S/ {{monto_cuota}}
 
-                    Puedes pagar por cualquiera de estas cuentas:
+                    Puedes pagar por transferencia o depósito:
                     🏦 *BCP:* 194-1058703-0-68
+                       CCI: 002-19400105870306894
                     🏦 *Interbank:* 2003006691585
+                       CCI: 00320000300669158538
                     🏦 *Scotiabank:* 000-4689149
-                    📲 *Yape:* 912301407
+                       CCI: 009-056-000004689149-35
 
                     📎 Envíanos el *comprobante* por este mismo chat y lo registramos al instante.
 
@@ -107,10 +102,13 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                     📈 *Mora acumulada:* S/ {{monto_mora}}
                     📊 *Total a regularizar hoy:* S/ {{monto_total}}
 
-                    Regulariza tu pago cuanto antes para evitar que la mora siga creciendo:
+                    Regulariza tu pago por transferencia o depósito:
                     🏦 *BCP:* 194-1058703-0-68
+                       CCI: 002-19400105870306894
                     🏦 *Interbank:* 2003006691585
-                    📲 *Yape:* 912301407
+                       CCI: 00320000300669158538
+                    🏦 *Scotiabank:* 000-4689149
+                       CCI: 009-056-000004689149-35
 
                     📎 Envía tu *comprobante* por este chat y lo procesamos al instante.
 
@@ -210,10 +208,13 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
 
                     El {{fecha_promesa}} un asesor realizará seguimiento. Cuando realices el pago, envíanos el comprobante por este mismo chat para cerrarlo de inmediato.
 
-                    Cuentas disponibles:
+                    Puedes transferir o depositar a:
                     🏦 *BCP:* 194-1058703-0-68
+                       CCI: 002-19400105870306894
                     🏦 *Interbank:* 2003006691585
-                    📲 *Yape:* 912301407
+                       CCI: 00320000300669158538
+                    🏦 *Scotiabank:* 000-4689149
+                       CCI: 009-056-000004689149-35
 
                     _¡Gracias por tu compromiso! — Motoya Digital_""")
                 .variables(List.of(

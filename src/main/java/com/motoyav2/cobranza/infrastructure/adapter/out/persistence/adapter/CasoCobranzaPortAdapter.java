@@ -48,10 +48,13 @@ public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
             base = repository.findAll();
         }
 
-        // Omite documentos corruptos (@DocumentId conflict) sin terminar el stream
+        // Omite documentos corruptos sin terminar el stream, pero los registra con detalle
         return base
                 .onErrorContinue(RuntimeException.class,
-                        (e, obj) -> log.warn("[CasoCobranza] Documento omitido por error de deserialización: {}", e.getMessage()))
+                        (e, obj) -> log.error("[CasoCobranza] DOCUMENTO OMITIDO — obj={} tipo={} error={} causa={}",
+                                obj, obj != null ? obj.getClass().getSimpleName() : "null",
+                                e.getMessage(),
+                                e.getCause() != null ? e.getCause().getMessage() : "sin causa"))
                 .transformDeferred(RetryOperator.of(retryRegistry.retry("firestoreTimeout")));
     }
 
@@ -88,7 +91,10 @@ public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
     public Flux<CasoCobranzaDocument> findAll() {
         return repository.findAll()
                 .onErrorContinue(RuntimeException.class,
-                        (e, obj) -> log.warn("[CasoCobranza] Documento omitido: {}", e.getMessage()));
+                        (e, obj) -> log.error("[CasoCobranza] DOCUMENTO OMITIDO (findAll) — obj={} tipo={} error={} causa={}",
+                                obj, obj != null ? obj.getClass().getSimpleName() : "null",
+                                e.getMessage(),
+                                e.getCause() != null ? e.getCause().getMessage() : "sin causa"));
     }
 
     @Override

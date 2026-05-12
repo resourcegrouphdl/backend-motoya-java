@@ -67,6 +67,29 @@ public class CobranzaController {
     private final ConciliacionService conciliacionService;
     private final WhatsAppMediaStorageService mediaStorageService;
     private final DebugWaService debugWaService;
+    private final MigrarCasosCobranzaService migrarCasosCobranzaService;
+
+    // =========================================================================
+    // RECUPERACIÓN DE CASOS BORRADOS
+    // =========================================================================
+
+    /** Lee las subcollecciones huérfanas (eventos, movimientos, promesas) de los 3 casos borrados. */
+    @GetMapping("/api/v1/cobranzas/admin/recuperar-casos")
+    public Mono<List<MigrarCasosCobranzaService.CasoRescatadoDto>> recuperarCasos() {
+        return migrarCasosCobranzaService.recuperarCasosBorrados();
+    }
+
+    /** Elimina el campo "contratoId" del body de documentos que lo tengan duplicado (corrección segura, sin borrar docs). */
+    @PostMapping("/api/v1/cobranzas/admin/limpiar-campo-contrato-id")
+    public Mono<List<String>> limpiarCampoContratoId() {
+        return migrarCasosCobranzaService.limpiarCampoContratoId();
+    }
+
+    /** Reconstruye los 3 casos borrados automáticamente desde la colección contratos. */
+    @PostMapping("/api/v1/cobranzas/admin/auto-reconstruir")
+    public Mono<List<String>> autoReconstruir() {
+        return migrarCasosCobranzaService.autoReconstruir();
+    }
 
     // =========================================================================
     // DASHBOARD

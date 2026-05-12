@@ -65,7 +65,7 @@ public class CobranzaIntegrationAdapter implements CobranzaIntegrationPort {
                 descripcion,
                 capitalOriginal,
                 capitalOriginal,        // saldoActual = capitalOriginal al inicio
-                "MORA_TEMPRANA",
+                "AL_DIA",
                 "EN_SEGUIMIENTO",
                 null,                   // agenteAsignadoId — se asigna luego
                 null,                   // agenteAsignadoNombre
@@ -81,7 +81,7 @@ public class CobranzaIntegrationAdapter implements CobranzaIntegrationPort {
                         .cuota(c.numeroCuota())
                         .cuotaNum(c.numeroCuota())
                         .fechaVencimiento(c.fechaVencimiento()
-                                .atZone(ZoneId.systemDefault())
+                                .atZone(ZoneId.of("America/Lima"))
                                 .toLocalDate()
                                 .toString())
                         .monto(contrato.datosFinancieros().cuotaMensual().doubleValue())
