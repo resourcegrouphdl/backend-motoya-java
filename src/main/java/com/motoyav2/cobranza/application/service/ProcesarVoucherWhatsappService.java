@@ -65,27 +65,45 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
 
                                 Double montoDetectado = parseMonto(extraccion.campos());
 
-                                // Umbral de confianza: monto detectado O banco específico (no fallback GENERICO)
+                                // Umbral de confianza (3 niveles):
+                                //   1. Banco específico reconocido (no GENERICO/DESCONOCIDO)
+                                //   2. Monto detectado
+                                //   3. Fallback: Document AI extrajo algún campo → imagen con texto, probable recibo
+                                //      El agente puede rechazarlo desde la pestaña Vouchers si no corresponde.
                                 boolean bancoCierto = extraccion.banco() != null
-                                        && !"GENERICO".equals(extraccion.banco());
-                                boolean esVoucher = montoDetectado != null || bancoCierto;
+                                        && !"GENERICO".equals(extraccion.banco())
+                                        && !"DESCONOCIDO".equals(extraccion.banco());
+                                boolean tieneCampos = extraccion.campos() != null && !extraccion.campos().isEmpty();
+                                boolean esVoucher = bancoCierto || montoDetectado != null || tieneCampos;
                                 if (!esVoucher) {
-                                    log.info("[VOUCHER-WA] Imagen descartada — sin monto ni banco | contratoId={} mensajeId={}",
-                                            contratoId, mensajeId);
+                                    log.info("[VOUCHER-WA] Imagen descartada — OCR sin texto reconocible | "
+                                                    + "contratoId={} mensajeId={} banco={} campos={}",
+                                            contratoId, mensajeId,
+                                            extraccion.banco(),
+                                            extraccion.campos() != null ? extraccion.campos().keySet() : "null");
                                     return marcarNoVoucher(mensajeId);
                                 }
 
                                 Double montoEsperado = CuotaAplicador.montoProximaCuota(caso.getCronograma());
                                 OcrResultadoDocument ocr = buildOcr(extraccion, montoDetectado);
 
-                                log.info("[VOUCHER-WA] Voucher detectado | contratoId={} banco={} monto={} esperado={} llm={}",
+                                // Resolver storeId desde el caso; migrados sin tienda → COBRANZAS
+                                String effectiveStoreId = (storeId != null && !storeId.isBlank())
+                                        ? storeId
+                                        : (caso.getStoreId() != null && !caso.getStoreId().isBlank())
+                                                ? caso.getStoreId()
+                                                : IniciarCasoService.STORE_COBRANZAS;
+                                String effectiveCliente = (clienteNombre != null && !clienteNombre.isBlank())
+                                        ? clienteNombre : caso.getClienteNombre();
+
+                                log.info("[VOUCHER-WA] Voucher detectado | contratoId={} banco={} monto={} esperado={} storeId={} llm={}",
                                         contratoId, extraccion.banco(), montoDetectado,
-                                        montoEsperado, extraccion.enriquecidoConLlm());
+                                        montoEsperado, effectiveStoreId, extraccion.enriquecidoConLlm());
 
                                 RecibirVoucherCommand command = new RecibirVoucherCommand(
-                                        contratoId, storeId, upload.gcsPath(), null,
+                                        contratoId, effectiveStoreId, upload.gcsPath(), null,
                                         montoDetectado, montoEsperado, ocr,
-                                        "WHATSAPP_BOT", "WHATSAPP", clienteNombre
+                                        "WHATSAPP_BOT", "WHATSAPP", effectiveCliente
                                 );
 
                                 return recibirVoucher.ejecutar(command)
@@ -93,7 +111,10 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
                                             log.info("[VOUCHER-WA] Voucher registrado | voucherId={} contratoId={}", voucherId, contratoId);
                                             marcarComoVoucher(mensajeId, voucherId)
                                                     .subscribe(null, e -> log.warn("[VOUCHER-WA] Error marcando voucher en mensaje: {}", e.getMessage()));
-                                            String banco    = extraccion.banco() != null ? extraccion.banco() : "No identificado";
+                                            String banco = (extraccion.banco() != null
+                                                    && !"GENERICO".equals(extraccion.banco())
+                                                    && !"DESCONOCIDO".equals(extraccion.banco()))
+                                                    ? extraccion.banco() : "No identificado";
                                             String montoFmt = montoDetectado != null
                                                     ? String.format("S/ %.2f", montoDetectado) : "Por determinar";
                                             return notificationFacade.notificarVoucherRecibidoCobranza(

@@ -868,6 +868,29 @@ public class CobranzaController {
                 });
     }
 
+    /**
+     * POST /api/v1/cobranzas/casos/{contratoId}/mensajes/{mensajeId}/registrar-voucher
+     * El agente promueve manualmente una imagen del chat a voucher PENDIENTE.
+     * Solo funciona si el mensaje tiene gcsMediaUrl y aún no es voucher.
+     */
+    @PostMapping("/api/v1/cobranzas/casos/{contratoId}/mensajes/{mensajeId}/registrar-voucher")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<Map<String, Object>> registrarVoucherDesdeMensaje(
+            @PathVariable String contratoId,
+            @PathVariable String mensajeId,
+            ServerWebExchange exchange) {
+
+        String userId = (String) exchange.getAttributes().get("userId");
+        log.info("POST /casos/{}/mensajes/{}/registrar-voucher userId={}", contratoId, mensajeId, userId);
+
+        return whatsappService.registrarVoucherDesdeMensaje(mensajeId, contratoId, userId)
+                .map(voucherId -> Map.<String, Object>of(
+                        "status", "OK",
+                        "message", "Voucher registrado y pendiente de revisión",
+                        "voucherId", voucherId
+                ));
+    }
+
     @PatchMapping("/api/v1/cobranzas/casos/{contratoId}/whatsapp/marcar-leidos")
     public Mono<Map<String, Object>> marcarMensajesLeidos(
             @PathVariable String contratoId,
