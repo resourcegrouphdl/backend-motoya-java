@@ -123,7 +123,16 @@ public class VoucherExtractionService implements ExtraerVoucherUseCase {
 
     private VoucherExtraccion buildExtraccion(Map<String, String> campos, String banco, boolean llmUsed) {
         String status = campos.isEmpty() ? "COMPLETADO_SIN_CAMPOS" : "COMPLETADO";
-        return new VoucherExtraccion(status, banco, Collections.unmodifiableMap(campos), llmUsed, Instant.now().toString(), null);
+        // Si la estrategia fallback devolvió "GENERICO" pero los campos tienen un banco real
+        // (detectado por GenéricoStrategy o por el LLM), promoverlo a VoucherExtraccion.banco().
+        String bancoEfectivo = banco;
+        if ("GENERICO".equals(banco)) {
+            String bancoCampo = campos.get("banco");
+            if (bancoCampo != null && !bancoCampo.isBlank() && !"DESCONOCIDO".equals(bancoCampo)) {
+                bancoEfectivo = bancoCampo;
+            }
+        }
+        return new VoucherExtraccion(status, bancoEfectivo, Collections.unmodifiableMap(campos), llmUsed, Instant.now().toString(), null);
     }
 
     /**

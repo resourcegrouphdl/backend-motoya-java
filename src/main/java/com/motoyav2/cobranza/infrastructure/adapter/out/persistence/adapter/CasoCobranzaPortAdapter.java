@@ -2,6 +2,7 @@ package com.motoyav2.cobranza.infrastructure.adapter.out.persistence.adapter;
 
 import com.motoyav2.cobranza.application.port.in.query.ListarCasosQuery;
 import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
+import com.motoyav2.cobranza.application.service.IniciarCasoService;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.repository.CasoCobranzaRepository;
 import io.github.resilience4j.reactor.retry.RetryOperator;
@@ -41,9 +42,21 @@ public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
             // ADMIN ve toda la cartera sin importar su storeId
             base = repository.findAll();
         } else if (tieneStore && tieneEstado) {
-            base = repository.findByStoreIdAndEstadoCaso(q.storeId(), q.estado());
+            String estadoFinal = q.estado();
+            Flux<CasoCobranzaDocument> deEstaTienda = repository.findByStoreIdAndEstadoCaso(q.storeId(), estadoFinal);
+            // Pool cobranzas indexado + legacy null para datos anteriores al centinela
+            Flux<CasoCobranzaDocument> deCobranzas  = repository.findByStoreIdAndEstadoCaso(
+                    IniciarCasoService.STORE_COBRANZAS, estadoFinal);
+            Flux<CasoCobranzaDocument> legacy       = repository.findAll()
+                    .filter(c -> (c.getStoreId() == null || c.getStoreId().isBlank())
+                              && estadoFinal.equals(c.getEstadoCaso()));
+            base = Flux.merge(deEstaTienda, deCobranzas, legacy);
         } else if (tieneStore) {
-            base = repository.findByStoreId(q.storeId());
+            Flux<CasoCobranzaDocument> deEstaTienda = repository.findByStoreId(q.storeId());
+            Flux<CasoCobranzaDocument> deCobranzas  = repository.findByStoreId(IniciarCasoService.STORE_COBRANZAS);
+            Flux<CasoCobranzaDocument> legacy       = repository.findAll()
+                    .filter(c -> c.getStoreId() == null || c.getStoreId().isBlank());
+            base = Flux.merge(deEstaTienda, deCobranzas, legacy);
         } else {
             base = repository.findAll();
         }

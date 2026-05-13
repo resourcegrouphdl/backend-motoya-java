@@ -20,6 +20,9 @@ import java.time.ZoneId;
 @RequiredArgsConstructor
 public class IniciarCasoService implements IniciarCasoUseCase {
 
+    /** Clientes migrados sin tienda de origen pertenecen al pool de cobranzas. */
+    public static final String STORE_COBRANZAS = "COBRANZAS";
+
     private final CasoCobranzaPort casoPort;
     private final EventoCobranzaPort eventoPort;
 
@@ -43,9 +46,13 @@ public class IniciarCasoService implements IniciarCasoUseCase {
                                     .sum()
                             : 0.0;
 
+                    // Clientes migrados sin tienda → asignar al pool de cobranzas
+                    String storeId = (command.storeId() != null && !command.storeId().isBlank())
+                            ? command.storeId() : STORE_COBRANZAS;
+
                     CasoCobranzaDocument doc = CasoCobranzaDocument.builder()
                             .contratoId(command.contratoId())
-                            .storeId(command.storeId())
+                            .storeId(storeId)
                             .titular(command.titular())
                             .fiador(command.fiador())
                             // Campos planos para queries (denormalizados)

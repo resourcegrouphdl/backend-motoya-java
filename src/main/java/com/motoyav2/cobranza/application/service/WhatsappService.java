@@ -2,7 +2,10 @@ package com.motoyav2.cobranza.application.service;
 
 import com.motoyav2.cobranza.application.port.in.ActualizarEstadoMensajeUseCase;
 import com.motoyav2.cobranza.application.port.in.EnviarMensajeWhatsappUseCase;
+import com.motoyav2.cobranza.application.port.in.RecibirVoucherUseCase;
 import com.motoyav2.cobranza.application.port.in.command.EnviarMensajeWhatsappCommand;
+import com.motoyav2.cobranza.application.port.in.command.RecibirVoucherCommand;
+import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.EventoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.MensajeWhatsappPort;
@@ -11,6 +14,7 @@ import com.motoyav2.cobranza.application.port.out.WhatsAppSenderPort;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.MensajeWhatsappDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.PlantillaWhatsappDocument;
+import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.NotFoundException;
 import reactor.core.publisher.Flux;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +40,7 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
     private final EventoCobranzaPort eventoPort;
     private final CasoCobranzaPort casoPort;
     private final WhatsAppSenderPort waSender;
+    private final RecibirVoucherUseCase recibirVoucherUseCase;
 
     // -------------------------------------------------------------------------
     // EnviarMensajeWhatsappUseCase
@@ -220,6 +225,42 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
                     return casoPort.save(caso);
                 })
                 .then();
+    }
+
+    /**
+     * Promueve un mensaje INBOUND con imagen almacenada en GCS a voucher PENDIENTE.
+     * Usado por el botón "Registrar como voucher" del agente en el chat.
+     * Reutiliza RecibirVoucherUseCase — sin duplicar lógica de creación de VoucherDocument.
+     */
+    public Mono<String> registrarVoucherDesdeMensaje(String mensajeId, String contratoId, String subioPor) {
+        return mensajePort.findById(mensajeId)
+                .switchIfEmpty(Mono.error(new NotFoundException("Mensaje no encontrado: " + mensajeId)))
+                .flatMap(msg -> {
+                    if (Boolean.TRUE.equals(msg.getEsVoucher())) {
+                        // Idempotente: ya fue registrado
+                        return Mono.just(msg.getVoucherId() != null ? msg.getVoucherId() : "");
+                    }
+                    if (msg.getGcsMediaUrl() == null || msg.getGcsMediaUrl().isBlank()) {
+                        return Mono.error(new BadRequestException(
+                                "El mensaje no tiene imagen almacenada en GCS"));
+                    }
+                    return casoPort.findById(contratoId)
+                            .defaultIfEmpty(new CasoCobranzaDocument())
+                            .flatMap(caso -> {
+                                String storeId = caso.getStoreId() != null && !caso.getStoreId().isBlank()
+                                        ? caso.getStoreId() : IniciarCasoService.STORE_COBRANZAS;
+                                RecibirVoucherCommand command = new RecibirVoucherCommand(
+                                        contratoId, storeId, msg.getGcsMediaUrl(), null,
+                                        null, null, null,
+                                        subioPor, "WHATSAPP_MANUAL", caso.getClienteNombre());
+                                return recibirVoucherUseCase.ejecutar(command)
+                                        .flatMap(voucherId -> {
+                                            msg.setEsVoucher(true);
+                                            msg.setVoucherId(voucherId);
+                                            return mensajePort.save(msg).thenReturn(voucherId);
+                                        });
+                            });
+                });
     }
 
     private String normalizarTelefono(String tel) {
