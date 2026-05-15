@@ -61,6 +61,7 @@ public class VoucherService implements RecibirVoucherUseCase, AprobarVoucherUseC
                 .fuente(command.fuente())
                 .imagenPath(command.imagenPath())
                 .thumbPath(command.thumbPath())
+                .mediaType(command.mediaType())
                 .montoDetectado(command.montoDetectado())
                 .montoEsperado(command.montoEsperado())
                 .ocrResultado(command.ocrResultado())

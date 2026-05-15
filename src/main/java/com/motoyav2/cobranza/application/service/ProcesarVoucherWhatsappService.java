@@ -65,16 +65,18 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
 
                                 Double montoDetectado = parseMonto(extraccion.campos());
 
-                                // Umbral de confianza (3 niveles):
+                                // Umbral de confianza (4 niveles):
                                 //   1. Banco específico reconocido (no GENERICO/DESCONOCIDO)
                                 //   2. Monto detectado
                                 //   3. Fallback: Document AI extrajo algún campo → imagen con texto, probable recibo
-                                //      El agente puede rechazarlo desde la pestaña Vouchers si no corresponde.
+                                //   4. PDF: siempre se registra para revisión manual del agente
+                                //      (el OCR falla en PDFs escaneados pero el agente puede aprobarlo/rechazarlo)
                                 boolean bancoCierto = extraccion.banco() != null
                                         && !"GENERICO".equals(extraccion.banco())
                                         && !"DESCONOCIDO".equals(extraccion.banco());
                                 boolean tieneCampos = extraccion.campos() != null && !extraccion.campos().isEmpty();
-                                boolean esVoucher = bancoCierto || montoDetectado != null || tieneCampos;
+                                boolean esPdf = "document".equals(mediaType);
+                                boolean esVoucher = bancoCierto || montoDetectado != null || tieneCampos || esPdf;
                                 if (!esVoucher) {
                                     log.info("[VOUCHER-WA] Imagen descartada — OCR sin texto reconocible | "
                                                     + "contratoId={} mensajeId={} banco={} campos={}",
@@ -103,7 +105,8 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
                                 RecibirVoucherCommand command = new RecibirVoucherCommand(
                                         contratoId, effectiveStoreId, upload.gcsPath(), null,
                                         montoDetectado, montoEsperado, ocr,
-                                        "WHATSAPP_BOT", "WHATSAPP", effectiveCliente
+                                        "WHATSAPP_BOT", "WHATSAPP", effectiveCliente,
+                                        mediaType
                                 );
 
                                 return recibirVoucher.ejecutar(command)

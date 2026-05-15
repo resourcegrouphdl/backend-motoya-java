@@ -10,5 +10,6 @@ public record VoucherVista360Dto(
         String imagenPath,
         Double montoDetectado,
         String comprobanteId,
-        Date creadoEn
+        Date creadoEn,
+        String mediaType
 ) {}

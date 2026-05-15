@@ -252,7 +252,8 @@ public class WhatsappService implements EnviarMensajeWhatsappUseCase, Actualizar
                                 RecibirVoucherCommand command = new RecibirVoucherCommand(
                                         contratoId, storeId, msg.getGcsMediaUrl(), null,
                                         null, null, null,
-                                        subioPor, "WHATSAPP_MANUAL", caso.getClienteNombre());
+                                        subioPor, "WHATSAPP_MANUAL", caso.getClienteNombre(),
+                                        msg.getMediaType());
                                 return recibirVoucherUseCase.ejecutar(command)
                                         .flatMap(voucherId -> {
                                             msg.setEsVoucher(true);

@@ -15,7 +15,7 @@ public record VoucherResponse(
         String storeId,
         String estado,
         String fuente,
-        /** Signed URL GCS válida 15 minutos — lista para <img src> */
+        /** Signed URL GCS válida 15 minutos — usar en <img src> o enlace PDF */
         String imagenUrl,
         /** GCS path relativo — para referencia interna */
         String imagenPath,
@@ -30,5 +30,7 @@ public record VoucherResponse(
         String comprobanteId,
         /** ISO timestamp — mapeado desde creadoEn */
         String fechaDeteccion,
-        String creadoPor
+        String creadoPor,
+        /** "image" | "document" — null en registros legacy */
+        String mediaType
 ) {}

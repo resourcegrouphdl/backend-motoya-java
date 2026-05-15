@@ -434,7 +434,7 @@ public class CobranzaController {
                 doc.getMontoDetectado(), doc.getMontoEsperado(), doc.getOcrResultado(),
                 doc.getAprobadoPor(), doc.getAprobadoPorNombre(),
                 doc.getRechazadoPor(), doc.getMotivoRechazo(), doc.getObservacionesRechazo(),
-                doc.getComprobanteId(), fechaDeteccion, doc.getCreadoPor()
+                doc.getComprobanteId(), fechaDeteccion, doc.getCreadoPor(), doc.getMediaType()
         );
     }
 
@@ -452,9 +452,10 @@ public class CobranzaController {
         String userId  = (String) exchange.getAttributes().get("userId");
         log.debug("POST /vouchers storeId={} contratoId={}", storeId, contratoId);
 
+        String adminMediaType = imagenPath != null && imagenPath.endsWith(".pdf") ? "document" : "image";
         RecibirVoucherCommand command = new RecibirVoucherCommand(
                 contratoId, storeId, imagenPath, thumbPath, montoDetectado,
-                null, null, userId, "ADMIN_UPLOAD", null);
+                null, null, userId, "ADMIN_UPLOAD", null, adminMediaType);
 
         return recibirVoucherUseCase.ejecutar(command)
                 .map(voucherId -> Map.<String, Object>of(
