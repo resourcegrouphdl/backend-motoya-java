@@ -6,7 +6,7 @@ public record RecibirVoucherCommand(
         /** null si el contrato se identificará por OCR */
         String contratoId,
         String storeId,
-        /** GCS path relativo: cobranza-vouchers/{contratoId}/{uuid}.jpg */
+        /** GCS path relativo: cobranza-vouchers/{contratoId}/{uuid}.jpg o .pdf */
         String imagenPath,
         String thumbPath,
         Double montoDetectado,
@@ -18,5 +18,7 @@ public record RecibirVoucherCommand(
         /** WHATSAPP | PAGO_MANUAL | ADMIN_UPLOAD */
         String fuente,
         /** Nombre del cliente — null en uploads manuales sin contexto */
-        String clienteNombre
+        String clienteNombre,
+        /** "image" | "document" — null para registros legacy sin tipo conocido */
+        String mediaType
 ) {}

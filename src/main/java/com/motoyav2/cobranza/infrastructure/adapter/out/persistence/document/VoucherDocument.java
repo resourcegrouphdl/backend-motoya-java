@@ -36,10 +36,12 @@ public class VoucherDocument {
     /** Origen del voucher: WHATSAPP | PAGO_MANUAL | ADMIN_UPLOAD */
     private String fuente;
 
-    /** Ruta GCS: vouchers/{voucherId}/original.jpg */
+    /** Ruta GCS: vouchers/{voucherId}/original.jpg o .pdf */
     private String imagenPath;
-    /** Ruta GCS: vouchers/{voucherId}/thumb.jpg */
+    /** Ruta GCS: vouchers/{voucherId}/thumb.jpg — null para PDFs */
     private String thumbPath;
+    /** "image" | "document" — null en registros legacy */
+    private String mediaType;
 
     /** null si OCR falló */
     private Double montoDetectado;

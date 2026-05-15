@@ -87,7 +87,7 @@ public class CasoCobranzaService implements ListarCasosUseCase, ObtenerCasoUseCa
                            .map(v -> new VoucherVista360Dto(v.getId(), v.getEstado(), v.getFuente(),
                                                            v.getThumbPath(), v.getImagenPath(),
                                                            v.getMontoDetectado(), v.getComprobanteId(),
-                                                           v.getCreadoEn()))
+                                                           v.getCreadoEn(), v.getMediaType()))
                            .collectList()
         ).flatMap(t -> vehiculoMono
                 .map(veh -> new Vista360CasoDto(t.getT1(), t.getT2(), t.getT3(), t.getT4(), t.getT5(), veh, t.getT6()))

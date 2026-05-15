@@ -180,6 +180,8 @@ public class RegistrarPagoManualService implements RegistrarPagoManualUseCase {
                             .confianza(1.0)
                             .build();
 
+                    String pagoMediaType = command.imagenPath() != null
+                            && command.imagenPath().endsWith(".pdf") ? "document" : "image";
                     RecibirVoucherCommand recibirCmd = new RecibirVoucherCommand(
                             command.contratoId(),
                             caso.getStoreId(),
@@ -190,7 +192,8 @@ public class RegistrarPagoManualService implements RegistrarPagoManualUseCase {
                             ocrHint,
                             command.registradoPor(),
                             "PAGO_MANUAL",
-                            null
+                            null,
+                            pagoMediaType
                     );
 
                     log.info("[PAGO-MANUAL] Con voucher | contratoId={} monto={} imagenPath={}",
