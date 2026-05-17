@@ -39,15 +39,15 @@ import java.util.stream.Stream;
 public class ReporteContableServiceImpl implements
         GenerarLiquidacionComisionesUseCase,
         GenerarPdfLiquidacionUseCase,
-        GenerarExcelContratosUseCase {
+        GenerarExcelContratosUseCase,
+        ConsultarContratosPreviewUseCase {
 
     private final Firestore db;
 
-    private static final String COL_COMISIONES  = "finanzas_comisiones";
+    private static final String COL_COMISIONES = "finanzas_comisiones";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final List<String> ESTADOS_CERRADO = List.of("FIRMADO", "ACTIVO", "COMPLETADO");
 
-    // ── Preview JSON ──────────────────────────────────────────────────────────
+    // ── Liquidación de comisiones — Preview JSON ──────────────────────────────
 
     @Override
     public Mono<ReporteLiquidacionResponse> generar(LocalDate desde, LocalDate hasta, String tiendaId) {
@@ -58,8 +58,7 @@ public class ReporteContableServiceImpl implements
                 .map(list -> agrupar(list, d, h));
     }
 
-    // ── Query directa a finanzas_comisiones (sin índice compuesto) ────────────
-    // Solo usa igualdad en tiendaId; el filtro de fechas se aplica en memoria.
+    // Solo igualdad en tiendaId; filtro de fechas en memoria.
     private Flux<ComisionDocument> queryComisiones(LocalDate desde, LocalDate hasta, String tiendaId) {
         Query q = (tiendaId != null && !tiendaId.isBlank())
                 ? db.collection(COL_COMISIONES).whereEqualTo("tiendaId", tiendaId)
@@ -75,15 +74,15 @@ public class ReporteContableServiceImpl implements
         try {
             LocalDate inicio = doc.getPeriodoInicio() != null ? LocalDate.parse(doc.getPeriodoInicio()) : null;
             LocalDate fin    = doc.getPeriodoFin()    != null ? LocalDate.parse(doc.getPeriodoFin())    : null;
-            if (desde != null && fin    != null && fin.isBefore(desde))  return false;
-            if (hasta != null && inicio != null && inicio.isAfter(hasta)) return false;
+            if (desde != null && fin    != null && fin.isBefore(desde))   return false;
+            if (hasta != null && inicio != null && inicio.isAfter(hasta))  return false;
             return true;
         } catch (Exception e) {
             return true;
         }
     }
 
-    // ── PDF ───────────────────────────────────────────────────────────────────
+    // ── Liquidación de comisiones — PDF ──────────────────────────────────────
 
     @Override
     public Mono<byte[]> generarPdf(LocalDate desde, LocalDate hasta, String tiendaId) {
@@ -92,16 +91,79 @@ public class ReporteContableServiceImpl implements
                         .subscribeOn(Schedulers.boundedElastic()));
     }
 
-    // ── Excel contratos ───────────────────────────────────────────────────────
+    // ── Contratos — Preview JSON ──────────────────────────────────────────────
+
+    @Override
+    public Mono<ContratosPreviewResponse> consultarPreview(LocalDate desde, LocalDate hasta, String tiendaId) {
+        LocalDate d = desde != null ? desde : LocalDate.now().withDayOfMonth(1);
+        LocalDate h = hasta != null ? hasta : LocalDate.now();
+        return fetchContratos(d, h, tiendaId)
+                .collectList()
+                .map(docs -> agruparContratos(docs, d, h));
+    }
+
+    // ── Contratos — Excel ─────────────────────────────────────────────────────
 
     @Override
     public Mono<byte[]> generarExcel(LocalDate desde, LocalDate hasta, String tiendaId) {
         LocalDate d = desde != null ? desde : LocalDate.now().withDayOfMonth(1);
         LocalDate h = hasta != null ? hasta : LocalDate.now();
-        return queryContratos(d, h, tiendaId)
+        return fetchContratos(d, h, tiendaId)
+                .map(this::toContratoRow)
                 .collectList()
                 .flatMap(rows -> Mono.fromCallable(() -> buildExcel(rows, d, h))
                         .subscribeOn(Schedulers.boundedElastic()));
+    }
+
+    // ── Contratos — query base (sin filtro de estado; fechaCreacion en memoria) ─
+
+    private Flux<ContratoDocument> fetchContratos(LocalDate desde, LocalDate hasta, String tiendaId) {
+        Query q = (tiendaId != null && !tiendaId.isBlank())
+                ? db.collection("contratos").whereEqualTo("tienda.tiendaId", tiendaId)
+                : db.collection("contratos");
+
+        return toFlux(q.get())
+                .map(doc -> doc.toObject(ContratoDocument.class))
+                .filter(Objects::nonNull)
+                .filter(c -> enRangoFechaCreacion(c, desde, hasta));
+    }
+
+    private boolean enRangoFechaCreacion(ContratoDocument c, LocalDate desde, LocalDate hasta) {
+        if (c.getFechaCreacion() == null) return true;
+        LocalDate fecha = c.getFechaCreacion().toDate().toInstant()
+                .atZone(ZoneOffset.UTC).toLocalDate();
+        if (desde != null && fecha.isBefore(desde)) return false;
+        if (hasta != null && fecha.isAfter(hasta))  return false;
+        return true;
+    }
+
+    // ── Agrupación contratos por tienda ───────────────────────────────────────
+
+    private ContratosPreviewResponse agruparContratos(List<ContratoDocument> docs, LocalDate desde, LocalDate hasta) {
+        Map<String, String>                     tiendaNombres = new LinkedHashMap<>();
+        Map<String, List<ContratoReporteRow>>   porTienda     = new LinkedHashMap<>();
+        Map<String, Integer>                    porEstado     = new LinkedHashMap<>();
+
+        for (ContratoDocument doc : docs) {
+            String tid   = (doc.getTienda() != null && doc.getTienda().getTiendaId() != null)
+                           ? doc.getTienda().getTiendaId() : "sin-tienda";
+            String tName = (doc.getTienda() != null && doc.getTienda().getNombreTienda() != null)
+                           ? doc.getTienda().getNombreTienda() : "Sin tienda";
+            tiendaNombres.putIfAbsent(tid, tName);
+            porTienda.computeIfAbsent(tid, k -> new ArrayList<>()).add(toContratoRow(doc));
+            String est = doc.getEstado() != null ? doc.getEstado() : "DESCONOCIDO";
+            porEstado.merge(est, 1, Integer::sum);
+        }
+
+        List<ContratosTiendaDTO> tiendas = porTienda.entrySet().stream()
+                .map(e -> new ContratosTiendaDTO(
+                        e.getKey(),
+                        tiendaNombres.getOrDefault(e.getKey(), "Sin tienda"),
+                        e.getValue(),
+                        e.getValue().size()))
+                .toList();
+
+        return new ContratosPreviewResponse(desde, hasta, tiendas, docs.size(), porEstado);
     }
 
     // ── Agrupación comisiones ─────────────────────────────────────────────────
@@ -111,9 +173,9 @@ public class ReporteContableServiceImpl implements
         Map<String, Map<String, List<ComisionDocument>>>      porTiendaVendedor = new LinkedHashMap<>();
 
         for (ComisionDocument c : list) {
-            String tid   = c.getTiendaId()    != null ? c.getTiendaId()    : "sin-tienda";
+            String tid   = c.getTiendaId()    != null ? c.getTiendaId()     : "sin-tienda";
             String tName = c.getTiendaNombre() != null ? c.getTiendaNombre() : "Sin tienda";
-            String vid   = c.getVendedorId()  != null ? c.getVendedorId()  : "sin-vendedor";
+            String vid   = c.getVendedorId()  != null ? c.getVendedorId()   : "sin-vendedor";
             tiendaNombres.putIfAbsent(tid, tName);
             porTiendaVendedor.computeIfAbsent(tid, k -> new LinkedHashMap<>())
                     .computeIfAbsent(vid, k -> new ArrayList<>())
@@ -266,30 +328,13 @@ public class ReporteContableServiceImpl implements
         return sb.toString();
     }
 
-    // ── Contratos Firestore query ─────────────────────────────────────────────
-
-    private Flux<ContratoReporteRow> queryContratos(LocalDate desde, LocalDate hasta, String tiendaId) {
-        Timestamp fromTs = Timestamp.of(Date.from(desde.atStartOfDay(ZoneOffset.UTC).toInstant()));
-        Timestamp toTs   = Timestamp.of(Date.from(hasta.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()));
-
-        Query q = db.collection("contratos")
-                .whereGreaterThanOrEqualTo("fechaActualizacion", fromTs)
-                .whereLessThanOrEqualTo("fechaActualizacion", toTs);
-
-        return toFlux(q.get())
-                .map(doc -> doc.toObject(ContratoDocument.class))
-                .filter(Objects::nonNull)
-                .filter(c -> ESTADOS_CERRADO.contains(c.getEstado()))
-                .filter(c -> tiendaId == null
-                        || (c.getTienda() != null && tiendaId.equals(c.getTienda().getTiendaId())))
-                .map(this::toContratoRow);
-    }
+    // ── Contrato → row ────────────────────────────────────────────────────────
 
     private ContratoReporteRow toContratoRow(ContratoDocument doc) {
-        String nombre  = "";
-        String tipDoc  = "";
-        String numDoc  = "";
-        String tel     = "";
+        String nombre = "";
+        String tipDoc = "";
+        String numDoc = "";
+        String tel    = "";
         if (doc.getTitular() != null) {
             nombre = trim(doc.getTitular().getNombres()) + " " + trim(doc.getTitular().getApellidos());
             tipDoc = trim(doc.getTitular().getTipoDocumento());
@@ -297,9 +342,9 @@ public class ReporteContableServiceImpl implements
             tel    = trim(doc.getTitular().getTelefono());
         }
 
-        String tienda  = doc.getTienda() != null ? trim(doc.getTienda().getNombreTienda()) : "";
+        String tienda = doc.getTienda() != null ? trim(doc.getTienda().getNombreTienda()) : "";
 
-        Double precio  = null, cuotaIni = null, monto = null, cuota = null, tasa = null;
+        Double precio = null, cuotaIni = null, monto = null, cuota = null, tasa = null;
         Integer cuotas = null;
         String marcaMod = "";
         if (doc.getDatosFinancieros() != null) {
@@ -315,16 +360,16 @@ public class ReporteContableServiceImpl implements
                     .collect(Collectors.joining(" "));
         }
 
-        String fechaCierre = "";
-        if (doc.getFechaActualizacion() != null) {
-            fechaCierre = doc.getFechaActualizacion().toDate().toInstant()
+        String fechaCreacion = "";
+        if (doc.getFechaCreacion() != null) {
+            fechaCreacion = doc.getFechaCreacion().toDate().toInstant()
                     .atZone(ZoneOffset.UTC).toLocalDate().format(DATE_FMT);
         }
 
         return new ContratoReporteRow(
                 trim(doc.getNumeroContrato()), trim(doc.getEstado()),
                 tienda, nombre.trim(), tipDoc, numDoc, tel,
-                marcaMod, precio, cuotaIni, monto, cuotas, cuota, tasa, fechaCierre);
+                marcaMod, precio, cuotaIni, monto, cuotas, cuota, tasa, fechaCreacion);
     }
 
     // ── Excel contratos ───────────────────────────────────────────────────────
@@ -334,16 +379,15 @@ public class ReporteContableServiceImpl implements
             "N° Contrato", "Estado", "Tienda",
             "Cliente", "Tipo Doc.", "N° Documento", "Teléfono",
             "Vehículo", "Precio Vehículo", "Cuota Inicial", "Monto Financiado",
-            "N° Cuotas", "Cuota Mensual", "TEA %", "Fecha Cierre"
+            "N° Cuotas", "Cuota Mensual", "TEA %", "Fecha Creación"
         };
 
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Contratos");
 
-            // Fila título
             Row titleRow = sheet.createRow(0);
             Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("CONTRATOS CERRADOS — Período " +
+            titleCell.setCellValue("CONTRATOS — Período " +
                     desde.format(DATE_FMT) + " al " + hasta.format(DATE_FMT));
             CellStyle titleStyle = wb.createCellStyle();
             Font titleFont = wb.createFont();
@@ -353,7 +397,6 @@ public class ReporteContableServiceImpl implements
             titleStyle.setFont(titleFont);
             titleCell.setCellStyle(titleStyle);
 
-            // Headers
             CellStyle hs = headerStyle(wb);
             Row hRow = sheet.createRow(1);
             for (int i = 0; i < headers.length; i++) {
@@ -362,7 +405,6 @@ public class ReporteContableServiceImpl implements
                 c.setCellStyle(hs);
             }
 
-            // Data rows
             CellStyle numStyle = numericStyle(wb);
             int ri = 2;
             for (ContratoReporteRow row : rows) {
@@ -384,7 +426,6 @@ public class ReporteContableServiceImpl implements
                 cell(r, 14, row.fechaCierre());
             }
 
-            // Fila total
             Row totalRow = sheet.createRow(ri);
             CellStyle ts = totalStyle(wb);
             Cell tcell = totalRow.createCell(0);
@@ -454,7 +495,7 @@ public class ReporteContableServiceImpl implements
         c.setCellStyle(style);
     }
 
-    // ── Firestore reactive utils (inline para evitar dependencia cruzada) ──────
+    // ── Firestore reactive utils ──────────────────────────────────────────────
 
     private static Mono<QuerySnapshot> toMono(com.google.api.core.ApiFuture<QuerySnapshot> future) {
         return Mono.fromFuture(() -> {
