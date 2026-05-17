@@ -1,6 +1,8 @@
 package com.motoyav2.contabilidad.infrastructure.adapter.in.web;
 
+import com.motoyav2.contabilidad.domain.model.ContratosPreviewResponse;
 import com.motoyav2.contabilidad.domain.model.ReporteLiquidacionResponse;
+import com.motoyav2.contabilidad.domain.port.in.ConsultarContratosPreviewUseCase;
 import com.motoyav2.contabilidad.domain.port.in.GenerarExcelContratosUseCase;
 import com.motoyav2.contabilidad.domain.port.in.GenerarLiquidacionComisionesUseCase;
 import com.motoyav2.contabilidad.domain.port.in.GenerarPdfLiquidacionUseCase;
@@ -25,11 +27,9 @@ public class ReporteContableController {
     private final GenerarLiquidacionComisionesUseCase liquidacionUseCase;
     private final GenerarPdfLiquidacionUseCase         pdfUseCase;
     private final GenerarExcelContratosUseCase         excelUseCase;
+    private final ConsultarContratosPreviewUseCase     contratosPreviewUseCase;
 
-    /**
-     * GET /api/v1/contabilidad/reportes/comisiones-vendedor
-     * Devuelve el reporte agrupado en JSON para previsualización en el frontend.
-     */
+    /** GET /api/v1/contabilidad/reportes/comisiones-vendedor — JSON preview */
     @GetMapping("/comisiones-vendedor")
     public Mono<ReporteLiquidacionResponse> getLiquidacion(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
@@ -42,10 +42,7 @@ public class ReporteContableController {
         return liquidacionUseCase.generar(d, h, tiendaId);
     }
 
-    /**
-     * GET /api/v1/contabilidad/reportes/comisiones-vendedor/pdf
-     * Descarga el PDF de liquidación de comisiones por vendedor.
-     */
+    /** GET /api/v1/contabilidad/reportes/comisiones-vendedor/pdf — PDF download */
     @GetMapping("/comisiones-vendedor/pdf")
     public Mono<ResponseEntity<byte[]>> getPdfLiquidacion(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
@@ -64,10 +61,20 @@ public class ReporteContableController {
                         .body(bytes));
     }
 
-    /**
-     * GET /api/v1/contabilidad/reportes/contratos
-     * Descarga el Excel de contratos cerrados en el período.
-     */
+    /** GET /api/v1/contabilidad/reportes/contratos/preview — JSON preview agrupado por tienda */
+    @GetMapping("/contratos/preview")
+    public Mono<ContratosPreviewResponse> getContratosPreview(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @RequestParam(required = false) String tiendaId) {
+
+        LocalDate d = desde != null ? desde : LocalDate.now().withDayOfMonth(1);
+        LocalDate h = hasta != null ? hasta : LocalDate.now();
+        log.info("GET /contabilidad/reportes/contratos/preview desde={} hasta={} tiendaId={}", d, h, tiendaId);
+        return contratosPreviewUseCase.consultarPreview(d, h, tiendaId);
+    }
+
+    /** GET /api/v1/contabilidad/reportes/contratos — Excel download */
     @GetMapping("/contratos")
     public Mono<ResponseEntity<byte[]>> getExcelContratos(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
@@ -78,7 +85,7 @@ public class ReporteContableController {
         LocalDate h = hasta != null ? hasta : LocalDate.now();
         log.info("GET /contabilidad/reportes/contratos desde={} hasta={} tiendaId={}", d, h, tiendaId);
 
-        String filename = "contratos-cerrados-" + d + "-al-" + h + ".xlsx";
+        String filename = "contratos-" + d + "-al-" + h + ".xlsx";
         return excelUseCase.generarExcel(d, h, tiendaId)
                 .map(bytes -> ResponseEntity.ok()
                         .header("Content-Type", EXCEL_CT)
