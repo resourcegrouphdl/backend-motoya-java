@@ -5,6 +5,7 @@ import com.motoyav2.cobranza.application.port.in.command.EnviarMensajeWhatsappCo
 import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.ComprobantePagoPort;
 import com.motoyav2.cobranza.application.port.out.EventoCobranzaPort;
+import com.motoyav2.notifications.infrastructure.adapter.out.storage.WhatsAppMediaStorageService;
 import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.ComprobantePagoDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
@@ -31,6 +32,7 @@ public class ComprobantesService {
     private final CasoCobranzaPort casoPort;
     private final NotificationFacade notificationFacade;
     private final EnviarMensajeWhatsappUseCase whatsappUseCase;
+    private final WhatsAppMediaStorageService storageService;
 
     // -------------------------------------------------------------------------
     // Listar comprobantes con filtros opcionales en memoria
@@ -115,30 +117,43 @@ public class ComprobantesService {
                         .flatMap(caso -> {
                             if (caso.getClienteTelefono() == null || caso.getClienteTelefono().isBlank())
                                 return Mono.error(new BadRequestException("El cliente no tiene teléfono registrado"));
+
                             String montoStr = String.format("S/ %.2f", comp.getTotal());
                             String cliente  = caso.getClienteNombre() != null ? caso.getClienteNombre() : "cliente";
-                            String mensaje  = "✅ ¡Pago recibido! Hola " + cliente + ",\n\n"
-                                    + "Confirmamos la recepción de tu pago:\n\n"
-                                    + "💰 *Monto:* " + montoStr + "\n\n"
-                                    + "Tu pago ha sido registrado exitosamente. "
-                                    + "Gracias por mantenerte al día con tus cuotas.\n\n"
-                                    + "*¡Gracias por confiar en Moto Ya Digital, S.A.C!* 🏍️🚀";
-                            EnviarMensajeWhatsappCommand cmd = new EnviarMensajeWhatsappCommand(
-                                    comp.getContratoId(), null, null,
-                                    "SISTEMA", "Sistema Automático",
-                                    caso.getStoreId(),
-                                    caso.getClienteTelefono(),
-                                    mensaje);
-                            log.info("[REENVIO-WA] Enviando vía Factiliza | contratoId={} telefono={} monto={}",
-                                    comp.getContratoId(), caso.getClienteTelefono(), montoStr);
-                            return whatsappUseCase.ejecutar(cmd)
-                                    .doOnNext(mensajeId -> log.info(
-                                            "[REENVIO-WA] ✓ Enviado correctamente | comprobanteId={} contratoId={} mensajeId={}",
-                                            comprobanteId, comp.getContratoId(), mensajeId))
-                                    .doOnError(e -> log.error(
-                                            "[REENVIO-WA] ✗ Error al enviar | comprobanteId={} contratoId={} error={}",
-                                            comprobanteId, comp.getContratoId(), e.getMessage()))
-                                    .then();
+
+                            Mono<String> urlMono = (comp.getPdfPath() != null && !comp.getPdfPath().isBlank())
+                                    ? storageService.generarSignedUrl(comp.getPdfPath(), 60 * 24 * 7)
+                                            .doOnNext(url -> log.info("[REENVIO-WA] Signed URL generada | pdfPath={}", comp.getPdfPath()))
+                                    : Mono.just("");
+
+                            return urlMono.flatMap(pdfUrl -> {
+                                String mensaje = "✅ ¡Pago recibido! Hola " + cliente + ",\n\n"
+                                        + "Confirmamos la recepción de tu pago:\n\n"
+                                        + "💰 *Monto:* " + montoStr + "\n\n"
+                                        + (pdfUrl.isBlank() ? ""
+                                                : "📄 *Tu boleta:*\n" + pdfUrl + "\n_(Enlace válido por 7 días)_\n\n")
+                                        + "Gracias por mantenerte al día con tus cuotas.\n\n"
+                                        + "*¡Gracias por confiar en Moto Ya Digital, S.A.C!* 🏍️🚀";
+
+                                EnviarMensajeWhatsappCommand cmd = new EnviarMensajeWhatsappCommand(
+                                        comp.getContratoId(), null, null,
+                                        "SISTEMA", "Sistema Automático",
+                                        caso.getStoreId(),
+                                        caso.getClienteTelefono(),
+                                        mensaje);
+
+                                log.info("[REENVIO-WA] Enviando vía Factiliza | contratoId={} telefono={} monto={} conUrl={}",
+                                        comp.getContratoId(), caso.getClienteTelefono(), montoStr, !pdfUrl.isBlank());
+
+                                return whatsappUseCase.ejecutar(cmd)
+                                        .doOnNext(mensajeId -> log.info(
+                                                "[REENVIO-WA] ✓ Enviado correctamente | comprobanteId={} contratoId={} mensajeId={}",
+                                                comprobanteId, comp.getContratoId(), mensajeId))
+                                        .doOnError(e -> log.error(
+                                                "[REENVIO-WA] ✗ Error al enviar | comprobanteId={} contratoId={} error={}",
+                                                comprobanteId, comp.getContratoId(), e.getMessage()))
+                                        .then();
+                            });
                         }));
     }
 
