@@ -46,6 +46,7 @@ public class CobranzaController {
     private final ListarVouchersUseCase listarVouchersUseCase;
     private final EnviarMensajeWhatsappUseCase enviarMensajeWhatsappUseCase;
     private final ActualizarEstadoMensajeUseCase actualizarEstadoMensajeUseCase;
+    private final EnviarComprobanteWhatsappUseCase enviarComprobanteWhatsappUseCase;
 
     private final CasoCobranzaService casoCobranzaService;
     private final PromesaGlobalService promesaGlobalService;
@@ -554,6 +555,41 @@ public class CobranzaController {
                 .onErrorResume(IllegalArgumentException.class, e ->
                         Mono.just(Map.of("status", "ERROR", "message", e.getMessage())))
                 .onErrorResume(IllegalStateException.class, e ->
+                        Mono.just(Map.of("status", "ERROR", "message", e.getMessage())));
+    }
+
+    /**
+     * POST /api/v1/cobranzas/vouchers/{id}/enviar-comprobante-whatsapp
+     * Envía el comprobante de pago al cliente por WhatsApp.
+     * Resolución del documento (prioridad):
+     *  1. archivoGcsPath del body (PDF subido manualmente por el agente)
+     *  2. Comprobante generado vinculado al voucher (pdfPath)
+     *  3. Imagen original del voucher
+     */
+    @PostMapping("/api/v1/cobranzas/vouchers/{id}/enviar-comprobante-whatsapp")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<Map<String, Object>> enviarComprobanteWhatsapp(
+            @PathVariable String id,
+            @RequestBody EnviarComprobanteWhatsappRequest body,
+            ServerWebExchange exchange) {
+
+        String userId     = (String) exchange.getAttributes().get("userId");
+        String userNombre = (String) exchange.getAttributes().get("userNombre");
+        String storeId    = (String) exchange.getAttributes().get("storeId");
+        log.info("POST /vouchers/{}/enviar-comprobante-whatsapp userId={}", id, userId);
+
+        EnviarComprobanteWhatsappCommand command = new EnviarComprobanteWhatsappCommand(
+                id, body.archivoGcsPath(), userId, userNombre, storeId);
+
+        return enviarComprobanteWhatsappUseCase.ejecutar(command)
+                .map(mensajeId -> Map.<String, Object>of(
+                        "status",    "OK",
+                        "message",   "Comprobante enviado por WhatsApp",
+                        "mensajeId", mensajeId
+                ))
+                .onErrorResume(com.motoyav2.shared.exception.NotFoundException.class, e ->
+                        Mono.just(Map.of("status", "ERROR", "message", e.getMessage())))
+                .onErrorResume(com.motoyav2.shared.exception.BadRequestException.class, e ->
                         Mono.just(Map.of("status", "ERROR", "message", e.getMessage())));
     }
 
@@ -1176,6 +1212,11 @@ public class CobranzaController {
     public record RechazarVoucherRequest(
             String motivo,
             String observaciones
+    ) {}
+
+    public record EnviarComprobanteWhatsappRequest(
+            /** GCS path del PDF subido manualmente. Null = resolver desde comprobante o voucher. */
+            String archivoGcsPath
     ) {}
 
     public record EnviarWhatsappRequest(
