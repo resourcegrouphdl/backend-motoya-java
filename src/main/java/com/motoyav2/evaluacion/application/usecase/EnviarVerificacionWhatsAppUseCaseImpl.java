@@ -5,6 +5,10 @@ import com.motoyav2.evaluacion.domain.port.in.EnviarVerificacionWhatsAppUseCase;
 import com.motoyav2.evaluacion.domain.port.out.ReferenciaRepository;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
 import com.motoyav2.evaluacion.shared.exception.RecursoNoEncontradoException;
+import com.motoyav2.notifications.domain.model.conversacion.DireccionMensaje;
+import com.motoyav2.notifications.domain.model.conversacion.RolParticipante;
+import com.motoyav2.notifications.domain.model.conversacion.TipoMensajeWa;
+import com.motoyav2.notifications.domain.port.in.RegistrarMensajeConversacionUseCase;
 import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaWhatsAppNotificationAdapter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +26,7 @@ public class EnviarVerificacionWhatsAppUseCaseImpl implements EnviarVerificacion
     private final ReferenciaRepository    referenciaRepository;
     private final SolicitudRepository     solicitudRepository;
     private final FactilizaWhatsAppNotificationAdapter whatsApp;
+    private final RegistrarMensajeConversacionUseCase  registrarMensaje;
 
     @Override
     public Mono<Void> ejecutar(String referenciaId, String solicitudId) {
@@ -53,6 +58,13 @@ public class EnviarVerificacionWhatsAppUseCaseImpl implements EnviarVerificacion
                                 updates.put("solicitudId",         solicitudId);
                                 updates.put("metodoVerificacion",  "automatico");
                                 updates.put("updatedAt",           Timestamp.now());
+
+                                registrarMensaje.registrar(
+                                        solicitudId, telefonoRef, nombreRef.trim(),
+                                        RolParticipante.REFERENCIA, DireccionMensaje.OUTBOUND, TipoMensajeWa.TEXTO,
+                                        mensaje, null, "sistema-automatico", null, null
+                                ).subscribe(null, e -> log.warn("[WA-VERIF] Error guardando en conversacion: {}", e.getMessage()));
+
                                 return referenciaRepository.updateFields(referenciaId, updates);
                             })
                             .doOnSuccess(v -> log.info("[WA-VERIF] Enviado a referencia={} telefono={}", referenciaId, telefonoRef))
