@@ -1,9 +1,12 @@
 package com.motoyav2.cobranza.application.service;
 
+import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
 import com.motoyav2.cobranza.application.port.out.ComprobantePagoPort;
 import com.motoyav2.cobranza.application.port.out.EventoCobranzaPort;
+import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.ComprobantePagoDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
+import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.ConflictException;
 import com.motoyav2.shared.exception.NotFoundException;
 import java.util.UUID;
@@ -23,6 +26,8 @@ public class ComprobantesService {
 
     private final ComprobantePagoPort comprobantePagoPort;
     private final EventoCobranzaPort eventoPort;
+    private final CasoCobranzaPort casoPort;
+    private final NotificationFacade notificationFacade;
 
     // -------------------------------------------------------------------------
     // Listar comprobantes con filtros opcionales en memoria
@@ -73,7 +78,44 @@ public class ComprobantesService {
                 .fechaEmision(fechaEmision)
                 .creadoEn(new Date())
                 .build();
-        return comprobantePagoPort.save(doc);
+        return comprobantePagoPort.save(doc)
+                .flatMap(saved -> enviarNotificacionPagoBoleta(contratoId, monto)
+                        .onErrorResume(e -> {
+                            log.warn("No se pudo enviar notificación WhatsApp para boleta {}: {}",
+                                    saved.getNumeroCompleto(), e.getMessage());
+                            return Mono.empty();
+                        })
+                        .thenReturn(saved));
+    }
+
+    private Mono<Void> enviarNotificacionPagoBoleta(String contratoId, Double monto) {
+        return casoPort.findById(contratoId)
+                .filter(caso -> caso.getClienteTelefono() != null && !caso.getClienteTelefono().isBlank())
+                .flatMap(caso -> {
+                    String montoStr = monto != null ? String.format("S/ %.2f", monto) : "registrado";
+                    String clienteNombre = caso.getClienteNombre() != null ? caso.getClienteNombre() : "cliente";
+                    return notificationFacade.notificarPagoConfirmado(
+                            contratoId, caso.getClienteTelefono(), clienteNombre, montoStr);
+                });
+    }
+
+    // -------------------------------------------------------------------------
+    // Reenviar notificación WhatsApp de pago confirmado
+    // -------------------------------------------------------------------------
+
+    public Mono<Void> reenviarNotificacionPago(String comprobanteId) {
+        return comprobantePagoPort.findById(comprobanteId)
+                .switchIfEmpty(Mono.error(new NotFoundException("Comprobante no encontrado: " + comprobanteId)))
+                .flatMap(comp -> casoPort.findById(comp.getContratoId())
+                        .switchIfEmpty(Mono.error(new NotFoundException("Caso no encontrado: " + comp.getContratoId())))
+                        .flatMap(caso -> {
+                            if (caso.getClienteTelefono() == null || caso.getClienteTelefono().isBlank())
+                                return Mono.error(new BadRequestException("El cliente no tiene teléfono registrado"));
+                            String montoStr = String.format("S/ %.2f", comp.getTotal());
+                            String cliente  = caso.getClienteNombre() != null ? caso.getClienteNombre() : "cliente";
+                            return notificationFacade.notificarPagoConfirmado(
+                                    comp.getContratoId(), caso.getClienteTelefono(), cliente, montoStr);
+                        }));
     }
 
     // -------------------------------------------------------------------------

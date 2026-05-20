@@ -717,6 +717,13 @@ public class CobranzaController {
                 });
     }
 
+    @PostMapping("/api/v1/cobranzas/comprobantes/{id}/reenviar-notificacion")
+    public Mono<Map<String, String>> reenviarNotificacionPago(@PathVariable String id) {
+        log.debug("POST /comprobantes/{}/reenviar-notificacion", id);
+        return comprobantesService.reenviarNotificacionPago(id)
+                .thenReturn(Map.of("mensaje", "Notificación WhatsApp enviada correctamente"));
+    }
+
     @PostMapping("/api/v1/cobranzas/comprobantes/{id}/anular")
     public Mono<ComprobantePagoDocument> anularComprobante(
             @PathVariable String id,
