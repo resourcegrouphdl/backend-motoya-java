@@ -45,6 +45,7 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
     private final DetectarDuplicadosUseCase detectarDuplicados;
     private final com.motoyav2.evaluacion.domain.port.out.PersonaRepository personaRepository;
     private final com.motoyav2.gestion.infrastructure.adapter.out.persistence.repository.VendedorProfileRepository vendedorProfileRepository;
+    private final com.motoyav2.gestion.infrastructure.adapter.out.persistence.repository.TiendaProfileRepository tiendaProfileRepository;
 
     @Override
     public Mono<IngresarSolicitudResult> ejecutar(IngresarSolicitudCommand cmd) {
@@ -102,6 +103,20 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
 
                         return tiendaIdResolvedMono.flatMap(resolvedTiendaId -> {
 
+                        // Validar que la tienda esté activa antes de crear la solicitud
+                        Mono<Void> validarTienda = (!resolvedTiendaId.isBlank())
+                                ? tiendaProfileRepository.findById(resolvedTiendaId)
+                                        .flatMap(tiendaDoc -> {
+                                            if (!"activa".equals(tiendaDoc.getTiendaStatus())) {
+                                                return Mono.<Void>error(new com.motoyav2.shared.exception.ForbiddenException(
+                                                        "TIENDA_SUSPENDIDA: El ingreso de nuevas solicitudes ha sido suspendido temporalmente para esta tienda."));
+                                            }
+                                            return Mono.empty();
+                                        })
+                                        .then()
+                                : Mono.empty();
+
+                        return validarTienda.then(Mono.defer(() -> {
                         // 5. Crear solicitud
                         Map<String, Object> solMap = buildSolicitudMap(
                                 cmd, titularId,
@@ -119,6 +134,7 @@ public class IngresarSolicitudUseCaseImpl implements IngresarSolicitudUseCase {
                                     return Mono.just(new IngresarSolicitudResult(
                                             solicitudId, codigoDeSolicitud, "pendiente"));
                                 });
+                        })); // Mono.defer
                         }); // tiendaIdResolvedMono
                     }); // referenciasIdsMono
                 });
