@@ -3,6 +3,7 @@ package com.motoyav2.cobranza.infrastructure.adapter.out.persistence.adapter;
 import com.motoyav2.cobranza.application.port.out.MensajeWhatsappPort;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.MensajeWhatsappDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.repository.MensajeWhatsappRepository;
+import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -31,6 +32,14 @@ public class MensajeWhatsappPortAdapter implements MensajeWhatsappPort {
 
     @Override
     public Flux<MensajeWhatsappDocument> findByContratoId(String contratoId) {
-        return repository.findByContratoId(contratoId);
+        return repository.findByContratoId(contratoId)
+                .sort((a, b) -> {
+                    Date da = a.getEnviadoEn() != null ? a.getEnviadoEn() : a.getRecibidoEn();
+                    Date db = b.getEnviadoEn() != null ? b.getEnviadoEn() : b.getRecibidoEn();
+                    if (da == null && db == null) return 0;
+                    if (da == null) return -1;
+                    if (db == null) return 1;
+                    return da.compareTo(db);
+                });
     }
 }
