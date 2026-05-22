@@ -1,7 +1,9 @@
 package com.motoyav2.notifications.application.usecase;
 
+import com.google.cloud.firestore.Firestore;
 import com.motoyav2.cobranza.application.port.in.ProcesarVoucherWhatsappUseCase;
 import com.motoyav2.cobranza.application.port.out.AlertaCobranzaPort;
+import com.motoyav2.cobranza.application.service.VoucherSueltoService;
 import com.motoyav2.cobranza.application.service.WhatsappService;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.AlertaCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
@@ -20,9 +22,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -54,6 +58,8 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
     private final NotificationFacade                   notificationFacade;
     private final WhatsappService                      whatsappService;
     private final AlertaCobranzaPort                   alertaPort;
+    private final VoucherSueltoService                 voucherSueltoService;
+    private final Firestore                            firestore;
 
     @Override
     public Mono<Void> dispatch(String fromPhone, String text, String mediaType, String mediaUrl) {
@@ -131,9 +137,11 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
                             }
                             return Mono.empty();
                         }))
-                // ── 5. Sin contexto ───────────────────────────────────────────
-                .switchIfEmpty(Mono.fromRunnable(() ->
-                        log.warn("[DISPATCHER] Sin contexto para phone={} — no es referencia, titular, fiador ni cliente de cobranza activo", phone)))
+                // ── 5. Número desconocido — derivar a voucher suelto ─────────
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.info("[DISPATCHER] Número desconocido phone={} — derivando a VoucherSuelto", phone);
+                    return voucherSueltoService.manejarMensajeDesconocido(phone, text, mediaType, mediaUrl);
+                }))
                 .onErrorResume(e -> {
                     if (e.getMessage() != null && e.getMessage().contains("index")) {
                         log.error("[DISPATCHER] *** ÍNDICE FIRESTORE FALTANTE *** phone={}: {}", phone, e.getMessage());
@@ -145,16 +153,45 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
     }
 
     /**
-     * Busca el caso de cobranza activo por teléfono del cliente.
-     * clienteTelefono se almacena como 9 dígitos (sin +51), el phone normalizado
-     * viene como +51XXXXXXXXX — se convierte antes de consultar.
+     * Busca el caso de cobranza activo por teléfono: titular principal,
+     * fiador embebido, y lista de teléfonos adicionales registrados.
      */
     private Mono<CasoCobranzaDocument> buscarCasoActivoPorTelefono(String normalizedPhone) {
-        String telefono9 = toCasoTelefono(normalizedPhone);
-        if (telefono9.isBlank()) return Mono.empty();
-        return casoCobranzaRepository.findByClienteTelefono(telefono9)
+        String tel9 = toCasoTelefono(normalizedPhone);
+        if (tel9.isBlank()) return Mono.empty();
+        return casoCobranzaRepository.findByClienteTelefono(tel9)
                 .filter(c -> c.getCicloVida() == null || !CICLOS_INACTIVOS.contains(c.getCicloVida()))
-                .next();
+                .next()
+                .switchIfEmpty(buscarPorFiadorTelefono(tel9))
+                .switchIfEmpty(buscarPorTelefonoAdicional(tel9));
+    }
+
+    private Mono<CasoCobranzaDocument> buscarPorFiadorTelefono(String tel9) {
+        return Mono.fromCallable(() -> {
+            var snap = firestore.collection("cobranzas-casos")
+                .whereEqualTo("fiador.telefono", tel9)
+                .limit(5).get().get();
+            return snap.getDocuments().stream()
+                .map(doc -> doc.toObject(CasoCobranzaDocument.class))
+                .filter(Objects::nonNull)
+                .filter(c -> c.getCicloVida() == null || !CICLOS_INACTIVOS.contains(c.getCicloVida()))
+                .findFirst().orElse(null);
+        }).subscribeOn(Schedulers.boundedElastic())
+        .filter(Objects::nonNull);
+    }
+
+    private Mono<CasoCobranzaDocument> buscarPorTelefonoAdicional(String tel9) {
+        return Mono.fromCallable(() -> {
+            var snap = firestore.collection("cobranzas-casos")
+                .whereArrayContains("telefonosAdicionales", tel9)
+                .limit(5).get().get();
+            return snap.getDocuments().stream()
+                .map(doc -> doc.toObject(CasoCobranzaDocument.class))
+                .filter(Objects::nonNull)
+                .filter(c -> c.getCicloVida() == null || !CICLOS_INACTIVOS.contains(c.getCicloVida()))
+                .findFirst().orElse(null);
+        }).subscribeOn(Schedulers.boundedElastic())
+        .filter(Objects::nonNull);
     }
 
     /** Convierte +51XXXXXXXXX → XXXXXXXXX (9 dígitos, como se almacena en cobranzas-casos). */

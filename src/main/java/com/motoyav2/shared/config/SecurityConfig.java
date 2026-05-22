@@ -51,6 +51,7 @@ public class SecurityConfig {
                             .pathMatchers(HttpMethod.POST, "/api/v1/cobranzas/admin/limpiar-campo-contrato-id").permitAll()
                             .pathMatchers(HttpMethod.POST, "/api/v1/cobranzas/admin/auto-reconstruir").permitAll()
                             .pathMatchers(HttpMethod.GET, "/api/v1/cobranzas/conciliacion").permitAll()
+                            .pathMatchers("/api/v1/debug/**").permitAll()
                             .anyExchange().authenticated()
                     )
                     .addFilterAt(firebaseAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);
