@@ -69,6 +69,7 @@ public class CobranzaController {
     private final WhatsAppMediaStorageService mediaStorageService;
     private final DebugWaService debugWaService;
     private final MigrarCasosCobranzaService migrarCasosCobranzaService;
+    private final VoucherSueltoService       voucherSueltoService;
 
     // =========================================================================
     // RECUPERACIÓN DE CASOS BORRADOS
@@ -1087,44 +1088,73 @@ public class CobranzaController {
         // Ignorar mensajes enviados por nosotros que rebotan de vuelta
         if (Boolean.TRUE.equals(info.get("FromMe"))) return Mono.empty();
 
-        String fromPhone = (String) info.get("Sender");   // "51957311203@s.whatsapp.net"
-        String wamid     = (String) info.get("ID");
-        String tipo      = (String) info.getOrDefault("Type",      "text");  // "text" | "media"
-        String tsRaw     = info.get("Timestamp") != null ? info.get("Timestamp").toString() : null;
-        Date   fecha     = parseFactilizaTimestamp(tsRaw);
+        String fromPhoneRaw = (String) info.get("Sender");   // "51957311203@s.whatsapp.net"
+        String fromPhone    = limpiarTelefono(fromPhoneRaw); // "+51957311203"
+        String wamid        = (String) info.get("ID");
+        String tipo         = (String) info.getOrDefault("Type", "text");  // "text" | "media"
+        String tsRaw        = info.get("Timestamp") != null ? info.get("Timestamp").toString() : null;
+        Date   fecha        = parseFactilizaTimestamp(tsRaw);
+
+        // Pre-extraer texto y media para tenerlos disponibles en onErrorResume
+        String textoFinal;
+        String mediaUrlFinal;
+        String tipoNormalizadoFinal;
+        if ("media".equals(tipo)) {
+            textoFinal = null;
+            String base64 = (String) message.get("base64");
+            Map<String, Object> imgMsg = (Map<String, Object>) message.get("imageMessage");
+            String mime = imgMsg != null
+                    ? (String) imgMsg.getOrDefault("mimetype", "image/jpeg")
+                    : "image/jpeg";
+            mediaUrlFinal       = (base64 != null && !base64.isBlank()) ? "data:" + mime + ";base64," + base64 : null;
+            tipoNormalizadoFinal = mime.startsWith("image") ? "image" : "document";
+        } else {
+            textoFinal           = (String) message.getOrDefault("conversation", "");
+            mediaUrlFinal        = null;
+            tipoNormalizadoFinal = null;
+        }
 
         return whatsappService.encontrarContratoIdPorTelefono(fromPhone)
                 .flatMap(contratoId -> {
                     if ("media".equals(tipo)) {
-                        String base64 = (String) message.get("base64");
-                        if (base64 == null || base64.isBlank()) {
+                        if (mediaUrlFinal == null) {
                             log.warn("[WEBHOOK-WA] Media sin base64 | contratoId={}", contratoId);
                             return Mono.empty();
                         }
-                        Map<String, Object> imgMsg = (Map<String, Object>) message.get("imageMessage");
-                        String mime = imgMsg != null
-                                ? (String) imgMsg.getOrDefault("mimetype", "image/jpeg")
-                                : "image/jpeg";
-                        String mediaUrl        = "data:" + mime + ";base64," + base64;
-                        String tipoNormalizado = mime.startsWith("image") ? "image" : "document";
-                        log.info("[WEBHOOK-WA] Media entrante | contratoId={} mime={} bytes~{}",
-                                contratoId, mime, base64.length() * 3 / 4);
+                        log.info("[WEBHOOK-WA] Media entrante | contratoId={} tipo={}", contratoId, tipoNormalizadoFinal);
                         return whatsappService.registrarMediaEntrante(
-                                        contratoId, null, fromPhone, mediaUrl, tipoNormalizado, fecha)
+                                        contratoId, null, fromPhone, mediaUrlFinal, tipoNormalizadoFinal, fecha)
                                 .flatMap(mensajeId -> procesarVoucherWhatsappService
-                                        .procesar(contratoId, null, null, fromPhone, mediaUrl, tipoNormalizado, mensajeId));
+                                        .procesar(contratoId, null, null, fromPhone, mediaUrlFinal, tipoNormalizadoFinal, mensajeId));
                     } else {
-                        String texto = (String) message.getOrDefault("conversation", "");
                         log.info("[WEBHOOK-WA] Texto entrante | contratoId={} from={}", contratoId, fromPhone);
                         return whatsappService.registrarMensajeEntrante(
-                                contratoId, null, fromPhone, wamid, texto, fecha)
+                                contratoId, null, fromPhone, wamid, textoFinal, fecha)
                                 .then(whatsappService.actualizarRespuestaCliente(contratoId));
                     }
                 })
                 .onErrorResume(e -> {
-                    log.warn("[WEBHOOK-WA] No se pudo asociar teléfono {} a contrato: {}", fromPhone, e.getMessage());
-                    return Mono.empty();
+                    log.info("[WEBHOOK-WA] Teléfono {} no asociado a contrato — derivando a vouchers sueltos: {}",
+                            fromPhone, e.getMessage());
+                    return voucherSueltoService.manejarMensajeDesconocido(
+                            fromPhone, textoFinal, tipoNormalizadoFinal, mediaUrlFinal);
                 });
+    }
+
+    /** Normaliza un teléfono de Factiliza al formato +51XXXXXXXXX.
+     *  Entrada: "51957311203@s.whatsapp.net", "51957311203@c.us", "51957311203", "957311203", "+51957311203"
+     *  Salida:  "+51957311203"
+     */
+    private static String limpiarTelefono(String raw) {
+        if (raw == null) return "";
+        // Quitar sufijo de dominio (@s.whatsapp.net, @c.us, etc.)
+        String tel = raw.contains("@") ? raw.substring(0, raw.indexOf('@')) : raw;
+        // Quitar + inicial si existe para normalizar
+        tel = tel.startsWith("+") ? tel.substring(1) : tel;
+        // Agregar código de país si es número de 9 dígitos (sin código país)
+        if (tel.length() == 9) tel = "51" + tel;
+        // Devolver siempre con +
+        return "+" + tel;
     }
 
     /** GET /webhooks/whatsapp — verificación del webhook (challenge) */
