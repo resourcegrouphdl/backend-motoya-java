@@ -46,6 +46,16 @@ public class VoucherSueltoService {
     private static final List<String>   CICLOS_INACTIVOS = List.of("PAGADO_TOTAL", "JUDICIAL", "CASTIGADO", "CERRADO");
     private static final long           EXPIRACION_MS    = 30L * 60 * 1000;
     private static final Pattern        PATRON_DNI       = Pattern.compile("\\b(\\d{8})\\b");
+    private static final Pattern        PATRON_CE        = Pattern.compile("\\b([Cc][Ee][-\\s]?\\d{6,9})\\b");
+    private static final Pattern        PATRON_PLACA     = Pattern.compile("\\b([A-Za-z]{3,4}[-\\s]?\\d{3}(?:\\d{1})?)\\b");
+
+    private static final String MSG_PEDIR_DATOS =
+        "Hola, recibimos tu comprobante de pago. Para registrarlo correctamente, " +
+        "por favor indicanos los siguientes datos del titular del credito:\n\n" +
+        "1. *Nombre completo* del titular\n" +
+        "2. *Numero de documento* (DNI o Carnet de Extranjeria)\n" +
+        "3. *Placa del vehiculo*\n\n" +
+        "Puedes responder todo en un solo mensaje. Gracias.";
     private static final String         COL_SUELTOS      = "cobranzas-vouchers-sueltos";
     private static final String         COL_CASOS        = "cobranzas-casos";
 
@@ -150,9 +160,7 @@ public class VoucherSueltoService {
                     .build();
                 return estadoConversacionRepository.save(estado);
             })
-            .flatMap(e -> whatsAppSenderPort.enviarTexto(phone,
-                "Hola, recibimos tu comprobante de pago. Para registrarlo correctamente, " +
-                "por favor indicanos el numero de DNI del titular del credito asociado a este pago."))
+            .flatMap(e -> whatsAppSenderPort.enviarTexto(phone, MSG_PEDIR_DATOS))
             .onErrorResume(e -> {
                 log.warn("[VOUCHER-SUELTO] Error procesando media de {}: {}", phone, e.getMessage());
                 return Mono.empty();
@@ -162,13 +170,20 @@ public class VoucherSueltoService {
 
     private Mono<Void> procesarRespuestaIdentificacion(String phone, String tel9, String text,
                                                         EstadoConversacionDocument estado) {
-        Optional<String> dniOpt = extraerDni(text);
-        String voucherSueltoId  = estado.getVoucherSueltoId();
+        Optional<String> dniOpt   = extraerDni(text);
+        Optional<String> ceOpt    = extraerCe(text);
+        Optional<String> placaOpt = extraerPlaca(text);
+        // Documento de identidad: prioriza DNI, si no hay intenta CE
+        Optional<String> docOpt   = dniOpt.isPresent() ? dniOpt : ceOpt;
+        String voucherSueltoId    = estado.getVoucherSueltoId();
 
         Mono<Void> guardarDatos = Mono.fromCallable(() -> {
             Map<String, Object> datos = new HashMap<>();
             datos.put("textoRecibido", text);
+            docOpt.ifPresent(doc -> datos.put("documento", doc));
             dniOpt.ifPresent(dni -> datos.put("dni", dni));
+            ceOpt.ifPresent(ce  -> datos.put("ce", ce));
+            placaOpt.ifPresent(p -> datos.put("placa", p));
             firestore.collection(COL_SUELTOS).document(voucherSueltoId)
                 .update("datosProporcionados", datos).get();
             return null;
@@ -177,17 +192,17 @@ public class VoucherSueltoService {
         Mono<Void> limpiarEstado = estadoConversacionRepository.deleteById(tel9).then();
         String msgGracias = "Gracias por la informacion. Un asesor revisara tu comprobante a la brevedad.";
 
-        if (dniOpt.isEmpty()) {
+        if (docOpt.isEmpty()) {
             return guardarDatos.then(limpiarEstado)
                 .then(whatsAppSenderPort.enviarTexto(phone, msgGracias)).then();
         }
 
         return guardarDatos
-            .then(casoCobranzaRepository.findByClienteDni(dniOpt.get())
+            .then(casoCobranzaRepository.findByClienteDni(docOpt.get())
                 .filter(c -> c.getCicloVida() == null || !CICLOS_INACTIVOS.contains(c.getCicloVida()))
                 .next())
             .flatMap(caso -> {
-                log.info("[VOUCHER-SUELTO] Auto-match DNI={} → contratoId={}", dniOpt.get(), caso.getContratoId());
+                log.info("[VOUCHER-SUELTO] Auto-match doc={} → contratoId={}", docOpt.get(), caso.getContratoId());
                 return voucherSueltoRepository.findById(voucherSueltoId)
                     .flatMap(doc -> asociarInterno(doc, caso, "SISTEMA"))
                     .then(limpiarEstado)
@@ -267,6 +282,18 @@ public class VoucherSueltoService {
         if (text == null) return Optional.empty();
         Matcher m = PATRON_DNI.matcher(text);
         return m.find() ? Optional.of(m.group(1)) : Optional.empty();
+    }
+
+    private Optional<String> extraerCe(String text) {
+        if (text == null) return Optional.empty();
+        Matcher m = PATRON_CE.matcher(text);
+        return m.find() ? Optional.of(m.group(1).toUpperCase().replaceAll("\\s", "")) : Optional.empty();
+    }
+
+    private Optional<String> extraerPlaca(String text) {
+        if (text == null) return Optional.empty();
+        Matcher m = PATRON_PLACA.matcher(text);
+        return m.find() ? Optional.of(m.group(1).toUpperCase().replaceAll("[-\\s]", "")) : Optional.empty();
     }
 
     private String toTelefono9(String phone) {
