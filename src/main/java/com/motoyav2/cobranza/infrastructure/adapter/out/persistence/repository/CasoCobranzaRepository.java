@@ -21,4 +21,6 @@ public interface CasoCobranzaRepository extends FirestoreReactiveRepository<Caso
     Flux<CasoCobranzaDocument> findByAgenteAsignadoIdAndEstadoCaso(String agenteAsignadoId, String estadoCaso);
 
     Flux<CasoCobranzaDocument> findByClienteTelefono(String clienteTelefono);
+
+    Flux<CasoCobranzaDocument> findByClienteDni(String clienteDni);
 }

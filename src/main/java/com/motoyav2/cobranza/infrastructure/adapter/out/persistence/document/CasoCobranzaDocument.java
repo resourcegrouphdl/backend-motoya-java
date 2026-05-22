@@ -89,6 +89,8 @@ public class CasoCobranzaDocument {
     // Contactabilidad
     /** Mensajes INBOUND no leídos por el agente (se resetea al abrir el chat). */
     private Integer mensajesNoLeidos;
+    /** Números alternativos del titular/fiador. El dispatcher los reconoce igual que clienteTelefono. */
+    private List<String> telefonosAdicionales;
     /** Última vez que el cliente respondió un mensaje de WhatsApp. */
     private Date ultimaRespuestaCliente;
 
