@@ -49,6 +49,16 @@ public class ReferenciaClasificadorService {
      * En caso de error retorna DUDOSA con confianza 0 (no bloquea el flujo).
      */
     public Mono<ResultadoClasificacion> clasificar(String respuesta) {
+        // Fast-path: payload de botón del template Meta — determinístico, sin Claude
+        if (esBotonPositivo(respuesta)) {
+            log.info("[CLASIFICADOR-REF] Botón confirmación → POSITIVA (confianza=1.0)");
+            return Mono.just(new ResultadoClasificacion(Clasificacion.POSITIVA, 1.0));
+        }
+        if (esBotonNegativo(respuesta)) {
+            log.info("[CLASIFICADOR-REF] Botón negación → NEGATIVA (confianza=1.0)");
+            return Mono.just(new ResultadoClasificacion(Clasificacion.NEGATIVA, 1.0));
+        }
+
         if (!enabled || apiKey == null || apiKey.isBlank() || respuesta == null || respuesta.isBlank()) {
             return Mono.just(new ResultadoClasificacion(Clasificacion.DUDOSA, 0.0));
         }
@@ -94,6 +104,21 @@ public class ReferenciaClasificadorService {
 
                 Respuesta a clasificar: "%s"
                 """.formatted(respuesta.replace("\"", "'").substring(0, Math.min(respuesta.length(), 500)));
+    }
+
+    private static boolean esBotonPositivo(String r) {
+        if (r == null) return false;
+        String lower = r.toLowerCase().trim();
+        return r.equals("REFERENCIA_CONFIRMA")
+                || lower.startsWith("sí, lo conozco")
+                || lower.startsWith("si, lo conozco");
+    }
+
+    private static boolean esBotonNegativo(String r) {
+        if (r == null) return false;
+        String lower = r.toLowerCase().trim();
+        return r.equals("REFERENCIA_NIEGA")
+                || lower.startsWith("no lo conozco");
     }
 
     @SuppressWarnings("unchecked")
