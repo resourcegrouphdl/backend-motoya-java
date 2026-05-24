@@ -104,7 +104,7 @@ public class MetaTemplateRegistry {
     }
 
     private static void reg(NotificationTemplate template, String metaName, List<String> slots) {
-        REGISTRY.put(template, new MetaTemplateConfig(metaName, "es", slots));
+        REGISTRY.put(template, new MetaTemplateConfig(metaName, "es_PE", slots));
     }
 
     public Optional<MetaTemplateConfig> find(NotificationTemplate template) {
