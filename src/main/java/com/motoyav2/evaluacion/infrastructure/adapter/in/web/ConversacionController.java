@@ -8,7 +8,7 @@ import com.motoyav2.notifications.domain.model.conversacion.RolParticipante;
 import com.motoyav2.notifications.domain.model.conversacion.TipoMensajeWa;
 import com.motoyav2.notifications.domain.port.in.RegistrarMensajeConversacionUseCase;
 import com.motoyav2.notifications.domain.port.out.ConversacionRepository;
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaWhatsAppNotificationAdapter;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppNotificationAdapter;
 import com.motoyav2.shared.security.FirebaseUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,7 +33,7 @@ public class ConversacionController {
 
     private final ConversacionRepository                conversacionRepository;
     private final RegistrarMensajeConversacionUseCase   registrarMensaje;
-    private final FactilizaWhatsAppNotificationAdapter  whatsApp;
+    private final MetaWhatsAppNotificationAdapter       whatsApp;
 
     // ── [1] Listar conversaciones de una solicitud ────────────────────────────
 

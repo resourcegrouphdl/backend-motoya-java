@@ -7,7 +7,7 @@ import com.motoyav2.notifications.domain.model.conversacion.DireccionMensaje;
 import com.motoyav2.notifications.domain.model.conversacion.RolParticipante;
 import com.motoyav2.notifications.domain.model.conversacion.TipoMensajeWa;
 import com.motoyav2.notifications.domain.port.in.RegistrarMensajeConversacionUseCase;
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaWhatsAppNotificationAdapter;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppNotificationAdapter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,7 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class EnviarBienvenidaWhatsAppUseCaseImpl implements EnviarBienvenidaWhatsAppUseCase {
 
-    private final FactilizaWhatsAppNotificationAdapter whatsApp;
+    private final MetaWhatsAppNotificationAdapter whatsApp;
     private final RegistrarMensajeConversacionUseCase  registrarMensaje;
     private final SolicitudRepository                  solicitudRepository;
 

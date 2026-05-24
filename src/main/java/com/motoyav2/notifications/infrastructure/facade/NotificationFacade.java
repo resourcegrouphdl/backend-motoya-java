@@ -521,6 +521,28 @@ public class NotificationFacade {
     }
 
     /**
+     * Notifica al titular (o fiador) por WhatsApp que se agendó su entrevista de crédito.
+     *
+     * @param solicitudId       ID de la solicitud
+     * @param telefono          Teléfono del titular o fiador (9 dígitos sin país)
+     * @param cliente           Nombre del titular o fiador
+     * @param codigoDeSolicitud Código visible de la solicitud
+     */
+    public Mono<Void> notificarEntrevistaAgendada(
+            String solicitudId, String telefono, String cliente, String codigoDeSolicitud) {
+
+        if (telefono == null || telefono.isBlank()) return Mono.empty();
+
+        return publishEvent.publish(
+                        BusinessEventType.SOLICITUD_INGRESADA, solicitudId,
+                        NotificationChannel.WHATSAPP, telefono,
+                        NotificationTemplate.CREDITO_MOTO_ENTREVISTA_WHATSAPP,
+                        Map.of("cliente",           cliente           != null ? cliente           : "",
+                               "codigoDeSolicitud", codigoDeSolicitud != null ? codigoDeSolicitud : solicitudId))
+                .onErrorResume(e -> { log.warn("[FACADE] Error notificando entrevista: {}", e.getMessage()); return Mono.empty(); });
+    }
+
+    /**
      * Notifica al vendedor por WhatsApp cuando cambia el estado de su solicitud.
      * Solo para estados relevantes para el vendedor (aprobado, rechazado, etc.).
      */

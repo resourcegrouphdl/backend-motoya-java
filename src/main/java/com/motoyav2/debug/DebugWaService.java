@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QuerySnapshot;
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaWhatsAppNotificationAdapter;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppNotificationAdapter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ public class DebugWaService {
 
     private final Firestore firestore;
     private final ObjectMapper objectMapper;
-    private final FactilizaWhatsAppNotificationAdapter factilizaAdapter;
+    private final MetaWhatsAppNotificationAdapter metaAdapter;
 
     /** Guarda el payload raw del webhook — llamado ANTES de cualquier otra lógica. */
     public Mono<Void> guardarPayload(Map<String, Object> payload) {
@@ -104,7 +104,7 @@ public class DebugWaService {
 
     /** Envía un mensaje de texto via Factiliza y lo guarda en el log de debug. */
     public Mono<Map<String, Object>> enviarMensaje(String numero, String texto) {
-        return factilizaAdapter.sendText(numero, texto)
+        return metaAdapter.sendText(numero, texto)
                 .flatMap(wamid -> Mono.fromCallable(() -> {
                     Map<String, Object> doc = new HashMap<>();
                     doc.put("evento",       "SENT");

@@ -10,7 +10,7 @@ import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendEmailReq
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendMediaRequest;
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendNotificationRequest;
 import com.motoyav2.notifications.infrastructure.adapter.in.web.dto.SendNotificationResponse;
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaWhatsAppNotificationAdapter;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppNotificationAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -39,7 +39,7 @@ public class NotificationController {
 
     private final SendNotificationUseCase sendNotificationUseCase;
     private final PublishBusinessEventUseCase publishBusinessEventUseCase;
-    private final FactilizaWhatsAppNotificationAdapter factilizaAdapter;
+    private final MetaWhatsAppNotificationAdapter metaAdapter;
     private final StoragePort storagePort;
 
     /**
@@ -164,10 +164,10 @@ public class NotificationController {
                 req.recipient(), req.storagePath(), req.mediaType());
 
         return storagePort.getDownloadUrl(req.storagePath())
-                .flatMap(url -> factilizaAdapter.sendMedia(
+                .flatMap(url -> metaAdapter.sendMedia(
                         req.recipient(),
-                        url,
                         req.mediaType(),
+                        url,
                         req.filename(),
                         req.caption()))
                 .thenReturn(SendNotificationResponse.direct())
