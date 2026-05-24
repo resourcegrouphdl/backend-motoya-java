@@ -1,6 +1,6 @@
 package com.motoyav2.notifications.infrastructure.config;
 
-import com.motoyav2.notifications.infrastructure.channel.whatsapp.FactilizaProperties;
+import com.motoyav2.notifications.infrastructure.channel.whatsapp.MetaWhatsAppProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -18,22 +18,19 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
  * con el TemplateEngine autoconfigurado por Spring Boot usado en la generación de PDFs.
  *
  * Resolvedores configurados:
- *   1. TEXT resolver → notification-templates/whatsapp/*.txt
+ *   1. TEXT resolver → notification-templates/whatsapp/*.txt  (referencia/fallback)
  *   2. HTML resolver → notification-templates/email/*.html
  */
 @Configuration
 @EnableScheduling
 public class NotificationConfig {
 
-    /**
-     * WebClient dedicado a la API WhatsApp de Factiliza.
-     * Base URL: https://apiwsp.factiliza.com/v1 — la instancia se añade en cada llamada.
-     */
-    @Bean("factilizaWhatsAppWebClient")
-    public WebClient factilizaWhatsAppWebClient(FactilizaProperties properties) {
+    /** WebClient para Meta WhatsApp Cloud API (graph.facebook.com). */
+    @Bean("metaWhatsAppWebClient")
+    public WebClient metaWhatsAppWebClient(MetaWhatsAppProperties properties) {
         return WebClient.builder()
-                .baseUrl(properties.getBaseUrl())
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getToken())
+                .baseUrl("https://graph.facebook.com")
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getAccessToken())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .build();

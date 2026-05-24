@@ -117,6 +117,11 @@ public enum NotificationTemplate {
       NotificationChannel.EMAIL,
       "Agenda tu entrevista de crédito - Motoya Digital"),
 
+  CREDITO_MOTO_ENTREVISTA_WHATSAPP(
+      "credito_moto_entrevista_solicitud",
+      NotificationChannel.WHATSAPP,
+      "Entrevista de crédito - Motoya Digital"),
+
   SOLICITUD_CAMBIO_ESTADO_VENDEDOR(
       "solicitud_cambio_estado_vendedor",
       NotificationChannel.WHATSAPP,

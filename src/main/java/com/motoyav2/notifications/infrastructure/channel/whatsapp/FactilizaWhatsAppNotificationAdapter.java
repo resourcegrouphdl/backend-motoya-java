@@ -24,8 +24,8 @@ import java.util.Map;
  *   notifications.factiliza.base-url → https://api.whatsapp.json.pe
  *   notifications.factiliza.token    → Bearer token
  */
+// Reemplazado por MetaWhatsAppNotificationAdapter. Mantenido como referencia histórica.
 @Slf4j
-@Component
 public class FactilizaWhatsAppNotificationAdapter implements NotificationSenderPort {
 
     private final WebClient webClient;
