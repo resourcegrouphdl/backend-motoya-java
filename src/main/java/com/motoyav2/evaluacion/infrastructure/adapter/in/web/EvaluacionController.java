@@ -62,6 +62,7 @@ public class EvaluacionController {
     private final com.motoyav2.evaluacion.domain.port.in.ReenviarBienvenidaWaUseCase reenviarBienvenidaWaUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.AnalizarSentinelUseCase analizarSentinelUseCase;
     private final com.motoyav2.evaluacion.domain.port.in.EliminarSolicitudUseCase eliminarSolicitudUseCase;
+    private final com.motoyav2.evaluacion.domain.port.in.AnalizarRedConexionesUseCase analizarRedConexionesUseCase;
     private final Firestore firestore;
 
     // ── GET /expediente/{solicitudId} ──────────────────────────────────────
@@ -628,5 +629,15 @@ public class EvaluacionController {
         return eliminarSolicitudUseCase.eliminar(solicitudId)
                 .onErrorMap(com.motoyav2.shared.exception.NotFoundException.class,
                         e -> new NotFoundException(e.getMessage()));
+    }
+
+    // ── GET /expediente/{solicitudId}/red-conexiones ───────────────────────
+    @GetMapping("/expediente/{solicitudId}/red-conexiones")
+    public Mono<List<com.motoyav2.evaluacion.infrastructure.adapter.in.web.response.HallazgoRedConexionesDto>> analizarRedConexiones(
+            @PathVariable String solicitudId) {
+        return analizarRedConexionesUseCase.analizar(solicitudId)
+                .map(hallazgos -> hallazgos.stream()
+                        .map(com.motoyav2.evaluacion.infrastructure.adapter.in.web.response.HallazgoRedConexionesDto::from)
+                        .toList());
     }
 }
