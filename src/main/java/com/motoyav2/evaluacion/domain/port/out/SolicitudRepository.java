@@ -22,6 +22,10 @@ public interface SolicitudRepository {
     Mono<Solicitud> findActivaByTitularTelefono(String telefono);
     /** Busca la solicitud activa más reciente para un teléfono de fiador (para webhook dispatcher). */
     Mono<Solicitud> findActivaByFiadorTelefono(String telefono);
+    /** Busca todas las solicitudes (cualquier estado) con ese teléfono de titular (para red de conexiones). */
+    Flux<Solicitud> findByTitularTelefono(String telefono, int limit);
+    /** Busca todas las solicitudes (cualquier estado) con ese teléfono de fiador (para red de conexiones). */
+    Flux<Solicitud> findByFiadorTelefono(String telefono, int limit);
     /** Solicitudes en estados tempranos sin actividad en los últimos N días. */
     Flux<Solicitud> findAbandonadas(int diasInactividad);
     Mono<String> create(Map<String, Object> fields);

@@ -1,0 +1,14 @@
+{
+  "name": "migrar-lista-negra",
+  "version": "1.0.0",
+  "description": "Migración Excel → colección riesgo_registros en Firestore",
+  "main": "migrar.js",
+  "scripts": {
+    "dry-run": "node migrar.js --dry-run",
+    "migrar":  "node migrar.js"
+  },
+  "dependencies": {
+    "csv-parse":    "^5.5.6",
+    "firebase-admin": "^12.3.0"
+  }
+}

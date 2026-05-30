@@ -50,6 +50,15 @@ public class ReferenciaRepositoryAdapter implements ReferenciaRepository {
     }
 
     @Override
+    public Flux<Referencia> findByTelefono(String telefono, int limit) {
+        if (telefono == null || telefono.isBlank()) return Flux.empty();
+        return toFlux(db.collection(COL)
+                        .whereEqualTo("telefono", normalizePhone(telefono))
+                        .limit(limit).get())
+                .mapNotNull(ReferenciaMapper::toDomain);
+    }
+
+    @Override
     public Mono<String> create(Map<String, Object> fields) {
         return toMono(db.collection(COL).add(fields))
                 .map(ref -> ref.getId());

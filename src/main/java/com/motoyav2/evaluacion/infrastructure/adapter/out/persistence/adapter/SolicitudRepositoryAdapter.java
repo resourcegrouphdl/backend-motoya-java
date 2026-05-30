@@ -168,6 +168,26 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
     }
 
     @Override
+    public Flux<Solicitud> findByTitularTelefono(String telefono, int limit) {
+        if (telefono == null || telefono.isBlank()) return Flux.empty();
+        return toFlux(db.collection(COL)
+                        .whereEqualTo("titularTelefono", normalizePhone(telefono))
+                        .orderBy("createdAt", Query.Direction.DESCENDING)
+                        .limit(limit).get())
+                .mapNotNull(SolicitudMapper::toDomain);
+    }
+
+    @Override
+    public Flux<Solicitud> findByFiadorTelefono(String telefono, int limit) {
+        if (telefono == null || telefono.isBlank()) return Flux.empty();
+        return toFlux(db.collection(COL)
+                        .whereEqualTo("fiadorTelefono", normalizePhone(telefono))
+                        .orderBy("createdAt", Query.Direction.DESCENDING)
+                        .limit(limit).get())
+                .mapNotNull(SolicitudMapper::toDomain);
+    }
+
+    @Override
     public Flux<Solicitud> findAbandonadas(int diasInactividad) {
         Timestamp cutoff = Timestamp.ofTimeSecondsAndNanos(
                 Instant.now().minusSeconds((long) diasInactividad * 86_400).getEpochSecond(), 0);
