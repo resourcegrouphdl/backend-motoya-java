@@ -31,6 +31,7 @@ public class Factura {
     LocalDate fechaEmisionFactura;
     BigDecimal montoTotal;
     LocalDate fechaFactura;
+    LocalDate fechaCreacion;
     int condicionPago;
     EstadoPago estado;
     List<PagoFactura> pagos;

@@ -125,6 +125,7 @@ public class FacturaPortAdapter implements FacturaPort {
                 .fechaEmisionFactura(parseDate(doc.getFechaEmisionFactura()))
                 .montoTotal(doc.getMontoTotal() != null ? BigDecimal.valueOf(doc.getMontoTotal()) : BigDecimal.ZERO)
                 .fechaFactura(parseDate(doc.getFechaFactura()))
+                .fechaCreacion(parseDate(doc.getCreadoEn()))
                 .condicionPago(doc.getCondicionPago() != null ? doc.getCondicionPago() : 0)
                 .estado(parseEstadoPago(doc.getEstado()))
                 .pagos(pagos)

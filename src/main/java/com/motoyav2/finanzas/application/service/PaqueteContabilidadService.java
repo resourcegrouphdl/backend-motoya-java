@@ -48,7 +48,7 @@ public class PaqueteContabilidadService implements GenerarPaqueteContabilidadUse
                 .collectList()
                 .flatMap(todas -> {
                     List<Factura> relevantes = todas.stream()
-                            .filter(f -> tieneAlgunPagoPagadoEnPeriodo(f, fechaInicio, fechaFin))
+                            .filter(f -> facturaEnPeriodo(f, fechaInicio, fechaFin))
                             .sorted(Comparator.comparing(Factura::getNumero,
                                     Comparator.nullsLast(Comparator.naturalOrder())))
                             .toList();
@@ -64,7 +64,7 @@ public class PaqueteContabilidadService implements GenerarPaqueteContabilidadUse
                                         "). Reduzca el rango de fechas."));
                     }
 
-                    log.info("[PaqueteContabilidad] {} facturas · {} vouchers para {}/{}",
+                    log.info("[PaqueteContabilidad] {} facturas por fecha de emisión · {} vouchers PAGADO — período {}/{}",
                             relevantes.size(), totalVouchers, fechaInicio, fechaFin);
 
                     return Mono.fromCallable(() -> buildZip(relevantes, fechaInicio, fechaFin))
@@ -221,13 +221,20 @@ public class PaqueteContabilidadService implements GenerarPaqueteContabilidadUse
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private boolean tieneAlgunPagoPagadoEnPeriodo(Factura f, LocalDate desde, LocalDate hasta) {
-        if (f.getPagos() == null) return false;
-        return f.getPagos().stream().anyMatch(p ->
-                p.getEstado() == EstadoPago.PAGADO
-                        && p.getFechaPago() != null
-                        && !p.getFechaPago().isBefore(desde)
-                        && !p.getFechaPago().isAfter(hasta));
+    /**
+     * Fecha efectiva de la factura para clasificarla en un período contable.
+     * Cascada: fechaFactura → fechaEmisionFactura → fechaCreacion (subida al sistema).
+     */
+    private LocalDate fechaEfectivaFactura(Factura f) {
+        if (f.getFechaFactura() != null)      return f.getFechaFactura();
+        if (f.getFechaEmisionFactura() != null) return f.getFechaEmisionFactura();
+        return f.getFechaCreacion();
+    }
+
+    private boolean facturaEnPeriodo(Factura f, LocalDate desde, LocalDate hasta) {
+        LocalDate fecha = fechaEfectivaFactura(f);
+        if (fecha == null) return false;
+        return !fecha.isBefore(desde) && !fecha.isAfter(hasta);
     }
 
     private String gcsPathDeUrl(String url) {
