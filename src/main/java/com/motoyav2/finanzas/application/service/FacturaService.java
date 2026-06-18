@@ -13,6 +13,7 @@ import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
 import com.motoyav2.shared.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -33,6 +34,9 @@ public class FacturaService implements ListarFacturasUseCase, ObtenerFacturaUseC
     private final FacturaPort facturaPort;
     private final DocumentAiService documentAiService;
     private final NotificationFacade notificationFacade;
+
+    @Value("${app.notifications.cobranzas.enabled:false}")
+    private boolean notificacionesEnabled;
 
     // ── ListarFacturasUseCase ──────────────────────────────────────────────
 
@@ -131,6 +135,10 @@ public class FacturaService implements ListarFacturasUseCase, ObtenerFacturaUseC
     // ── Notificación async (fire-and-forget) ─────────────────────────────
 
     private void notificarPagoAsync(Factura factura, PagoFactura pago, RegistrarPagoCommand command) {
+        if (!notificacionesEnabled) {
+            log.info("[Finanzas] Notificación WhatsApp desactivada (app.notifications.cobranzas.enabled=false) — factura {}", factura.getId());
+            return;
+        }
         String conceptoLabel = (pago.getConcepto() == TipoConceptoPago.INICIAL)
                 ? "Pago Inicial" : "Pago de Saldo";
         String montoStr = "S/ " + (pago.getMonto() != null
