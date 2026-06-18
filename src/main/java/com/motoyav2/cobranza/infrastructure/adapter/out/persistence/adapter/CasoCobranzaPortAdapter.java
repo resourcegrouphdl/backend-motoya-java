@@ -101,6 +101,11 @@ public class CasoCobranzaPortAdapter implements CasoCobranzaPort {
     }
 
     @Override
+    public Flux<CasoCobranzaDocument> findByClienteTelefono(String clienteTelefono) {
+        return repository.findByClienteTelefono(clienteTelefono);
+    }
+
+    @Override
     public Flux<CasoCobranzaDocument> findAll() {
         return repository.findAll()
                 .onErrorContinue(RuntimeException.class,

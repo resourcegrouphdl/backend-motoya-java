@@ -69,10 +69,7 @@ public class ConversacionController {
                         req.texto(), null, evaluadorNombre, null, null))
                 .thenReturn(Map.of("status", "sent"))
                 .doOnSuccess(v -> log.info("[CONV-CTRL] Mensaje manual enviado | solicitud={} evaluador={}", solicitudId, evaluadorNombre))
-                .onErrorResume(e -> {
-                    log.error("[CONV-CTRL] Error enviando mensaje manual: {}", e.getMessage());
-                    return Mono.just(Map.of("status", "error", "message", e.getMessage()));
-                });
+                .doOnError(e -> log.error("[CONV-CTRL] Error enviando mensaje manual | solicitud={} error={}", solicitudId, e.getMessage()));
     }
 
     // ── DTOs ──────────────────────────────────────────────────────────────────

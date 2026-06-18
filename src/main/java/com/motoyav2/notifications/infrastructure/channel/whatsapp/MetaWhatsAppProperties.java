@@ -20,4 +20,12 @@ public class MetaWhatsAppProperties {
 
     /** Token secreto para verificación del webhook (configurar en Meta BM → Webhooks). */
     private String webhookVerifyToken = "";
+
+    /**
+     * App Secret de la Meta App — usado para validar la firma HMAC-SHA256
+     * del header X-Hub-Signature-256 en cada webhook.
+     * Obtener en: Meta Business Manager → App → Configuración básica → App Secret.
+     * En prod: env var META_WA_APP_SECRET en Cloud Run.
+     */
+    private String appSecret = "";
 }

@@ -1,0 +1,547 @@
+{
+  "info": {
+    "name": "Motoya — WhatsApp Completo",
+    "_postman_id": "motoya-wa-completo-v2",
+    "description": "Colección completa para probar el sistema WhatsApp de Motoya.\n\nCubre:\n1. Debug (sin auth) — enviar y ver payloads\n2. Webhook Meta Cloud API — simular mensajes entrantes reales\n3. Webhook Factiliza — formato alternativo\n4. Panel de cobranza — plantillas, preview, envío, historial\n5. Ciclo de vida del caso\n6. Flujo end-to-end completo\n\nVariables requeridas en el Environment:\n  base_url       → http://localhost:8080 (o URL de Cloud Run)\n  token          → Bearer token Firebase del agente admin\n  contrato_id    → CTR-XXXX de un caso activo con teléfono registrado\n  telefono       → 9 dígitos sin +51 (ej: 987654321)\n  solicitud_id   → ID de una solicitud activa (para evaluación)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",      "value": "http://localhost:8080", "description": "Cambiar a URL de Cloud Run para prod" },
+    { "key": "token",         "value": "",                      "description": "Bearer token Firebase — obtener de localStorage en el app" },
+    { "key": "contrato_id",   "value": "CTR-1001",             "description": "ID de caso de cobranza activo" },
+    { "key": "telefono",      "value": "987654321",            "description": "Teléfono sin +51 del cliente (9 dígitos)" },
+    { "key": "wamid_enviado", "value": "",                      "description": "Se setea automáticamente al enviar un mensaje" },
+    { "key": "mensaje_id",    "value": "",                      "description": "ID de mensaje en Firestore" },
+    { "key": "solicitud_id",  "value": "",                      "description": "ID de solicitud activa (para evaluación)" }
+  ],
+  "item": [
+    {
+      "name": "0. Health check",
+      "item": [
+        {
+          "name": "0.1 Ping — servidor activo",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Servidor responde', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/actuator/health", "host": ["{{base_url}}"], "path": ["actuator","health"] }
+          }
+        },
+        {
+          "name": "0.2 Swagger UI disponible",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/swagger-ui.html", "host": ["{{base_url}}"], "path": ["swagger-ui.html"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Debug WA (sin autenticación)",
+      "description": "Endpoints de diagnóstico — no requieren token. Solo disponibles en dev/local.",
+      "item": [
+        {
+          "name": "1.1 Ver últimos 50 payloads recibidos",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Es un array', () => pm.expect(Array.isArray(json)).to.be.true);",
+            "console.log('Payloads guardados:', json.length);",
+            "if (json.length > 0) console.log('Último:', JSON.stringify(json[0], null, 2));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/debug/wa/mensajes", "host": ["{{base_url}}"], "path": ["api","v1","debug","wa","mensajes"] }
+          }
+        },
+        {
+          "name": "1.2 Enviar mensaje de texto libre a número real",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Status OK', () => pm.expect(json.status).to.eql('OK'));",
+            "if (json.wamid) {",
+            "  pm.collectionVariables.set('wamid_enviado', json.wamid);",
+            "  console.log('✅ Mensaje enviado | wamid:', json.wamid);",
+            "} else {",
+            "  console.warn('⚠️ Sin wamid — revisar configuración Meta');",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/debug/wa/enviar", "host": ["{{base_url}}"], "path": ["api","v1","debug","wa","enviar"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero\": \"+51{{telefono}}\",\n  \"texto\": \"🏍️ Prueba desde Motoya Admin — {{$timestamp}}. Si recibes esto, el sistema WA funciona.\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Webhook Meta Cloud API",
+      "description": "Simula los payloads que Meta envía cuando un cliente escribe por WhatsApp.\nUSO: el teléfono '{{telefono}}' debe corresponder a un contrato o solicitud activa.",
+      "item": [
+        {
+          "name": "2.1 Verificación webhook (GET — Meta lo hace al configurar)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "pm.test('Devuelve el challenge', () => pm.expect(pm.response.text()).to.eql('MOTOYA_TEST_CHALLENGE'));",
+            "console.log('✅ Webhook verificado correctamente');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/webhook/meta?hub.mode=subscribe&hub.verify_token=motoya-meta-verify&hub.challenge=MOTOYA_TEST_CHALLENGE",
+              "host": ["{{base_url}}"], "path": ["webhook","meta"],
+              "query": [
+                { "key": "hub.mode", "value": "subscribe" },
+                { "key": "hub.verify_token", "value": "motoya-meta-verify" },
+                { "key": "hub.challenge", "value": "MOTOYA_TEST_CHALLENGE" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.2 Mensaje de texto entrante (cliente escribe)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "pm.test('Status received', () => pm.expect(pm.response.json().status).to.eql('received'));",
+            "console.log('✅ Mensaje procesado — revisar logs del dispatcher en Cloud Run');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{\n    \"id\": \"WABA_ID\",\n    \"changes\": [{\n      \"value\": {\n        \"messaging_product\": \"whatsapp\",\n        \"metadata\": { \"phone_number_id\": \"1156572900879077\" },\n        \"messages\": [{\n          \"from\": \"51{{telefono}}\",\n          \"id\": \"wamid.inbound_test_{{$timestamp}}\",\n          \"timestamp\": \"{{$timestamp}}\",\n          \"type\": \"text\",\n          \"text\": { \"body\": \"Hola! Quiero consultar por mi cuota\" }\n        }]\n      },\n      \"field\": \"messages\"\n    }]\n  }]\n}"
+            }
+          }
+        },
+        {
+          "name": "2.3 Imagen INBOUND (cliente envía comprobante)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "console.log('✅ Imagen recibida — backend descargará de Meta y subirá a GCS');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{\n    \"changes\": [{\n      \"value\": {\n        \"messages\": [{\n          \"from\": \"51{{telefono}}\",\n          \"id\": \"wamid.imagen_test_{{$timestamp}}\",\n          \"timestamp\": \"{{$timestamp}}\",\n          \"type\": \"image\",\n          \"image\": {\n            \"id\": \"media_id_test_12345\",\n            \"mime_type\": \"image/jpeg\",\n            \"sha256\": \"abc123\",\n            \"caption\": \"Mi comprobante de pago BCP\"\n          }\n        }]\n      },\n      \"field\": \"messages\"\n    }]\n  }]\n}"
+            }
+          }
+        },
+        {
+          "name": "2.4 PDF INBOUND (cliente envía boleta)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{\n    \"changes\": [{\n      \"value\": {\n        \"messages\": [{\n          \"from\": \"51{{telefono}}\",\n          \"id\": \"wamid.pdf_test_{{$timestamp}}\",\n          \"timestamp\": \"{{$timestamp}}\",\n          \"type\": \"document\",\n          \"document\": {\n            \"id\": \"media_id_pdf_67890\",\n            \"mime_type\": \"application/pdf\",\n            \"filename\": \"boleta_marzo_2026.pdf\"\n          }\n        }]\n      },\n      \"field\": \"messages\"\n    }]\n  }]\n}"
+            }
+          }
+        },
+        {
+          "name": "2.5 Button reply (cliente selecciona opción de template)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{\n    \"changes\": [{\n      \"value\": {\n        \"messages\": [{\n          \"from\": \"51{{telefono}}\",\n          \"id\": \"wamid.btn_{{$timestamp}}\",\n          \"timestamp\": \"{{$timestamp}}\",\n          \"type\": \"button\",\n          \"button\": {\n            \"payload\": \"CONFIRMAR_PAGO\",\n            \"text\": \"Confirmar pago\"\n          }\n        }]\n      },\n      \"field\": \"messages\"\n    }]\n  }]\n}"
+            }
+          }
+        },
+        {
+          "name": "2.6 Status update — mensaje entregado",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "console.log('✅ Status update procesado — campo entregadoEn actualizado en Firestore');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{\n    \"changes\": [{\n      \"value\": {\n        \"statuses\": [{\n          \"id\": \"{{wamid_enviado}}\",\n          \"status\": \"delivered\",\n          \"timestamp\": \"{{$timestamp}}\",\n          \"recipient_id\": \"51{{telefono}}\"\n        }]\n      },\n      \"field\": \"messages\"\n    }]\n  }]\n}"
+            }
+          }
+        },
+        {
+          "name": "2.7 Status update — mensaje leído",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{\n    \"changes\": [{\n      \"value\": {\n        \"statuses\": [{\n          \"id\": \"{{wamid_enviado}}\",\n          \"status\": \"read\",\n          \"timestamp\": \"{{$timestamp}}\",\n          \"recipient_id\": \"51{{telefono}}\"\n        }]\n      },\n      \"field\": \"messages\"\n    }]\n  }]\n}"
+            }
+          }
+        },
+        {
+          "name": "2.8 Número desconocido (no tiene contrato — va a VoucherSuelto)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200 (no lanza error por número desconocido)', () => pm.response.to.have.status(200));",
+            "console.log('✅ Número desconocido derivado a VoucherSueltoService');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{\n    \"changes\": [{\n      \"value\": {\n        \"messages\": [{\n          \"from\": \"51999000000\",\n          \"id\": \"wamid.unknown_{{$timestamp}}\",\n          \"timestamp\": \"{{$timestamp}}\",\n          \"type\": \"text\",\n          \"text\": { \"body\": \"Quiero pagar una deuda\" }\n        }]\n      },\n      \"field\": \"messages\"\n    }]\n  }]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Webhook Factiliza (alias)",
+      "description": "Misma lógica pero con el formato json.pe / Factiliza.",
+      "item": [
+        {
+          "name": "3.1 Texto entrante — formato Factiliza",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "pm.test('Status received', () => pm.expect(pm.response.json().status).to.eql('received'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/whatsapp", "host": ["{{base_url}}"], "path": ["webhook","whatsapp"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message\",\n  \"from\": \"51{{telefono}}\",\n  \"pushName\": \"Cliente Prueba\",\n  \"message\": {\n    \"id\": \"fact_msg_{{$timestamp}}\",\n    \"type\": \"text\",\n    \"timestamp\": {{$timestamp}},\n    \"text\": { \"body\": \"Hola, quiero información de mi deuda\" }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "3.2 Imagen — formato Factiliza (isMedia=true)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/whatsapp", "host": ["{{base_url}}"], "path": ["webhook","whatsapp"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"message\",\n  \"from\": \"51{{telefono}}\",\n  \"isMedia\": true,\n  \"type\": \"image\",\n  \"body\": \"{{IMAGEN_BASE64_AQUI}}\",\n  \"caption\": \"Comprobante de pago\"\n}"
+            }
+          }
+        },
+        {
+          "name": "3.3 Ruta alternativa /api/v1/notificaciones/whatsapp/webhook",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/notificaciones/whatsapp/webhook", "host": ["{{base_url}}"], "path": ["api","v1","notificaciones","whatsapp","webhook"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"51{{telefono}}\",\n  \"message\": {\n    \"type\": \"text\",\n    \"body\": \"Hola, ¿me pueden dar información de mi cuota?\"\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Panel de Cobranza — WA agente",
+      "description": "Endpoints que usa el agente desde el frontend. Requieren token Firebase.",
+      "item": [
+        {
+          "name": "4.1 Listar plantillas disponibles",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Hay plantillas', () => pm.expect(json.length).to.be.greaterThan(0));",
+            "console.log('Plantillas:', json.map(p => p.id + ' — ' + p.nombre).join('\\n'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/whatsapp/plantillas", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","whatsapp","plantillas"] }
+          }
+        },
+        {
+          "name": "4.2 Preview de mensaje con variables",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Tiene texto de preview', () => pm.expect(json.texto).to.be.a('string').and.not.empty);",
+            "console.log('Preview:\\n' + json.texto);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/whatsapp/preview", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","whatsapp","preview"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contratoId\": \"{{contrato_id}}\",\n  \"plantillaId\": \"plt_cuota_vencida_mora_temprana\",\n  \"variablesValores\": {\n    \"nombre_cliente\": \"Juan Pérez\",\n    \"dias_mora\": \"5\",\n    \"monto_cuota\": \"250.00\",\n    \"monto_mora\": \"15.00\",\n    \"monto_total\": \"265.00\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "4.3 Enviar mensaje con plantilla al cliente",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('Status OK', () => pm.expect(json.status).to.eql('OK'));",
+            "if (json.wamid) {",
+            "  pm.collectionVariables.set('wamid_enviado', json.wamid);",
+            "  console.log('✅ Mensaje enviado | wamid:', json.wamid);",
+            "}",
+            "if (json.mensajeId) pm.collectionVariables.set('mensaje_id', json.mensajeId);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/whatsapp/enviar", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","whatsapp","enviar"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contratoId\": \"{{contrato_id}}\",\n  \"plantillaId\": \"plt_recordatorio_dia_vencimiento\",\n  \"variablesValores\": {\n    \"nombre_cliente\": \"Juan Pérez\",\n    \"numero_cuota\": \"5\",\n    \"monto_cuota\": \"250.00\"\n  },\n  \"telefono\": \"+51{{telefono}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "4.4 Enviar mensaje libre (sin plantilla)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+            "console.log('Respuesta:', JSON.stringify(pm.response.json(), null, 2));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/whatsapp/enviar", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","whatsapp","enviar"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contratoId\": \"{{contrato_id}}\",\n  \"mensajeLibre\": \"Buenos días Juan, le recordamos que mañana vence su cuota. Por favor comuníquese con nosotros.\",\n  \"telefono\": \"+51{{telefono}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "4.5 Ver historial de mensajes del caso",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Es array', () => pm.expect(Array.isArray(json)).to.be.true);",
+            "const inbound  = json.filter(m => m.direction === 'INBOUND').length;",
+            "const outbound = json.filter(m => m.direction === 'OUTBOUND').length;",
+            "console.log('Total mensajes:', json.length, '| INBOUND:', inbound, '| OUTBOUND:', outbound);",
+            "if (json.length > 0) {",
+            "  const ultimo = json[json.length - 1];",
+            "  pm.collectionVariables.set('mensaje_id', ultimo.id);",
+            "  console.log('Último mensaje:', JSON.stringify(ultimo, null, 2));",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/casos/{{contrato_id}}/whatsapp", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","casos","{{contrato_id}}","whatsapp"] }
+          }
+        },
+        {
+          "name": "4.6 Marcar mensajes como leídos",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "console.log('✅ Contador de no leídos reseteado');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/casos/{{contrato_id}}/whatsapp/marcar-leidos", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","casos","{{contrato_id}}","whatsapp","marcar-leidos"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "4.7 Registrar mensaje como voucher manualmente",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Status OK', () => pm.expect(json.status).to.eql('OK'));",
+            "console.log('voucherId creado:', json.voucherId);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/casos/{{contrato_id}}/mensajes/{{mensaje_id}}/registrar-voucher", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","casos","{{contrato_id}}","mensajes","{{mensaje_id}}","registrar-voucher"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Ciclo de vida del caso",
+      "description": "PATCH /ciclo-vida — valida transiciones con CicloVidaCasoMachine.",
+      "item": [
+        {
+          "name": "5.1 ACTIVO → PROMESA_VIGENTE (válido)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "pm.test('Status OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+            "console.log('✅ Ciclo de vida actualizado');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/casos/{{contrato_id}}/ciclo-vida", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","casos","{{contrato_id}}","ciclo-vida"] },
+            "body": { "mode": "raw", "raw": "{ \"cicloVida\": \"PROMESA_VIGENTE\" }" }
+          }
+        },
+        {
+          "name": "5.2 PAGADO_TOTAL → ACTIVO (inválido — debe dar 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 400 por transición inválida', () => pm.response.to.have.status(400));",
+            "const json = pm.response.json();",
+            "pm.test('Code INVALID_TRANSITION', () => pm.expect(json.code).to.eql('INVALID_TRANSITION'));",
+            "console.log('✅ State machine rechazó correctamente la transición inválida');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/casos/{{contrato_id}}/ciclo-vida", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","casos","{{contrato_id}}","ciclo-vida"] },
+            "body": { "mode": "raw", "raw": "{ \"cicloVida\": \"ACTIVO\" }" }
+          }
+        },
+        {
+          "name": "5.3 Actualizar nivelEstrategia (sin validación de transición)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "pm.test('Status OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/casos/{{contrato_id}}/ciclo-vida", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","casos","{{contrato_id}}","ciclo-vida"] },
+            "body": { "mode": "raw", "raw": "{ \"nivelEstrategia\": \"MORA_TEMPRANA\" }" }
+          }
+        },
+        {
+          "name": "5.4 Caso no encontrado (debe dar 404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 404', () => pm.response.to.have.status(404));",
+            "pm.test('Code NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('NOT_FOUND'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/casos/CTR-INEXISTENTE-9999/ciclo-vida", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","casos","CTR-INEXISTENTE-9999","ciclo-vida"] },
+            "body": { "mode": "raw", "raw": "{ \"cicloVida\": \"PAGADO_TOTAL\" }" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Flujo end-to-end",
+      "description": "Ejecutar en orden. Simula el ciclo completo: agente envía → cliente responde → agente ve el chat.",
+      "item": [
+        {
+          "name": "PASO 1 — Agente envía recordatorio de pago",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Mensaje enviado', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "if (json.wamid) pm.collectionVariables.set('wamid_enviado', json.wamid);",
+            "if (json.mensajeId) pm.collectionVariables.set('mensaje_id', json.mensajeId);",
+            "console.log('PASO 1 ✅ — Agente envió recordatorio | wamid:', json.wamid);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/whatsapp/enviar", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","whatsapp","enviar"] },
+            "body": { "mode": "raw", "raw": "{\n  \"contratoId\": \"{{contrato_id}}\",\n  \"plantillaId\": \"plt_recordatorio_dia_vencimiento\",\n  \"variablesValores\": {\n    \"nombre_cliente\": \"Cliente Test\",\n    \"numero_cuota\": \"3\",\n    \"monto_cuota\": \"250.00\"\n  },\n  \"telefono\": \"+51{{telefono}}\"\n}" }
+          }
+        },
+        {
+          "name": "PASO 2 — Meta confirma entrega (delivered)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status actualizado', () => pm.response.to.have.status(200));",
+            "console.log('PASO 2 ✅ — Meta informó entrega | wamid:', pm.collectionVariables.get('wamid_enviado'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": { "mode": "raw", "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{ \"changes\": [{ \"value\": {\n    \"statuses\": [{\n      \"id\": \"{{wamid_enviado}}\",\n      \"status\": \"delivered\",\n      \"timestamp\": \"{{$timestamp}}\",\n      \"recipient_id\": \"51{{telefono}}\"\n    }]\n  }, \"field\": \"messages\" }] }]\n}" }
+          }
+        },
+        {
+          "name": "PASO 3 — Cliente responde con texto",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "console.log('PASO 3 ✅ — Cliente respondió. Dispatcher procesará el mensaje.');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/webhook/meta", "host": ["{{base_url}}"], "path": ["webhook","meta"] },
+            "body": { "mode": "raw", "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [{ \"changes\": [{ \"value\": {\n    \"messages\": [{\n      \"from\": \"51{{telefono}}\",\n      \"id\": \"wamid.cliente_responde_{{$timestamp}}\",\n      \"timestamp\": \"{{$timestamp}}\",\n      \"type\": \"text\",\n      \"text\": { \"body\": \"Hola, ya hice el depósito al BCP\" }\n    }]\n  }, \"field\": \"messages\" }] }]\n}" }
+          }
+        },
+        {
+          "name": "PASO 4 — Agente verifica historial (debe tener INBOUND + OUTBOUND)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "const inbound  = json.filter(m => m.direction === 'INBOUND');",
+            "const outbound = json.filter(m => m.direction === 'OUTBOUND');",
+            "pm.test('Hay mensajes OUTBOUND', () => pm.expect(outbound.length).to.be.greaterThan(0));",
+            "console.log('PASO 4 ✅ — Historial | OUTBOUND:', outbound.length, '| INBOUND:', inbound.length);",
+            "const ultimoIn = inbound[inbound.length-1];",
+            "if (ultimoIn) console.log('Último INBOUND:', ultimoIn.textoRecibido, '| ventana24h expira:', ultimoIn.ventanaServicioExpira);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/cobranzas/casos/{{contrato_id}}/whatsapp", "host": ["{{base_url}}"], "path": ["api","v1","cobranzas","casos","{{contrato_id}}","whatsapp"] }
+          }
+        },
+        {
+          "name": "PASO 5 — Verificar debug log (debe tener payloads guardados)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Hay payloads en debug', () => pm.expect(json.length).to.be.greaterThan(0));",
+            "console.log('PASO 5 ✅ — Debug log tiene', json.length, 'entradas');",
+            "console.log('Flujo end-to-end completado ✅');"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/debug/wa/mensajes", "host": ["{{base_url}}"], "path": ["api","v1","debug","wa","mensajes"] }
+          }
+        }
+      ]
+    }
+  ]
+}

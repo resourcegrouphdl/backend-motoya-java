@@ -85,9 +85,11 @@ public class MetaTemplateRegistry {
                 "motoya_autorespuesta_cobranza",
                 List.of("cliente"));
 
+        // Plantilla Meta real: "Hola {{1}}, confirmamos la recepción de tu pago de S/ {{2}}."
+        // Solo tiene 2 parámetros — banco no está en el body aprobado por Meta.
         reg(NotificationTemplate.VOUCHER_RECIBIDO_COBRANZA,
                 "motoya_voucher_recibido",
-                List.of("cliente", "banco", "monto"));
+                List.of("cliente", "monto"));
 
         reg(NotificationTemplate.PAGO_CONFIRMADO,
                 "motoya_pago_confirmado",

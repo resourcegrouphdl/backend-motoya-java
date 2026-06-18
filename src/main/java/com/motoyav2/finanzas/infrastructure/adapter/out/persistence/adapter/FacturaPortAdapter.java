@@ -142,6 +142,7 @@ public class FacturaPortAdapter implements FacturaPort {
                 .fechaPago(parseDate(doc.getFechaPago()))
                 .estado(parseEstadoPago(doc.getEstado()))
                 .voucherUrl(doc.getVoucherUrl())
+                .voucherGcsPath(doc.getVoucherGcsPath())
                 .metodoPago(doc.getMetodoPago() != null ? MetodoPago.valueOf(doc.getMetodoPago()) : null)
                 .documentAiStatus(doc.getDocumentAiStatus())
                 .documentAiCampos(doc.getDocumentAiCampos())

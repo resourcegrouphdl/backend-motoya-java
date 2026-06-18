@@ -427,6 +427,24 @@
         { "fieldPath": "estadoVerificacion",   "order": "ASCENDING"  },
         { "fieldPath": "__name__",             "order": "ASCENDING"  }
       ]
+    },
+    {
+      "collectionGroup": "cobranzas-mensajes-whatsapp",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contratoId",  "order": "ASCENDING" },
+        { "fieldPath": "recibidoEn",  "order": "ASCENDING" },
+        { "fieldPath": "__name__",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cobranzas-mensajes-whatsapp",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contratoId",  "order": "ASCENDING"  },
+        { "fieldPath": "enviadoEn",   "order": "ASCENDING"  },
+        { "fieldPath": "__name__",    "order": "ASCENDING"  }
+      ]
     }
   ],
   "fieldOverrides": []

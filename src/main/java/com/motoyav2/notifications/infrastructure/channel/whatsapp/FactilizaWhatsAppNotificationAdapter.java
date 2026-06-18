@@ -1,3 +1,9 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// OBSOLETO — Reemplazado completamente por MetaWhatsAppNotificationAdapter
+// No usar en código nuevo. Pendiente de eliminación cuando FactilizaWaSenderAdapter
+// (cobranza/) migre a inyectar MetaWhatsAppNotificationAdapter directamente.
+// Ref: MEJORA WA-1 del plan de refactorización.
+// ═══════════════════════════════════════════════════════════════════════════
 package com.motoyav2.notifications.infrastructure.channel.whatsapp;
 
 import com.motoyav2.notifications.domain.model.Notification;

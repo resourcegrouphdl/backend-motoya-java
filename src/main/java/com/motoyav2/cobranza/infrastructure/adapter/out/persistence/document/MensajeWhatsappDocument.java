@@ -68,4 +68,36 @@ public class MensajeWhatsappDocument {
     private String enviadoPor;
 
     private String storeId;
+
+    /**
+     * Mensaje de error cuando el pipeline de procesamiento falla (OCR, descarga, etc.).
+     * Null = sin error. Campo opcional — documentos históricos sin este campo son válidos.
+     * El frontend lo muestra como "Error al procesar" en lugar de "procesando...".
+     */
+    private String errorProcesamiento;
+
+    // ── Campos de ventana de servicio Meta (24h) ─────────────────────────────
+    // Todos opcionales y backward compatible — documentos históricos sin estos campos son válidos.
+
+    /** Inicio de la ventana de servicio de 24h con el cliente (primer mensaje INBOUND). */
+    private Date ventanaServicioInicio;
+
+    /** Expiración de la ventana de servicio (ventanaServicioInicio + 24h). */
+    private Date ventanaServicioExpira;
+
+    /** true si el mensaje fue enviado dentro de la ventana de servicio activa. */
+    private Boolean dentroVentanaServicio;
+
+    /**
+     * Categoría de precio Meta para este mensaje.
+     * Valores: UTILITY, MARKETING, AUTHENTICATION, SERVICE.
+     * Mensajes dentro de la ventana de servicio son gratuitos (SERVICE).
+     */
+    private String categoriaPrecio;
+
+    /**
+     * true si este mensaje genera cobro en Meta.
+     * false para mensajes dentro de la ventana de servicio de 24h.
+     */
+    private Boolean billable;
 }

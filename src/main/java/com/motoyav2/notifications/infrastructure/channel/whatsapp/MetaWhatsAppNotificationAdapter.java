@@ -9,6 +9,9 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+
+import java.time.Duration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -69,6 +72,7 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
      */
     public Mono<String> sendText(String recipient, String text) {
         String to = normalizePhone(recipient);
+        log.warn("[META-WA] ⚠ Texto libre a={} — SOLO funciona si el destinatario escribió en las últimas 24h (ventana Meta). Usa sendTemplateRaw() para mensajes proactivos.", to);
         Map<String, Object> body = Map.of(
                 "messaging_product", "whatsapp",
                 "recipient_type",    "individual",
@@ -77,7 +81,39 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
                 "text",              Map.of("preview_url", false, "body", text)
         );
         return postMessages(body)
-                .doOnSuccess(id -> log.info("[META-WA] ✓ Texto enviado | to={} wamid={}", to, id));
+                .doOnSuccess(id -> log.info("[META-WA] ✓ Texto enviado | to={} wamid={} (Meta acepta pero puede no entregar si ventana cerrada)", to, id));
+    }
+
+    /**
+     * Envía un template de Meta directamente por nombre y params posicionales.
+     * Usado desde DebugWaController para probar plantillas sin requerir contratoId.
+     *
+     * @param metaName         Nombre exacto del template en Meta (ej: motoya_recordatorio_cuota)
+     * @param languageCode     Código de idioma (ej: es_PE)
+     * @param paramsOrdenados  Valores en el orden posicional que Meta espera ({{1}}, {{2}}, ...)
+     */
+    public Mono<String> sendTemplateRaw(String recipient, String metaName,
+                                        String languageCode, List<String> paramsOrdenados) {
+        String to = normalizePhone(recipient);
+        List<Map<String, Object>> parameters = paramsOrdenados.stream()
+                .map(v -> Map.<String, Object>of("type", "text", "text", v))
+                .toList();
+        Map<String, Object> body = Map.of(
+                "messaging_product", "whatsapp",
+                "recipient_type",    "individual",
+                "to",                to,
+                "type",              "template",
+                "template",          Map.of(
+                        "name",       metaName,
+                        "language",   Map.of("code", languageCode),
+                        "components", List.of(Map.of(
+                                "type",       "body",
+                                "parameters", parameters
+                        ))
+                )
+        );
+        return postMessages(body)
+                .doOnSuccess(id -> log.info("[META-WA] ✓ Template raw enviado | to={} template={} wamid={}", to, metaName, id));
     }
 
     /**
@@ -109,7 +145,11 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
 
     /**
      * Descarga los bytes de un media entrante usando el mediaId de Meta.
-     * Necesario para procesar imágenes/documentos recibidos por webhook.
+     * IMPORTANTE: Meta expira el mediaId en 10 minutos — esta llamada debe
+     * ejecutarse lo antes posible tras recibir el webhook.
+     *
+     * Incluye retry con backoff exponencial (3 intentos: 1s, 2s, 4s).
+     * No reintenta si el mediaId ya expiró (MetaApiException con 404).
      */
     public Mono<byte[]> downloadMedia(String mediaId) {
         return webClient.get()
@@ -123,11 +163,20 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
                     if (resp == null || resp.url() == null) {
                         return Mono.error(new MetaApiException("Meta no devolvió URL para mediaId=" + mediaId));
                     }
+                    log.debug("[META-WA] Descargando media | mediaId={} mime={}", mediaId, resp.mimeType());
                     return webClient.get()
                             .uri(resp.url())
                             .retrieve()
                             .bodyToMono(byte[].class);
-                });
+                })
+                // Retry con backoff exponencial — solo reintenta errores transitorios (no 404)
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                        .maxBackoff(Duration.ofSeconds(8))
+                        .filter(ex -> !(ex instanceof MetaApiException))
+                        .doBeforeRetry(sig -> log.warn("[META-WA] Reintentando descarga de media | mediaId={} intento={}",
+                                mediaId, sig.totalRetries() + 1)))
+                .doOnSuccess(bytes -> log.info("[META-WA] Media descargado | mediaId={} size={}KB",
+                        mediaId, bytes != null ? bytes.length / 1024 : 0));
     }
 
     // ─── Helpers internos ─────────────────────────────────────────────────────
@@ -173,14 +222,14 @@ public class MetaWhatsAppNotificationAdapter implements NotificationSenderPort {
                         response.bodyToMono(String.class)
                                 .flatMap(err -> Mono.error(new MetaApiException("Meta API error: " + err))))
                 .bodyToMono(MetaMessageResponse.class)
-                .map(r -> {
+                .flatMap(r -> {
                     if (r != null && r.messages() != null && !r.messages().isEmpty()) {
                         String wamid = r.messages().get(0).getOrDefault("id", "").toString();
-                        return wamid;
+                        if (!wamid.isBlank()) return Mono.just(wamid);
                     }
-                    return "";
-                })
-                .defaultIfEmpty("");
+                    return Mono.error(new MetaApiException(
+                        "Meta no devolvió wamid — revisa: token válido, phoneNumberId correcto, template aprobado y nombre exacto"));
+                });
     }
 
     private String normalizePhone(String phone) {

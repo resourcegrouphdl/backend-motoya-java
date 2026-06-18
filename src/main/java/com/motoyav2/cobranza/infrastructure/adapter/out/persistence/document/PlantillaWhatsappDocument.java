@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Plantillas aprobadas por Meta para WhatsApp Business.
@@ -45,4 +46,12 @@ public class PlantillaWhatsappDocument {
     private Date actualizadoEn;
     private String creadoPor;
     private String actualizadoPor;
+
+    /**
+     * Mapeo de nombres de variable al campo de datos del caso.
+     * Ejemplo: { "nombre_cliente": "clienteNombre", "deuda_total": "saldoActual" }
+     * El frontend resuelve cada clave usando los datos del caso activo.
+     * Campo opcional — documentos históricos sin este campo siguen siendo válidos.
+     */
+    private Map<String, String> variableMapping;
 }

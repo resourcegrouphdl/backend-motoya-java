@@ -13,6 +13,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Siembra las plantillas de WhatsApp para cobranzas si la colección está vacía.
@@ -52,6 +53,7 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
         return List.of(
 
             // 1 ── Recordatorio: cuota vence hoy ──────────────────────────────
+            // Meta template: motoya_recordatorio_cuota → {{1}}=cliente, {{2}}=monto, {{3}}=fecha
             PlantillaWhatsappDocument.builder()
                 .id("plt_recordatorio_dia_vencimiento")
                 .nombre("Recordatorio — Cuota vence hoy")
@@ -60,7 +62,7 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                 .cuerpo("""
                     Hola {{nombre_cliente}} 👋
 
-                    *Motoya Digital* te recuerda que *hoy* vence tu cuota N° {{numero_cuota}}.
+                    *Motoya Digital* te recuerda que vence tu cuota el *{{fecha_vencimiento}}*.
 
                     💰 *Monto a pagar:* S/ {{monto_cuota}}
 
@@ -76,10 +78,16 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
 
                     _Para hablar con un asesor: +51 912 301 507_""")
                 .variables(List.of(
-                    var("nombre_cliente", "Nombre del cliente", "María García"),
-                    var("numero_cuota",   "N° de cuota que vence hoy", "5"),
-                    var("monto_cuota",    "Monto de la cuota (S/)", "250.00")
+                    // Orden posicional = orden Meta: {{1}}=cliente, {{2}}=monto, {{3}}=fecha
+                    var("nombre_cliente",    "Nombre del cliente",         "María García"),
+                    var("monto_cuota",       "Monto de la cuota (S/)",     "250.00"),
+                    var("fecha_vencimiento", "Fecha de vencimiento",       "30/04/2025")
                 ))
+                .variableMapping(Map.of(
+                    "nombre_cliente",    "clienteNombre",
+                    "fecha_vencimiento", "fechaProximaCuota"
+                ))
+                .metaTemplateName("motoya_recordatorio_cuota")
                 .activa(true)
                 .aprobadaPorMeta(true)
                 .creadoEn(ahora)
@@ -88,6 +96,7 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                 .build(),
 
             // 2 ── Cuota vencida — mora temprana (1-15 días) ──────────────────
+            // Meta template: motoya_cuota_vencida → {{1}}=cliente, {{2}}=monto, {{3}}=diasVencido, {{4}}=montoMora, {{5}}=montoTotal
             PlantillaWhatsappDocument.builder()
                 .id("plt_cuota_vencida_mora_temprana")
                 .nombre("Cuota vencida — Mora temprana (1-15 días)")
@@ -114,12 +123,19 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
 
                     _Para hablar con un asesor: +51 912 301 507_""")
                 .variables(List.of(
-                    var("nombre_cliente", "Nombre del cliente",    "María García"),
-                    var("dias_mora",      "Días en mora",          "5"),
+                    // Orden posicional = orden Meta: {{1}}=cliente, {{2}}=monto, {{3}}=diasVencido, {{4}}=montoMora, {{5}}=montoTotal
+                    var("nombre_cliente", "Nombre del cliente",     "María García"),
                     var("monto_cuota",    "Monto de la cuota (S/)", "250.00"),
+                    var("dias_mora",      "Días en mora",           "5"),
                     var("monto_mora",     "Mora acumulada (S/)",    "15.00"),
                     var("monto_total",    "Total a pagar (S/)",     "265.00")
                 ))
+                .variableMapping(Map.of(
+                    "nombre_cliente", "clienteNombre",
+                    "dias_mora",      "diasMora",
+                    "monto_mora",     "montoMora"
+                ))
+                .metaTemplateName("motoya_cuota_vencida")
                 .activa(true)
                 .aprobadaPorMeta(true)
                 .creadoEn(ahora)
@@ -128,6 +144,7 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                 .build(),
 
             // 3 ── Aviso mora media (16-30 días) ─────────────────────────────
+            // Meta template: motoya_cuota_vencida → {{1}}=cliente, {{2}}=monto, {{3}}=diasVencido, {{4}}=montoMora, {{5}}=montoTotal
             PlantillaWhatsappDocument.builder()
                 .id("plt_mora_media_aviso")
                 .nombre("Aviso mora media (16-30 días)")
@@ -136,23 +153,32 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                 .cuerpo("""
                     🔴 Hola {{nombre_cliente}},
 
-                    Llevamos *{{dias_mora}} días* sin recibir tu pago con *Motoya Digital*.
+                    Tu cuota con *Motoya Digital* lleva *{{dias_mora}} días* vencida.
 
-                    💰 *Saldo pendiente:* S/ {{deuda_total}}
+                    💰 *Cuota pendiente:* S/ {{monto_cuota}}
                     📈 *Mora acumulada:* S/ {{monto_mora}}
+                    📊 *Total a regularizar:* S/ {{monto_total}}
 
-                    Es importante que te comuniques con nosotros hoy para coordinar el pago y evitar que tu caso escale a un tramo más grave.
+                    Contáctanos hoy para coordinar el pago y evitar cargos mayores.
 
-                    📞 *Llámanos:* +51 912 301 507
+                    📞 *+51 912 301 507*
                     📎 O envía tu comprobante por este mismo chat.
 
                     _Motoya Digital — Confianza en movimiento_ 🏍️""")
                 .variables(List.of(
-                    var("nombre_cliente", "Nombre del cliente",    "María García"),
-                    var("dias_mora",      "Días en mora",          "20"),
-                    var("deuda_total",    "Saldo total pendiente (S/)", "750.00"),
-                    var("monto_mora",     "Mora acumulada (S/)",    "60.00")
+                    // Orden posicional = orden Meta: {{1}}=cliente, {{2}}=monto, {{3}}=diasVencido, {{4}}=montoMora, {{5}}=montoTotal
+                    var("nombre_cliente", "Nombre del cliente",     "María García"),
+                    var("monto_cuota",    "Monto de la cuota (S/)", "350.00"),
+                    var("dias_mora",      "Días en mora",           "20"),
+                    var("monto_mora",     "Mora acumulada (S/)",    "60.00"),
+                    var("monto_total",    "Total a pagar (S/)",     "410.00")
                 ))
+                .variableMapping(Map.of(
+                    "nombre_cliente", "clienteNombre",
+                    "dias_mora",      "diasMora",
+                    "monto_mora",     "montoMora"
+                ))
+                .metaTemplateName("motoya_cuota_vencida")
                 .activa(true)
                 .aprobadaPorMeta(true)
                 .creadoEn(ahora)
@@ -161,30 +187,42 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                 .build(),
 
             // 4 ── Aviso mora crítica (31-60 días) ────────────────────────────
+            // Meta template: motoya_cuota_vencida → {{1}}=cliente, {{2}}=monto, {{3}}=diasVencido, {{4}}=montoMora, {{5}}=montoTotal
             PlantillaWhatsappDocument.builder()
                 .id("plt_mora_critica_aviso")
                 .nombre("Aviso mora crítica (31-60 días)")
                 .categoria("MORA_CRITICA")
                 .nivelMora("MORA_CRITICA")
                 .cuerpo("""
-                    🚨 *AVISO URGENTE* — {{nombre_cliente}}
+                    🚨 Hola {{nombre_cliente}},
 
-                    Tu deuda con *Motoya Digital* lleva *{{dias_mora}} días* en mora.
+                    Tu cuota con *Motoya Digital* lleva *{{dias_mora}} días* vencida.
 
-                    💰 *Monto total adeudado:* S/ {{deuda_total}}
+                    💰 *Cuota pendiente:* S/ {{monto_cuota}}
+                    📈 *Mora acumulada:* S/ {{monto_mora}}
+                    📊 *Total a regularizar HOY:* S/ {{monto_total}}
 
-                    Si no regularizas tu situación en los próximos días, tu caso será derivado a *gestión pre-judicial*, lo que implicará costos adicionales.
+                    Si no regularizas tu situación en los próximos días, tu caso será derivado a gestión pre-judicial con costos adicionales.
 
-                    Contáctanos *HOY* para llegar a un acuerdo de pago:
+                    Contáctanos *AHORA*:
                     📞 *+51 912 301 507*
                     📎 O envía tu comprobante por este chat.
 
                     _Área de Cobranzas — Motoya Digital_""")
                 .variables(List.of(
-                    var("nombre_cliente", "Nombre del cliente",    "María García"),
-                    var("dias_mora",      "Días en mora",          "35"),
-                    var("deuda_total",    "Monto total adeudado (S/)", "900.00")
+                    // Orden posicional = orden Meta: {{1}}=cliente, {{2}}=monto, {{3}}=diasVencido, {{4}}=montoMora, {{5}}=montoTotal
+                    var("nombre_cliente", "Nombre del cliente",     "María García"),
+                    var("monto_cuota",    "Monto de la cuota (S/)", "350.00"),
+                    var("dias_mora",      "Días en mora",           "35"),
+                    var("monto_mora",     "Mora acumulada (S/)",    "120.00"),
+                    var("monto_total",    "Total a pagar (S/)",     "470.00")
                 ))
+                .variableMapping(Map.of(
+                    "nombre_cliente", "clienteNombre",
+                    "dias_mora",      "diasMora",
+                    "monto_mora",     "montoMora"
+                ))
+                .metaTemplateName("motoya_cuota_vencida")
                 .activa(true)
                 .aprobadaPorMeta(true)
                 .creadoEn(ahora)
@@ -193,6 +231,9 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                 .build(),
 
             // 5 ── Confirmación de promesa de pago ────────────────────────────
+            // Sin metaTemplateName: motoya_promesa_recordatorio es para el día-D del pago,
+            // no para confirmar que se registró la promesa — semánticamente diferente.
+            // Registrar nueva plantilla en Meta si se necesita.
             PlantillaWhatsappDocument.builder()
                 .id("plt_promesa_confirmacion")
                 .nombre("Confirmación de promesa de pago")
@@ -222,32 +263,10 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                     var("fecha_promesa",  "Fecha de pago acordada",    "25/04/2025"),
                     var("monto_promesa",  "Monto prometido (S/)",      "265.00")
                 ))
-                .activa(true)
-                .aprobadaPorMeta(true)
-                .creadoEn(ahora)
-                .actualizadoEn(ahora)
-                .creadoPor("SISTEMA")
-                .build(),
-
-            // 6 ── Confirmación de voucher recibido ───────────────────────────
-            PlantillaWhatsappDocument.builder()
-                .id("plt_voucher_confirmacion")
-                .nombre("Voucher recibido — en verificación")
-                .categoria("VOUCHER_CONFIRMACION")
-                .nivelMora(null)
-                .cuerpo("""
-                    ✅ Hola {{nombre_cliente}},
-
-                    Recibimos tu comprobante de pago. Lo estamos verificando en este momento.
-
-                    En breve un asesor confirmará el registro en tu cuenta y recibirás la confirmación final.
-
-                    Si tienes alguna consulta:
-                    📞 +51 912 301 507
-
-                    _¡Gracias! — Motoya Digital_ 🏍️""")
-                .variables(List.of(
-                    var("nombre_cliente", "Nombre del cliente", "María García")
+                .variableMapping(Map.of(
+                    "nombre_cliente", "clienteNombre",
+                    "fecha_promesa",  "promesaFecha",
+                    "monto_promesa",  "promesaMonto"
                 ))
                 .activa(true)
                 .aprobadaPorMeta(true)
@@ -256,7 +275,42 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                 .creadoPor("SISTEMA")
                 .build(),
 
+            // 6 ── Confirmación de voucher recibido ───────────────────────────
+            // Meta template: motoya_voucher_recibido → {{1}}=cliente, {{2}}=monto
+            // Nota: el body de Meta dice "confirmamos la recepción de tu pago de S/ {{2}}"
+            PlantillaWhatsappDocument.builder()
+                .id("plt_voucher_confirmacion")
+                .nombre("Voucher recibido — en verificación")
+                .categoria("VOUCHER_CONFIRMACION")
+                .nivelMora(null)
+                .cuerpo("""
+                    ✅ Hola {{nombre_cliente}},
+
+                    Recibimos tu comprobante de pago de S/ {{monto_pago}}. Lo estamos verificando en este momento.
+
+                    En breve un asesor confirmará el registro en tu cuenta y recibirás la confirmación final.
+
+                    Si tienes alguna consulta:
+                    📞 +51 912 301 507
+
+                    _¡Gracias! — Motoya Digital_ 🏍️""")
+                .variables(List.of(
+                    // Orden posicional = orden Meta: {{1}}=cliente, {{2}}=monto
+                    var("nombre_cliente", "Nombre del cliente",       "María García"),
+                    var("monto_pago",     "Monto del pago recibido (S/)", "250.00")
+                ))
+                .variableMapping(Map.of("nombre_cliente", "clienteNombre"))
+                .metaTemplateName("motoya_voucher_recibido")
+                .activa(true)
+                .aprobadaPorMeta(true)
+                .creadoEn(ahora)
+                .actualizadoEn(ahora)
+                .creadoPor("SISTEMA")
+                .build(),
+
             // 7 ── Aviso pre-judicial (61+ días) ──────────────────────────────
+            // Sin metaTemplateName: no hay template de aviso legal registrado en Meta.
+            // Registrar nueva plantilla en Meta si se necesita.
             PlantillaWhatsappDocument.builder()
                 .id("plt_aviso_pre_judicial")
                 .nombre("Aviso pre-judicial (61+ días)")
@@ -280,6 +334,11 @@ public class PlantillaWhatsappSeederService implements ApplicationRunner {
                     var("nombre_cliente", "Nombre del cliente",         "María García"),
                     var("deuda_total",    "Monto total adeudado (S/)",  "1,200.00"),
                     var("dias_mora",      "Días en mora",               "65")
+                ))
+                .variableMapping(Map.of(
+                    "nombre_cliente", "clienteNombre",
+                    "deuda_total",    "saldoActual",
+                    "dias_mora",      "diasMora"
                 ))
                 .activa(true)
                 .aprobadaPorMeta(true)

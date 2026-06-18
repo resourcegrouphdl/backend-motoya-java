@@ -5,7 +5,13 @@ import com.motoyav2.cobranza.application.port.in.*;
 import com.motoyav2.cobranza.application.port.in.command.*;
 import com.motoyav2.cobranza.application.port.in.command.RegistrarPagoManualCommand;
 import com.motoyav2.cobranza.application.port.in.query.ListarCasosQuery;
+import com.motoyav2.cobranza.application.port.out.CasoCobranzaPort;
 import com.motoyav2.cobranza.application.service.*;
+import com.motoyav2.cobranza.application.service.InboundMensajeWaService;
+import com.motoyav2.cobranza.application.service.MensajeWaQueryService;
+import com.motoyav2.notifications.domain.port.in.WhatsAppMessageDispatcher;
+import com.motoyav2.cobranza.domain.enums.CicloVidaCaso;
+import com.motoyav2.cobranza.domain.service.CicloVidaCasoMachine;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.*;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.CuotaCronogramaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.embedded.DatosFiadorDocument;
@@ -58,7 +64,10 @@ public class CobranzaController {
     private final AlertaService alertaService;
     private final EstrategiaService estrategiaService;
     private final EstrategiaAutomaticaService estrategiaAutomaticaService;
-    private final WhatsappService whatsappService;
+    private final WhatsappService          whatsappService;
+    private final MensajeWaQueryService    mensajeWaQuery;
+    private final InboundMensajeWaService  inboundWaSvc;
+    private final WhatsAppMessageDispatcher waDispatcher;
     private final IniciarCasoUseCase iniciarCasoUseCase;
     private final ImportarCalendarioService importarCalendarioService;
     private final RegistrarPagoManualUseCase registrarPagoManualUseCase;
@@ -70,6 +79,7 @@ public class CobranzaController {
     private final DebugWaService debugWaService;
     private final MigrarCasosCobranzaService migrarCasosCobranzaService;
     private final VoucherSueltoService       voucherSueltoService;
+    private final CasoCobranzaPort           casoPort;
 
     // =========================================================================
     // RECUPERACIÓN DE CASOS BORRADOS
@@ -841,7 +851,7 @@ public class CobranzaController {
     @GetMapping("/api/v1/cobranzas/whatsapp/plantillas")
     public Flux<PlantillaWhatsappDocument> getPlantillas(ServerWebExchange exchange) {
         log.debug("GET /whatsapp/plantillas");
-        return whatsappService.listarPlantillas();
+        return mensajeWaQuery.listarPlantillas();
     }
 
     @PostMapping("/api/v1/cobranzas/whatsapp/preview")
@@ -853,7 +863,7 @@ public class CobranzaController {
         String userNombre = (String) exchange.getAttributes().get("userNombre");
         log.debug("POST /whatsapp/preview contratoId={} plantillaId={}", body.contratoId(), body.plantillaId());
 
-        return whatsappService.preview(body.contratoId(), body.plantillaId(), body.variablesValores())
+        return mensajeWaQuery.preview(body.contratoId(), body.plantillaId(), body.variablesValores())
                 .map(texto -> Map.<String, Object>of(
                         "plantillaId", body.plantillaId(),
                         "preview", texto
@@ -888,7 +898,7 @@ public class CobranzaController {
             @PathVariable String contratoId,
             ServerWebExchange exchange) {
         log.debug("GET /casos/{contratoId}/whatsapp contratoId={}", contratoId);
-        return whatsappService.listarMensajes(contratoId);
+        return mensajeWaQuery.listarMensajes(contratoId);
     }
 
     /**
@@ -941,7 +951,7 @@ public class CobranzaController {
             @PathVariable String contratoId,
             ServerWebExchange exchange) {
         log.debug("PATCH /casos/{}/whatsapp/marcar-leidos", contratoId);
-        return whatsappService.marcarMensajesLeidos(contratoId)
+        return inboundWaSvc.marcarMensajesLeidos(contratoId)
                 .thenReturn(Map.<String, Object>of("status", "OK"));
     }
 
@@ -1114,30 +1124,15 @@ public class CobranzaController {
             tipoNormalizadoFinal = null;
         }
 
-        return whatsappService.encontrarContratoIdPorTelefono(fromPhone)
-                .flatMap(contratoId -> {
-                    if ("media".equals(tipo)) {
-                        if (mediaUrlFinal == null) {
-                            log.warn("[WEBHOOK-WA] Media sin base64 | contratoId={}", contratoId);
-                            return Mono.empty();
-                        }
-                        log.info("[WEBHOOK-WA] Media entrante | contratoId={} tipo={}", contratoId, tipoNormalizadoFinal);
-                        return whatsappService.registrarMediaEntrante(
-                                        contratoId, null, fromPhone, mediaUrlFinal, tipoNormalizadoFinal, fecha)
-                                .flatMap(mensajeId -> procesarVoucherWhatsappService
-                                        .procesar(contratoId, null, null, fromPhone, mediaUrlFinal, tipoNormalizadoFinal, mensajeId));
-                    } else {
-                        log.info("[WEBHOOK-WA] Texto entrante | contratoId={} from={}", contratoId, fromPhone);
-                        return whatsappService.registrarMensajeEntrante(
-                                contratoId, null, fromPhone, wamid, textoFinal, fecha)
-                                .then(whatsappService.actualizarRespuestaCliente(contratoId));
-                    }
-                })
+        // Delegar al dispatcher central — mismo flujo que WhatsAppWebhookController.
+        // El dispatcher resuelve el contexto y publica el evento al handler correspondiente.
+        return waDispatcher.dispatch(fromPhone,
+                        "media".equals(tipo) ? null : textoFinal,
+                        tipoNormalizadoFinal,
+                        mediaUrlFinal)
                 .onErrorResume(e -> {
-                    log.info("[WEBHOOK-WA] Teléfono {} no asociado a contrato — derivando a vouchers sueltos: {}",
-                            fromPhone, e.getMessage());
-                    return voucherSueltoService.manejarMensajeDesconocido(
-                            fromPhone, textoFinal, tipoNormalizadoFinal, mediaUrlFinal);
+                    log.warn("[WEBHOOK-WA] Error en dispatcher phone={}: {}", fromPhone, e.getMessage());
+                    return Mono.empty();
                 });
     }
 
@@ -1423,5 +1418,69 @@ public class CobranzaController {
                     return mediaStorageService.subirBytes(bytes, mediaType, filename, contratoId);
                 })
                 .map(result -> Map.of("gcsPath", result.gcsPath()));
+    }
+
+    // =========================================================================
+    // SHORTCUT: comprobantes por caso (tarea #17)
+    // =========================================================================
+
+    /**
+     * GET /api/v1/cobranzas/casos/{contratoId}/comprobantes
+     * Shortcut de GET /api/v1/cobranzas/comprobantes?contratoId={id}.
+     * El endpoint original sigue activo y sin cambios.
+     */
+    @GetMapping("/api/v1/cobranzas/casos/{contratoId}/comprobantes")
+    public Flux<ComprobantePagoDocument> getComprobantesPorCaso(
+            @PathVariable String contratoId) {
+        log.debug("GET /casos/{}/comprobantes", contratoId);
+        return comprobantesService.listar(null, contratoId, null, null, null, null);
+    }
+
+    // =========================================================================
+    // ACTUALIZAR CICLO DE VIDA / NIVEL ESTRATEGIA (tarea #18)
+    // =========================================================================
+
+    private record ActualizarCicloVidaRequest(String nivelEstrategia, String cicloVida) {}
+
+    /**
+     * PATCH /api/v1/cobranzas/casos/{contratoId}/ciclo-vida
+     * Permite actualizar nivelEstrategia y/o cicloVida de un caso.
+     * - cicloVida: validado por CicloVidaCasoMachine (lanza 400 si transición inválida)
+     * - nivelEstrategia: sin validación de transición (puede moverse libremente)
+     *
+     * Respuesta: { status: "OK", message: "...", contratoId: "..." }
+     */
+    @PatchMapping("/api/v1/cobranzas/casos/{contratoId}/ciclo-vida")
+    public Mono<Map<String, String>> actualizarCicloVida(
+            @PathVariable String contratoId,
+            @RequestBody ActualizarCicloVidaRequest body,
+            ServerWebExchange exchange) {
+
+        String userId = (String) exchange.getAttributes().get("userId");
+        log.info("PATCH /casos/{}/ciclo-vida nivelEstrategia={} cicloVida={} userId={}",
+                contratoId, body.nivelEstrategia(), body.cicloVida(), userId);
+
+        return casoPort.findById(contratoId)
+                .switchIfEmpty(Mono.error(new com.motoyav2.shared.exception.NotFoundException(
+                        "Caso no encontrado: " + contratoId)))
+                .flatMap(caso -> {
+                    if (body.cicloVida() != null) {
+                        String actualStr = caso.getCicloVida() != null ? caso.getCicloVida() : "ACTIVO";
+                        CicloVidaCaso desde = CicloVidaCaso.valueOf(actualStr);
+                        CicloVidaCaso hacia = CicloVidaCaso.valueOf(body.cicloVida());
+                        CicloVidaCasoMachine.validar(desde, hacia);
+                        caso.setCicloVida(body.cicloVida());
+                    }
+                    if (body.nivelEstrategia() != null) {
+                        caso.setNivelEstrategia(body.nivelEstrategia());
+                    }
+                    caso.setActualizadoEn(new Date());
+                    return casoPort.save(caso);
+                })
+                .map(saved -> Map.of(
+                        "status",     "OK",
+                        "message",    "Caso actualizado correctamente",
+                        "contratoId", saved.getContratoId()
+                ));
     }
 }

@@ -53,7 +53,13 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
                     actualizarGcsUrl(mensajeId, upload.gcsPath())
                             .subscribe(null, e -> log.warn("[VOUCHER-WA] Error actualizando gcsMediaUrl mensajeId={}: {}", mensajeId, e.getMessage()));
 
-                    String mimeType = "image".equals(mediaType) ? "image/jpeg" : "application/pdf";
+                    // mimeType para Document AI: derivado del mediaType genérico recibido del dispatcher.
+                    // El mimeType real (image/png, image/jpeg) llega via WA-3 cuando el webhook lo incluye.
+                    String mimeType = switch (mediaType) {
+                        case "image"    -> "image/jpeg";
+                        case "document" -> "application/pdf";
+                        default         -> "image/jpeg";
+                    };
                     Mono<VoucherExtraccion> extraccionMono = extraerVoucher.extraer(upload.gcsUri(), mimeType);
                     Mono<CasoCobranzaDocument> casoMono = casoPort.findById(contratoId)
                             .defaultIfEmpty(new CasoCobranzaDocument());
@@ -127,8 +133,24 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
                                         });
                             });
                 })
-                .doOnError(e -> log.error("[VOUCHER-WA] Error | contratoId={} error={}", contratoId, e.getMessage()))
-                .onErrorResume(e -> Mono.empty());
+                .doOnError(e -> log.error("[VOUCHER-WA] Error en pipeline | contratoId={} mensajeId={} error={}",
+                        contratoId, mensajeId, e.getMessage()))
+                .onErrorResume(e -> {
+                    // Marcar el mensaje con error de procesamiento para que el agente
+                    // vea "Error al procesar" en lugar de "procesando..." indefinidamente.
+                    if (mensajeId != null) {
+                        mensajePort.findById(mensajeId)
+                                .flatMap(msg -> {
+                                    msg.setEsVoucher(false);
+                                    msg.setErrorProcesamiento(
+                                            "Error al procesar imagen: " + e.getClass().getSimpleName());
+                                    return mensajePort.save(msg);
+                                })
+                                .subscribe(null,
+                                        saveErr -> log.warn("[VOUCHER-WA] No se pudo marcar error en mensaje: {}", saveErr.getMessage()));
+                    }
+                    return Mono.empty();
+                });
     }
 
     // ── Helpers de actualización de mensaje ───────────────────────────────────

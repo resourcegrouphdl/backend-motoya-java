@@ -15,6 +15,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -102,7 +103,7 @@ public class DebugWaService {
         return root;
     }
 
-    /** Envía un mensaje de texto via Factiliza y lo guarda en el log de debug. */
+    /** Envía un mensaje de texto via Meta y lo guarda en el log de debug. */
     public Mono<Map<String, Object>> enviarMensaje(String numero, String texto) {
         return metaAdapter.sendText(numero, texto)
                 .flatMap(wamid -> Mono.fromCallable(() -> {
@@ -117,6 +118,32 @@ public class DebugWaService {
                     doc.put("payloadJson",  objectMapper.writeValueAsString(doc));
                     firestore.collection(COLLECTION).add(doc).get();
                     return Map.<String, Object>of("status", "OK", "wamid", wamid, "numero", numero);
+                }).subscribeOn(Schedulers.boundedElastic()));
+    }
+
+    /** Envía un template de Meta directamente y registra el resultado en debug_wa_mensajes. */
+    public Mono<Map<String, Object>> enviarConPlantilla(String numero, String metaTemplateName,
+                                                         String languageCode, List<String> params) {
+        log.info("[DEBUG-WA] Enviando plantilla a={} template={} params={}", numero, metaTemplateName, params);
+        return metaAdapter.sendTemplateRaw(numero, metaTemplateName, languageCode, params)
+                .flatMap(wamid -> Mono.fromCallable(() -> {
+                    Map<String, Object> summary = Map.of(
+                            "template", metaTemplateName,
+                            "languageCode", languageCode,
+                            "params", params
+                    );
+                    Map<String, Object> doc = new HashMap<>();
+                    doc.put("evento",       "TEMPLATE_SENT");
+                    doc.put("instanceName", "ADMIN");
+                    doc.put("direction",    "OUTBOUND");
+                    doc.put("numero",       numero);
+                    doc.put("texto",        "Template: " + metaTemplateName);
+                    doc.put("wamid",        wamid);
+                    doc.put("receivedAt",   new Date());
+                    doc.put("payloadJson",  objectMapper.writeValueAsString(summary));
+                    firestore.collection(COLLECTION).add(doc).get();
+                    return Map.<String, Object>of("status", "OK", "wamid", wamid,
+                            "numero", numero, "template", metaTemplateName);
                 }).subscribeOn(Schedulers.boundedElastic()));
     }
 }

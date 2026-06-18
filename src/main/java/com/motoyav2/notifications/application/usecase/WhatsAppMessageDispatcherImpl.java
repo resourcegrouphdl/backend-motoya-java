@@ -1,44 +1,38 @@
 package com.motoyav2.notifications.application.usecase;
 
 import com.google.cloud.firestore.Firestore;
-import com.motoyav2.cobranza.application.port.in.ProcesarVoucherWhatsappUseCase;
-import com.motoyav2.cobranza.application.port.out.AlertaCobranzaPort;
-import com.motoyav2.cobranza.application.service.VoucherSueltoService;
-import com.motoyav2.cobranza.application.service.WhatsappService;
-import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.AlertaCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.CasoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.repository.CasoCobranzaRepository;
-import com.motoyav2.evaluacion.domain.port.in.ProcesarPreferenciaEntrevistaUseCase;
-import com.motoyav2.evaluacion.domain.port.in.ProcesarRespuestaReferenciaUseCase;
 import com.motoyav2.evaluacion.domain.port.out.ReferenciaRepository;
 import com.motoyav2.evaluacion.domain.port.out.SolicitudRepository;
-import com.motoyav2.notifications.domain.model.conversacion.DireccionMensaje;
-import com.motoyav2.notifications.domain.model.conversacion.RolParticipante;
-import com.motoyav2.notifications.domain.model.conversacion.TipoMensajeWa;
-import com.motoyav2.notifications.domain.port.in.RegistrarMensajeConversacionUseCase;
 import com.motoyav2.notifications.domain.port.in.WhatsAppMessageDispatcher;
-import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
+import com.motoyav2.whatsapp.domain.event.CobranzaWaRecibidoEvent;
+import com.motoyav2.whatsapp.domain.event.EvaluacionParticipanteWaRecibidoEvent;
+import com.motoyav2.whatsapp.domain.event.NumeroDesconocidoWaEvent;
+import com.motoyav2.whatsapp.domain.event.ReferenciaWaRecibidoEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * Enrutador central de mensajes entrantes de WhatsApp.
  *
- * Orden de resolución de contexto:
- *   1. ¿Es una referencia activa (wa_enviado)?  → ProcesarRespuestaReferencia
- *   2. ¿Es el titular de una solicitud activa?  → ProcesarPreferenciaEntrevista
- *   3. ¿Es el fiador de una solicitud activa?   → ProcesarPreferenciaEntrevista
- *   4. Desconocido                              → log + ignorar
+ * Responsabilidad: resolver el contexto del mensaje (quién envió → a qué dominio pertenece)
+ * y publicar el evento de dominio correspondiente. El procesamiento lo realizan los handlers
+ * en com.motoyav2.whatsapp.application.service.
  *
- * Media (imagen/PDF): se registra en la conversación si se pudo resolver el contexto.
+ * Orden de resolución:
+ *   1. ¿Referencia activa con wa_enviado?       → ReferenciaWaRecibidoEvent
+ *   2. ¿Titular de solicitud activa?             → EvaluacionParticipanteWaRecibidoEvent(esFiador=false)
+ *   3. ¿Fiador de solicitud activa?              → EvaluacionParticipanteWaRecibidoEvent(esFiador=true)
+ *   4. ¿Cliente con caso cobranza activo?        → CobranzaWaRecibidoEvent
+ *   5. Número desconocido                        → NumeroDesconocidoWaEvent
  */
 @Slf4j
 @Service
@@ -48,114 +42,71 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
     private static final List<String> CICLOS_INACTIVOS =
             List.of("PAGADO_TOTAL", "JUDICIAL", "CASTIGADO", "CERRADO");
 
-    private final ReferenciaRepository                 referenciaRepository;
-    private final SolicitudRepository                  solicitudRepository;
-    private final CasoCobranzaRepository               casoCobranzaRepository;
-    private final ProcesarRespuestaReferenciaUseCase   procesarReferencia;
-    private final ProcesarPreferenciaEntrevistaUseCase procesarPreferencia;
-    private final ProcesarVoucherWhatsappUseCase       procesarVoucherWhatsapp;
-    private final RegistrarMensajeConversacionUseCase  registrarMensaje;
-    private final NotificationFacade                   notificationFacade;
-    private final WhatsappService                      whatsappService;
-    private final AlertaCobranzaPort                   alertaPort;
-    private final VoucherSueltoService                 voucherSueltoService;
-    private final Firestore                            firestore;
+    private final ReferenciaRepository    referenciaRepository;
+    private final SolicitudRepository     solicitudRepository;
+    private final CasoCobranzaRepository  casoCobranzaRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final Firestore               firestore;
 
     @Override
     public Mono<Void> dispatch(String fromPhone, String text, String mediaType, String mediaUrl) {
         String phone = normalizePhone(fromPhone);
-        log.info("[DISPATCHER] Mensaje recibido | fromRaw={} phoneNormalizado={} text={}", fromPhone, phone, text);
+        log.info("[DISPATCHER] fromRaw={} phoneNorm={} text={}", fromPhone, phone, text);
         if (phone.isBlank()) return Mono.empty();
 
-        // ── 1. Intentar resolver como referencia ──────────────────────────────
+        // ── 1. ¿Es referencia? ────────────────────────────────────────────────
         return referenciaRepository.findByTelefonoAndEstadoWaEnviado(phone)
                 .flatMap(ref -> {
-                    log.info("[DISPATCHER] Mensaje de REFERENCIA | refId={} phone={}", ref.getId(), phone);
-                    if (text != null) {
-                        // Registrar inbound en conversación (la referencia tiene su propia lógica)
-                        String nombre = (ref.getNombre() != null ? ref.getNombre() : "") + " " +
-                                (ref.getApellidos() != null ? ref.getApellidos() : "");
-                        registrarMensaje.registrar(
-                                ref.getSolicitudId(), phone, nombre.trim(),
-                                RolParticipante.REFERENCIA,
-                                DireccionMensaje.INBOUND, TipoMensajeWa.TEXTO,
-                                text, null, null, null, null
-                        ).subscribe(null, e -> log.warn("[DISPATCHER] Error registrando msg referencia: {}", e.getMessage()));
-
-                        return procesarReferencia.ejecutar(phone, text);
-                    }
-                    return handleMedia(ref.getSolicitudId(), phone, ref.getNombre(), RolParticipante.REFERENCIA, mediaType, mediaUrl);
+                    log.info("[DISPATCHER] Contexto=REFERENCIA | refId={} phone={}", ref.getId(), phone);
+                    String nombre = buildNombre(ref.getNombre(), ref.getApellidos());
+                    eventPublisher.publishEvent(new ReferenciaWaRecibidoEvent(
+                            ref.getSolicitudId(), ref.getId(), phone, nombre, text, mediaType, mediaUrl));
+                    return Mono.<Void>empty();
                 })
-                // ── 2. Intentar resolver como titular ─────────────────────────
+                // ── 2. ¿Es titular? ───────────────────────────────────────────
                 .switchIfEmpty(solicitudRepository.findActivaByTitularTelefono(phone)
                         .flatMap(sol -> {
-                            log.info("[DISPATCHER] Mensaje de TITULAR | solicitudId={} phone={}", sol.getId(), phone);
-                            if (text != null) {
-                                return procesarPreferencia.procesar(sol.getId(), phone, text, false);
-                            }
-                            return handleMedia(sol.getId(), phone, sol.getTitularNombreCompleto(), RolParticipante.TITULAR, mediaType, mediaUrl);
+                            log.info("[DISPATCHER] Contexto=TITULAR | solicitudId={} phone={}", sol.getId(), phone);
+                            eventPublisher.publishEvent(new EvaluacionParticipanteWaRecibidoEvent(
+                                    sol.getId(), phone, sol.getTitularNombreCompleto(),
+                                    text, mediaType, mediaUrl, false));
+                            return Mono.<Void>empty();
                         }))
-                // ── 3. Intentar resolver como fiador ──────────────────────────
+                // ── 3. ¿Es fiador? ────────────────────────────────────────────
                 .switchIfEmpty(solicitudRepository.findActivaByFiadorTelefono(phone)
                         .flatMap(sol -> {
-                            log.info("[DISPATCHER] Mensaje de FIADOR | solicitudId={} phone={}", sol.getId(), phone);
-                            if (text != null) {
-                                return procesarPreferencia.procesar(sol.getId(), phone, text, true);
-                            }
-                            return handleMedia(sol.getId(), phone, "Fiador", RolParticipante.FIADOR, mediaType, mediaUrl);
+                            log.info("[DISPATCHER] Contexto=FIADOR | solicitudId={} phone={}", sol.getId(), phone);
+                            eventPublisher.publishEvent(new EvaluacionParticipanteWaRecibidoEvent(
+                                    sol.getId(), phone, "Fiador",
+                                    text, mediaType, mediaUrl, true));
+                            return Mono.<Void>empty();
                         }))
-                // ── 4. Intentar resolver como cliente de cobranza ────────────
+                // ── 4. ¿Es cliente de cobranza? ───────────────────────────────
                 .switchIfEmpty(buscarCasoActivoPorTelefono(phone)
                         .flatMap(caso -> {
-                            log.info("[DISPATCHER] Mensaje de COBRANZA | contratoId={} phone={}",
-                                    caso.getContratoId(), phone);
-                            if (text != null) {
-                                whatsappService.registrarMensajeEntrante(
-                                        caso.getContratoId(), caso.getClienteNombre(), phone, null, text, new Date())
-                                    .then(whatsappService.actualizarRespuestaCliente(caso.getContratoId()))
-                                    .subscribe(null, e -> log.warn("[DISPATCHER] Error guardando texto cobranza: {}", e.getMessage()));
-                                crearAlertaInbound(caso, "Mensaje de texto recibido");
-                                String nombre = caso.getClienteNombre() != null ? caso.getClienteNombre() : "Cliente";
-                                return notificationFacade.notificarAutorespuestaCobranza(caso.getContratoId(), phone, nombre);
-                            }
-                            // Media (imagen/PDF): guardar en historial → procesar (encadenado para pasar mensajeId)
-                            if (mediaUrl != null) {
-                                return whatsappService.registrarMediaEntrante(
-                                        caso.getContratoId(), caso.getClienteNombre(), phone,
-                                        mediaUrl, mediaType, new Date())
-                                    .flatMap(mensajeId -> {
-                                        whatsappService.actualizarRespuestaCliente(caso.getContratoId())
-                                            .subscribe(null, e -> log.warn("[DISPATCHER] Error actualizando respuesta cliente: {}", e.getMessage()));
-                                        crearAlertaInbound(caso, "Imagen recibida — posible comprobante");
-                                        return procesarVoucherWhatsapp.procesar(
-                                                caso.getContratoId(), caso.getStoreId(),
-                                                caso.getClienteNombre(), phone,
-                                                mediaUrl, mediaType, mensajeId);
-                                    })
-                                    .doOnError(e -> log.warn("[DISPATCHER] Error procesando media cobranza: {}", e.getMessage()))
-                                    .onErrorResume(e -> Mono.empty());
-                            }
-                            return Mono.empty();
+                            log.info("[DISPATCHER] Contexto=COBRANZA | contratoId={} phone={}", caso.getContratoId(), phone);
+                            eventPublisher.publishEvent(new CobranzaWaRecibidoEvent(
+                                    caso.getContratoId(), caso.getStoreId(),
+                                    caso.getClienteNombre(), caso.getAgenteAsignadoId(),
+                                    phone, text, mediaType, mediaUrl));
+                            return Mono.<Void>empty();
                         }))
-                // ── 5. Número desconocido — derivar a voucher suelto ─────────
+                // ── 5. Número desconocido ─────────────────────────────────────
                 .switchIfEmpty(Mono.defer(() -> {
-                    log.info("[DISPATCHER] Número desconocido phone={} — derivando a VoucherSuelto", phone);
-                    return voucherSueltoService.manejarMensajeDesconocido(phone, text, mediaType, mediaUrl);
+                    log.info("[DISPATCHER] Contexto=DESCONOCIDO phone={}", phone);
+                    eventPublisher.publishEvent(new NumeroDesconocidoWaEvent(phone, text, mediaType, mediaUrl));
+                    return Mono.<Void>empty();
                 }))
                 .onErrorResume(e -> {
                     if (e.getMessage() != null && e.getMessage().contains("index")) {
                         log.error("[DISPATCHER] *** ÍNDICE FIRESTORE FALTANTE *** phone={}: {}", phone, e.getMessage());
                     } else {
-                        log.error("[DISPATCHER] Error procesando mensaje phone={}: {}", phone, e.getMessage());
+                        log.error("[DISPATCHER] Error resolviendo contexto phone={}: {}", phone, e.getMessage());
                     }
                     return Mono.empty();
                 });
     }
 
-    /**
-     * Busca el caso de cobranza activo por teléfono: titular principal,
-     * fiador embebido, y lista de teléfonos adicionales registrados.
-     */
     private Mono<CasoCobranzaDocument> buscarCasoActivoPorTelefono(String normalizedPhone) {
         String tel9 = toCasoTelefono(normalizedPhone);
         if (tel9.isBlank()) return Mono.empty();
@@ -169,13 +120,13 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
     private Mono<CasoCobranzaDocument> buscarPorFiadorTelefono(String tel9) {
         return Mono.fromCallable(() -> {
             var snap = firestore.collection("cobranzas-casos")
-                .whereEqualTo("fiador.telefono", tel9)
-                .limit(5).get().get();
+                    .whereEqualTo("fiador.telefono", tel9)
+                    .limit(5).get().get();
             return snap.getDocuments().stream()
-                .map(doc -> doc.toObject(CasoCobranzaDocument.class))
-                .filter(Objects::nonNull)
-                .filter(c -> c.getCicloVida() == null || !CICLOS_INACTIVOS.contains(c.getCicloVida()))
-                .findFirst().orElse(null);
+                    .map(doc -> doc.toObject(CasoCobranzaDocument.class))
+                    .filter(Objects::nonNull)
+                    .filter(c -> c.getCicloVida() == null || !CICLOS_INACTIVOS.contains(c.getCicloVida()))
+                    .findFirst().orElse(null);
         }).subscribeOn(Schedulers.boundedElastic())
         .filter(Objects::nonNull);
     }
@@ -183,46 +134,23 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
     private Mono<CasoCobranzaDocument> buscarPorTelefonoAdicional(String tel9) {
         return Mono.fromCallable(() -> {
             var snap = firestore.collection("cobranzas-casos")
-                .whereArrayContains("telefonosAdicionales", tel9)
-                .limit(5).get().get();
+                    .whereArrayContains("telefonosAdicionales", tel9)
+                    .limit(5).get().get();
             return snap.getDocuments().stream()
-                .map(doc -> doc.toObject(CasoCobranzaDocument.class))
-                .filter(Objects::nonNull)
-                .filter(c -> c.getCicloVida() == null || !CICLOS_INACTIVOS.contains(c.getCicloVida()))
-                .findFirst().orElse(null);
+                    .map(doc -> doc.toObject(CasoCobranzaDocument.class))
+                    .filter(Objects::nonNull)
+                    .filter(c -> c.getCicloVida() == null || !CICLOS_INACTIVOS.contains(c.getCicloVida()))
+                    .findFirst().orElse(null);
         }).subscribeOn(Schedulers.boundedElastic())
         .filter(Objects::nonNull);
     }
 
-    /** Convierte +51XXXXXXXXX → XXXXXXXXX (9 dígitos, como se almacena en cobranzas-casos). */
     private String toCasoTelefono(String normalizedPhone) {
         if (normalizedPhone == null) return "";
         String digits = normalizedPhone.replaceAll("[^0-9]", "");
         if (digits.startsWith("51") && digits.length() == 11) return digits.substring(2);
         if (digits.length() == 9) return digits;
         return "";
-    }
-
-    private Mono<Void> handleMedia(String solicitudId, String phone, String nombre,
-                                    RolParticipante rol, String mediaType, String mediaUrl) {
-        if (mediaUrl == null) return Mono.empty();
-        TipoMensajeWa tipo = detectarTipo(mediaType);
-        String contenido = tipo.name() + " recibido" + (mediaType != null ? " (" + mediaType + ")" : "");
-        log.info("[DISPATCHER] Media recibida | solicitudId={} tipo={} phone={}", solicitudId, tipo, phone);
-        return registrarMensaje.registrar(
-                solicitudId, phone, nombre != null ? nombre : "Participante",
-                rol, DireccionMensaje.INBOUND, tipo,
-                contenido, mediaUrl, null, null, null);
-    }
-
-    private TipoMensajeWa detectarTipo(String mediaType) {
-        if (mediaType == null) return TipoMensajeWa.DESCONOCIDO;
-        return switch (mediaType.toLowerCase()) {
-            case "image"    -> TipoMensajeWa.IMAGEN;
-            case "document" -> TipoMensajeWa.DOCUMENTO;
-            case "audio"    -> TipoMensajeWa.AUDIO;
-            default         -> TipoMensajeWa.DESCONOCIDO;
-        };
     }
 
     private String normalizePhone(String phone) {
@@ -233,26 +161,9 @@ public class WhatsAppMessageDispatcherImpl implements WhatsAppMessageDispatcher 
         return digits;
     }
 
-    private void crearAlertaInbound(CasoCobranzaDocument caso, String descripcion) {
-        if (caso.getAgenteAsignadoId() == null || caso.getAgenteAsignadoId().isBlank()) return;
-        AlertaCobranzaDocument alerta = AlertaCobranzaDocument.builder()
-                .id(UUID.randomUUID().toString())
-                .tipo("MENSAJE_INBOUND_WHATSAPP")
-                .nivel("INFO")
-                .titulo("Mensaje de " + (caso.getClienteNombre() != null ? caso.getClienteNombre() : "cliente"))
-                .descripcion(descripcion)
-                .contratoId(caso.getContratoId())
-                .clienteNombre(caso.getClienteNombre())
-                .storeId(caso.getStoreId())
-                .agenteId(caso.getAgenteAsignadoId())
-                .accionSugerida("Abrir chat y responder al cliente")
-                .accionRuta("/cobranzas/vista360/" + caso.getContratoId())
-                .leida(false)
-                .descartada(false)
-                .creadoEn(new Date())
-                .expiraEn(new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000))
-                .build();
-        alertaPort.save(alerta)
-                .subscribe(null, e -> log.warn("[DISPATCHER] Error creando alerta inbound contratoId={}: {}", caso.getContratoId(), e.getMessage()));
+    private String buildNombre(String nombre, String apellidos) {
+        String n = nombre   != null ? nombre.trim()   : "";
+        String a = apellidos != null ? apellidos.trim() : "";
+        return (n + " " + a).trim();
     }
 }

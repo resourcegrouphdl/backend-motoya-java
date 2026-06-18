@@ -24,6 +24,7 @@ public class PagoFactura {
     LocalDate fechaPago;
     EstadoPago estado;
     String voucherUrl;
+    String voucherGcsPath;
     MetodoPago metodoPago;
     // Document AI
     String documentAiStatus;

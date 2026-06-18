@@ -23,6 +23,12 @@ public interface CasoCobranzaPort {
 
     Flux<CasoCobranzaDocument> findByAgenteAsignadoId(String agenteId);
 
+    /**
+     * Busca casos por el teléfono del cliente (formato 9 dígitos, como se almacena en Firestore).
+     * Usa índice Firestore — NO es un full-scan.
+     */
+    Flux<CasoCobranzaDocument> findByClienteTelefono(String clienteTelefono);
+
     Flux<CasoCobranzaDocument> findAll();
 
     Mono<CasoCobranzaDocument> save(CasoCobranzaDocument caso);

@@ -27,18 +27,26 @@ import java.util.Map;
 @Component
 public class MetaPayloadParser {
 
+    /**
+     * mimeType: tipo MIME real enviado por Meta (ej: "image/jpeg", "image/png", "application/pdf").
+     * Diferente de mediaType que es genérico ("image", "document").
+     * Null para mensajes de texto y botones.
+     */
     public record InboundMessage(
             String from,
             String messageId,
             String text,
             String mediaType,
             String mediaId,
-            String buttonPayload) {}
+            String buttonPayload,
+            String mimeType) {}
 
     public record StatusUpdate(
             String messageId,
             String status,
-            String recipientPhone) {}
+            String recipientPhone,
+            Integer errorCode,
+            String errorTitle) {}
 
     @SuppressWarnings("unchecked")
     public List<InboundMessage> extractMessages(Map<String, Object> payload) {
@@ -78,8 +86,19 @@ public class MetaPayloadParser {
                         String id          = getString(s, "id");
                         String status      = getString(s, "status");
                         String recipientId = getString(s, "recipient_id");
+                        Integer errorCode  = null;
+                        String errorTitle  = null;
+                        Object errors = s.get("errors");
+                        if (errors instanceof List<?> errList && !errList.isEmpty()) {
+                            Object firstErr = errList.get(0);
+                            if (firstErr instanceof Map<?, ?> err) {
+                                Object code = err.get("code");
+                                if (code instanceof Number n) errorCode = n.intValue();
+                                errorTitle = getString(err, "title");
+                            }
+                        }
                         if (id != null && status != null) {
-                            result.add(new StatusUpdate(id, status, recipientId));
+                            result.add(new StatusUpdate(id, status, recipientId, errorCode, errorTitle));
                         }
                     }
                 }
@@ -103,18 +122,20 @@ public class MetaPayloadParser {
             case "text" -> {
                 Object textObj = msg.get("text");
                 String body = (textObj instanceof Map<?, ?> t) ? getString(t, "body") : null;
-                yield body != null ? new InboundMessage(from, messageId, body, null, null, null) : null;
+                yield body != null ? new InboundMessage(from, messageId, body, null, null, null, null) : null;
             }
             case "image", "document", "audio", "video", "sticker" -> {
                 Object mediaObj = msg.get(type);
-                String mediaId = (mediaObj instanceof Map<?, ?> m) ? getString(m, "id") : null;
-                yield new InboundMessage(from, messageId, null, type, mediaId, null);
+                String mediaId  = (mediaObj instanceof Map<?, ?> m) ? getString(m, "id")        : null;
+                // Meta envía el mime_type real (ej: "image/jpeg", "image/png", "application/pdf")
+                String mimeType = (mediaObj instanceof Map<?, ?> m) ? getString(m, "mime_type") : null;
+                yield new InboundMessage(from, messageId, null, type, mediaId, null, mimeType);
             }
             case "button" -> {
                 Object btnObj = msg.get("button");
                 String payload = (btnObj instanceof Map<?, ?> b) ? getString(b, "payload") : null;
                 String text    = (btnObj instanceof Map<?, ?> b) ? getString(b, "text") : null;
-                yield new InboundMessage(from, messageId, text, null, null, payload);
+                yield new InboundMessage(from, messageId, text, null, null, payload, null);
             }
             case "interactive" -> {
                 Object intObj = msg.get("interactive");
@@ -124,7 +145,7 @@ public class MetaPayloadParser {
                     Object br = inter.get("button_reply");
                     String payload = (br instanceof Map<?, ?> b) ? getString(b, "id") : null;
                     String title   = (br instanceof Map<?, ?> b) ? getString(b, "title") : null;
-                    yield new InboundMessage(from, messageId, title, null, null, payload);
+                    yield new InboundMessage(from, messageId, title, null, null, payload, null);
                 }
                 yield null;
             }

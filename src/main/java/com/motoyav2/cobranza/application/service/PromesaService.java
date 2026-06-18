@@ -10,6 +10,8 @@ import com.motoyav2.cobranza.application.port.out.PromesaPort;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.EventoCobranzaDocument;
 import com.motoyav2.cobranza.infrastructure.adapter.out.persistence.document.PromesaDocument;
 import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
+import com.motoyav2.cobranza.domain.enums.EstadoCaso;
+import com.motoyav2.cobranza.domain.service.EstadoCasoMachine;
 import com.motoyav2.shared.exception.BadRequestException;
 import com.motoyav2.shared.exception.ConflictException;
 import com.motoyav2.shared.exception.NotFoundException;
@@ -56,6 +58,16 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
                                 .build()))
                         .flatMap(promesa -> promesaPort.save(command.contratoId(), promesa))
                         .flatMap(promesa -> {
+                            // Validar transición — leniente con casos legacy sin estadoCaso
+                            if (caso.getEstadoCaso() != null) {
+                                try {
+                                    EstadoCasoMachine.validar(
+                                        EstadoCaso.valueOf(caso.getEstadoCaso()),
+                                        EstadoCaso.PROMESA_VIGENTE);
+                                } catch (IllegalArgumentException ignored) {
+                                    // estadoCaso con valor no reconocido → dejar pasar
+                                }
+                            }
                             caso.setEstadoCaso("PROMESA_VIGENTE");
                             caso.setUltimaGestion(new Date());
                             caso.setUltimaGestionResumen("Promesa registrada: S/ " + command.monto());
@@ -126,6 +138,16 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
                             .flatMap(savedPromesa -> casoPort.findById(command.contratoId())
                                     .flatMap(caso -> {
                                         String nuevoEstado = resolverEstadoCaso(command.resultado());
+                                        // Validar transición PROMESA_VIGENTE → nuevo estado
+                                        if (caso.getEstadoCaso() != null) {
+                                            try {
+                                                EstadoCasoMachine.validar(
+                                                    EstadoCaso.valueOf(caso.getEstadoCaso()),
+                                                    EstadoCaso.valueOf(nuevoEstado));
+                                            } catch (IllegalArgumentException ignored) {
+                                                // estadoCaso desconocido → dejar pasar
+                                            }
+                                        }
                                         caso.setEstadoCaso(nuevoEstado);
                                         caso.setUltimaGestion(new Date());
                                         caso.setUltimaGestionResumen("Promesa " + command.resultado().toLowerCase());

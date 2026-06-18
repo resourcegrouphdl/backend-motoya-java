@@ -54,7 +54,7 @@ public class FirebaseAuthenticationFilter implements WebFilter {
         String token = authHeader.substring(BEARER_PREFIX.length());
         String path  = exchange.getRequest().getPath().value();
         String method = exchange.getRequest().getMethod().name();
-        log.info("[FILTER] {} {} — verificando token (primeros 20 chars: {}...)", method, path, token.substring(0, Math.min(20, token.length())));
+        log.debug("[FILTER] {} {} — verificando token (primeros 20 chars: {}...)", method, path, token.substring(0, Math.min(20, token.length())));
 
         // checkRevoked=true: detecta tokens revocados inmediatamente (cuando admin cambia permisos)
         return Mono.fromCallable(() -> firebaseAuth.verifyIdToken(token, false))
@@ -63,7 +63,7 @@ public class FirebaseAuthenticationFilter implements WebFilter {
                     Map<String, Object> claims = firebaseToken.getClaims();
                     String uid   = firebaseToken.getUid();
                     String email = firebaseToken.getEmail();
-                    log.info("[FILTER] Token válido — uid={}, email={}", uid, email);
+                    log.debug("[FILTER] Token válido — uid={}, email={}", uid, email);
 
                     exchange.getAttributes().put("userId",    uid);
                     exchange.getAttributes().put("userEmail", email != null ? email : "");
