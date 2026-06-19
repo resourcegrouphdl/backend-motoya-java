@@ -199,13 +199,17 @@ public class GestionService {
         return tiendaRepository.findById(uid)
                 .switchIfEmpty(Mono.error(new NotFoundException("Tienda no encontrada: " + uid)))
                 .flatMap(doc -> Mono.fromCallable(() -> {
+                    // Una tienda suspendida sigue pudiendo iniciar sesión (isActive=true)
+                    // pero su portal muestra estado restringido (tiendaStatus='suspendida').
+                    // Solo pendiente_aprobacion u otros estados no activos bloquean el acceso.
+                    boolean canLogin = "activa".equals(req.estado()) || "suspendida".equals(req.estado());
                     Map<String, Object> updates = new HashMap<>();
                     updates.put("tiendaStatus", req.estado());
-                    updates.put("isActive", "activa".equals(req.estado()));
+                    updates.put("isActive", canLogin);
                     updates.put("updatedAt", Timestamp.now());
                     firestore.collection("tienda_profiles").document(uid).update(updates).get();
                     doc.setTiendaStatus(req.estado());
-                    doc.setIsActive("activa".equals(req.estado()));
+                    doc.setIsActive(canLogin);
                     return doc;
                 }).subscribeOn(Schedulers.boundedElastic()))
                 .map(this::toTiendaResponse);
