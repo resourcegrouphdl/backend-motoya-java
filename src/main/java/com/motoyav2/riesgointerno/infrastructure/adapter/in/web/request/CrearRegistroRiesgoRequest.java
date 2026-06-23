@@ -9,6 +9,8 @@ import java.util.List;
 @Data
 public class CrearRegistroRiesgoRequest {
 
+    private String tipoDocumento;
+
     private String dniRegistrado;
 
     @NotBlank

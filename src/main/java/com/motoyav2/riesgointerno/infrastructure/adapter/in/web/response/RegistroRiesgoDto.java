@@ -12,6 +12,7 @@ import java.util.List;
 public class RegistroRiesgoDto {
 
     String id;
+    String tipoDocumento;
     String dniRegistrado;
     String nombreRegistrado;
     List<String> telefonos;
@@ -43,6 +44,7 @@ public class RegistroRiesgoDto {
     public static RegistroRiesgoDto from(RegistroRiesgo r) {
         return RegistroRiesgoDto.builder()
                 .id(r.getId())
+                .tipoDocumento(r.getTipoDocumento() != null ? r.getTipoDocumento().name() : "DNI")
                 .dniRegistrado(r.getDniRegistrado())
                 .nombreRegistrado(r.getNombreRegistrado())
                 .telefonos(r.getTelefonos())

@@ -25,6 +25,7 @@ public class RegistrarRiesgoUseCaseImpl implements RegistrarRiesgoUseCase {
         Timestamp fechaIncidente = parseFecha(cmd.fechaIncidente(), ahora);
 
         RegistroRiesgo registro = RegistroRiesgo.builder()
+                .tipoDocumento(cmd.tipoDocumento())
                 .dniRegistrado(cmd.dniRegistrado())
                 .nombreRegistrado(cmd.nombreRegistrado())
                 .telefonos(cmd.telefonos() != null ? cmd.telefonos() : List.of())

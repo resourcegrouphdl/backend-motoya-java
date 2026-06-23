@@ -13,6 +13,7 @@ import com.motoyav2.voucherextraction.application.port.in.ExtraerVoucherUseCase;
 import com.motoyav2.voucherextraction.domain.model.VoucherExtraccion;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -38,6 +39,9 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
     private final CasoCobranzaPort            casoPort;
     private final MensajeWhatsappPort         mensajePort;
     private final NotificationFacade          notificationFacade;
+
+    @Value("${app.notifications.cobranzas.enabled:false}")
+    private boolean notificacionesEnabled;
 
     @Override
     public Mono<Void> procesar(String contratoId, String storeId,
@@ -126,6 +130,10 @@ public class ProcesarVoucherWhatsappService implements ProcesarVoucherWhatsappUs
                                                     ? extraccion.banco() : "No identificado";
                                             String montoFmt = montoDetectado != null
                                                     ? String.format("S/ %.2f", montoDetectado) : "Por determinar";
+                                            if (!notificacionesEnabled) {
+                                                log.info("[VOUCHER-WA] Notificación WA desactivada (app.notifications.cobranzas.enabled=false) — contratoId={}", contratoId);
+                                                return Mono.empty();
+                                            }
                                             return notificationFacade.notificarVoucherRecibidoCobranza(
                                                     contratoId, clienteTelefono,
                                                     clienteNombre != null ? clienteNombre : "Cliente",

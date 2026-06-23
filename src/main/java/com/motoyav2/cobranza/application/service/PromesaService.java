@@ -17,6 +17,7 @@ import com.motoyav2.shared.exception.ConflictException;
 import com.motoyav2.shared.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -33,6 +34,9 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
     private final PromesaPort promesaPort;
     private final EventoCobranzaPort eventoPort;
     private final NotificationFacade notificationFacade;
+
+    @Value("${app.notifications.cobranzas.enabled:false}")
+    private boolean notificacionesEnabled;
 
     // -------------------------------------------------------------------------
     // RegistrarPromesaUseCase
@@ -89,17 +93,20 @@ public class PromesaService implements RegistrarPromesaUseCase, CerrarPromesaUse
                                     .creadoEn(new Date())
                                     .build();
 
-                            Mono<Void> notifWa = caso.getClienteTelefono() != null
-                                    ? notificationFacade.notificarRecordatorioPromesa(
-                                            command.contratoId(),
-                                            caso.getClienteTelefono(),
-                                            caso.getClienteNombre(),
-                                            String.format("S/ %.2f", command.monto()))
-                                      .onErrorResume(e -> {
-                                          log.warn("[PROMESA] Error WA promesa {}: {}", command.contratoId(), e.getMessage());
-                                          return Mono.empty();
-                                      })
-                                    : Mono.empty();
+                            Mono<Void> notifWa = Mono.empty();
+                            if (notificacionesEnabled && caso.getClienteTelefono() != null) {
+                                notifWa = notificationFacade.notificarRecordatorioPromesa(
+                                                command.contratoId(),
+                                                caso.getClienteTelefono(),
+                                                caso.getClienteNombre(),
+                                                String.format("S/ %.2f", command.monto()))
+                                        .onErrorResume(e -> {
+                                            log.warn("[PROMESA] Error WA promesa {}: {}", command.contratoId(), e.getMessage());
+                                            return Mono.empty();
+                                        });
+                            } else if (!notificacionesEnabled) {
+                                log.info("[PROMESA] Notificación WA desactivada (app.notifications.cobranzas.enabled=false) — contratoId={}", command.contratoId());
+                            }
 
                             return casoPort.save(caso)
                                     .then(eventoPort.append(command.contratoId(), evento))

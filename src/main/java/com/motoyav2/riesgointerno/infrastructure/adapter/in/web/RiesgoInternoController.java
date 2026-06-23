@@ -2,6 +2,7 @@ package com.motoyav2.riesgointerno.infrastructure.adapter.in.web;
 
 import com.motoyav2.riesgointerno.domain.enums.EstadoRegistro;
 import com.motoyav2.riesgointerno.domain.enums.NivelRiesgo;
+import com.motoyav2.riesgointerno.domain.enums.TipoDocumento;
 import com.motoyav2.riesgointerno.domain.enums.TipoRiesgo;
 import com.motoyav2.riesgointerno.domain.enums.TipoSujeto;
 import com.motoyav2.riesgointerno.domain.port.in.*;
@@ -44,7 +45,12 @@ public class RiesgoInternoController {
             @Valid @RequestBody CrearRegistroRiesgoRequest req,
             @AuthenticationPrincipal FirebaseUserDetails principal) {
 
+        TipoDocumento tipoDoc = req.getTipoDocumento() != null && !req.getTipoDocumento().isBlank()
+                ? TipoDocumento.fromString(req.getTipoDocumento())
+                : TipoDocumento.DNI;
+
         var command = new RegistrarRiesgoUseCase.Command(
+                tipoDoc,
                 req.getDniRegistrado(),
                 req.getNombreRegistrado(),
                 req.getTelefonos(),

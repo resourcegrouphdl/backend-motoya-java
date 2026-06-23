@@ -4,6 +4,7 @@ import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.motoyav2.riesgointerno.domain.enums.EstadoRegistro;
 import com.motoyav2.riesgointerno.domain.enums.NivelRiesgo;
+import com.motoyav2.riesgointerno.domain.enums.TipoDocumento;
 import com.motoyav2.riesgointerno.domain.enums.TipoRiesgo;
 import com.motoyav2.riesgointerno.domain.enums.TipoSujeto;
 import com.motoyav2.riesgointerno.domain.model.HistorialCambioRiesgo;
@@ -25,6 +26,7 @@ public final class RegistroRiesgoMapper {
 
         return RegistroRiesgo.builder()
                 .id(doc.getId())
+                .tipoDocumento(TipoDocumento.fromString(str(d, "tipoDocumento")))
                 .dniRegistrado(str(d, "dniRegistrado"))
                 .nombreRegistrado(str(d, "nombreRegistrado"))
                 .telefonos(listStr(d, "telefonos"))
@@ -48,6 +50,7 @@ public final class RegistroRiesgoMapper {
 
     public static Map<String, Object> toFirestore(RegistroRiesgo r) {
         var map = new java.util.HashMap<String, Object>();
+        map.put("tipoDocumento", r.getTipoDocumento() != null ? r.getTipoDocumento().name() : "DNI");
         putIfNotNull(map, "dniRegistrado", r.getDniRegistrado());
         map.put("nombreRegistrado", r.getNombreRegistrado());
         map.put("telefonos", r.getTelefonos() != null ? r.getTelefonos() : List.of());

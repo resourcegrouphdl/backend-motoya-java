@@ -8,6 +8,7 @@ import com.motoyav2.notifications.infrastructure.facade.NotificationFacade;
 import com.motoyav2.whatsapp.domain.event.CobranzaWaRecibidoEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,9 @@ public class CobranzaWhatsAppEventHandler {
     private final NotificationFacade             notificationFacade;
     private final AlertaCobranzaPort             alertaPort;
 
+    @Value("${app.notifications.cobranzas.enabled:false}")
+    private boolean notificacionesEnabled;
+
     @Async("whatsappEventExecutor")
     @EventListener
     public void handle(CobranzaWaRecibidoEvent event) {
@@ -39,9 +43,13 @@ public class CobranzaWhatsAppEventHandler {
 
             crearAlertaInbound(event, "Mensaje de texto recibido");
 
-            String nombre = event.clienteNombre() != null ? event.clienteNombre() : "Cliente";
-            notificationFacade.notificarAutorespuestaCobranza(event.contratoId(), event.fromPhone(), nombre)
-                    .subscribe(null, e -> log.warn("[WA-HANDLER-COB] Error notificando autorespuesta: {}", e.getMessage()));
+            if (notificacionesEnabled) {
+                String nombre = event.clienteNombre() != null ? event.clienteNombre() : "Cliente";
+                notificationFacade.notificarAutorespuestaCobranza(event.contratoId(), event.fromPhone(), nombre)
+                        .subscribe(null, e -> log.warn("[WA-HANDLER-COB] Error notificando autorespuesta: {}", e.getMessage()));
+            } else {
+                log.info("[WA-HANDLER-COB] Autorespuesta WA desactivada (app.notifications.cobranzas.enabled=false) — contratoId={}", event.contratoId());
+            }
 
         } else if (event.mediaUrl() != null) {
             inboundSvc.registrarMediaEntrante(

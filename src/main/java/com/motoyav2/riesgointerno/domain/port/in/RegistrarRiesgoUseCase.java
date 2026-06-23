@@ -2,6 +2,7 @@ package com.motoyav2.riesgointerno.domain.port.in;
 
 import com.motoyav2.riesgointerno.domain.enums.EstadoRegistro;
 import com.motoyav2.riesgointerno.domain.enums.NivelRiesgo;
+import com.motoyav2.riesgointerno.domain.enums.TipoDocumento;
 import com.motoyav2.riesgointerno.domain.enums.TipoRiesgo;
 import com.motoyav2.riesgointerno.domain.enums.TipoSujeto;
 import com.motoyav2.riesgointerno.domain.model.RegistroRiesgo;
@@ -14,6 +15,7 @@ public interface RegistrarRiesgoUseCase {
     Mono<RegistroRiesgo> registrar(Command command);
 
     record Command(
+            TipoDocumento tipoDocumento,
             String dniRegistrado,
             String nombreRegistrado,
             List<String> telefonos,
