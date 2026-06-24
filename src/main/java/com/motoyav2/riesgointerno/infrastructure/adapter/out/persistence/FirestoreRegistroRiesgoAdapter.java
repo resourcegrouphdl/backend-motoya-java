@@ -6,6 +6,7 @@ import com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.Fires
 import com.motoyav2.riesgointerno.domain.model.RegistroRiesgo;
 import com.motoyav2.riesgointerno.domain.port.out.RegistroRiesgoRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -16,6 +17,7 @@ import java.util.UUID;
 import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toFlux;
 import static com.motoyav2.evaluacion.infrastructure.adapter.out.persistence.util.FirestoreUtils.toMono;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class FirestoreRegistroRiesgoAdapter implements RegistroRiesgoRepository {
@@ -43,6 +45,8 @@ public class FirestoreRegistroRiesgoAdapter implements RegistroRiesgoRepository 
             query = query.whereEqualTo("estadoRegistro", estadoRegistro.toUpperCase());
         }
 
+        log.info("[FirestoreRiesgo] findAll nivel={} estado={} search={} limit={} offset={}", nivelRiesgo, estadoRegistro, search, limit, offset);
+
         if (search != null && !search.isBlank()) {
             String q = search.toLowerCase();
             return toFlux(query.limit(SEARCH_FETCH_LIMIT).get())
@@ -53,7 +57,10 @@ public class FirestoreRegistroRiesgoAdapter implements RegistroRiesgoRepository 
         }
 
         return toFlux(query.offset(offset).limit(limit).get())
-                .mapNotNull(RegistroRiesgoMapper::toDomain);
+                .doOnNext(doc -> log.info("[FirestoreRiesgo] doc id={}", doc.getId()))
+                .mapNotNull(RegistroRiesgoMapper::toDomain)
+                .doOnComplete(() -> log.info("[FirestoreRiesgo] findAll stream completado"))
+                .doOnError(e  -> log.error("[FirestoreRiesgo] findAll Firestore ERROR: {}", e.getMessage(), e));
     }
 
     @Override
