@@ -40,12 +40,14 @@ public class CambiarEstadoRiesgoUseCaseImpl implements CambiarEstadoRiesgoUseCas
                     Map<String, Object> fields = new HashMap<>();
                     fields.put("estadoRegistro", nuevoEstado.name());
                     fields.put("historialCambios", historial.stream()
-                            .map(h -> Map.of(
-                                    "fecha", h.getFecha(),
-                                    "usuario", h.getUsuario(),
-                                    "cambio", h.getCambio(),
-                                    "motivoCambio", h.getMotivoCambio()
-                            )).toList());
+                            .map(h -> {
+                                Map<String, Object> entry = new HashMap<>();
+                                if (h.getFecha() != null) entry.put("fecha", h.getFecha());
+                                entry.put("usuario", h.getUsuario());
+                                entry.put("cambio", h.getCambio());
+                                entry.put("motivoCambio", h.getMotivoCambio());
+                                return entry;
+                            }).toList());
                     fields.put("updatedAt", ahora);
 
                     return repository.updateFields(id, fields);

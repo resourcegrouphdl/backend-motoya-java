@@ -89,9 +89,10 @@ public class FirestoreRegistroRiesgoAdapter implements RegistroRiesgoRepository 
     @Override
     public Mono<RegistroRiesgo> create(RegistroRiesgo registro) {
         String id = UUID.randomUUID().toString();
-        Map<String, Object> data = RegistroRiesgoMapper.toFirestore(registro);
-        return toMono(db.collection(COL).document(id).set(data))
-                .map(wr -> registro.toBuilder().id(id).build());
+        return Mono.defer(() -> {
+            Map<String, Object> data = RegistroRiesgoMapper.toFirestore(registro);
+            return toMono(db.collection(COL).document(id).set(data));
+        }).map(wr -> registro.toBuilder().id(id).build());
     }
 
     @Override

@@ -54,10 +54,10 @@ public final class RegistroRiesgoMapper {
         putIfNotNull(map, "dniRegistrado", r.getDniRegistrado());
         map.put("nombreRegistrado", r.getNombreRegistrado());
         map.put("telefonos", r.getTelefonos() != null ? r.getTelefonos() : List.of());
-        map.put("tipoSujeto", r.getTipoSujeto() != null ? r.getTipoSujeto().name() : null);
-        map.put("nivelRiesgo", r.getNivelRiesgo() != null ? r.getNivelRiesgo().name() : null);
-        map.put("estadoRegistro", r.getEstadoRegistro() != null ? r.getEstadoRegistro().name() : null);
-        map.put("tipoRiesgo", r.getTipoRiesgo() != null ? r.getTipoRiesgo().name() : null);
+        putIfNotNull(map, "tipoSujeto", r.getTipoSujeto() != null ? r.getTipoSujeto().name() : null);
+        putIfNotNull(map, "nivelRiesgo", r.getNivelRiesgo() != null ? r.getNivelRiesgo().name() : null);
+        putIfNotNull(map, "estadoRegistro", r.getEstadoRegistro() != null ? r.getEstadoRegistro().name() : null);
+        putIfNotNull(map, "tipoRiesgo", r.getTipoRiesgo() != null ? r.getTipoRiesgo().name() : null);
         putIfNotNull(map, "contratoIdRelacionado", r.getContratoIdRelacionado());
         putIfNotNull(map, "solicitudIdRelacionado", r.getSolicitudIdRelacionado());
         putIfNotNull(map, "montoDeudaPendiente", r.getMontoDeudaPendiente());
