@@ -5,6 +5,7 @@ import com.motoyav2.riesgointerno.domain.model.RegistroRiesgo;
 import com.motoyav2.riesgointerno.domain.port.in.RegistrarRiesgoUseCase;
 import com.motoyav2.riesgointerno.domain.port.out.RegistroRiesgoRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RegistrarRiesgoUseCaseImpl implements RegistrarRiesgoUseCase {
@@ -46,7 +48,10 @@ public class RegistrarRiesgoUseCaseImpl implements RegistrarRiesgoUseCase {
                 .updatedAt(ahora)
                 .build();
 
-        return repository.create(registro);
+        log.info("[RegistrarRiesgo] Guardando registro para: {} dni={}", cmd.nombreRegistrado(), cmd.dniRegistrado());
+        return repository.create(registro)
+                .doOnSuccess(r -> log.info("[RegistrarRiesgo] OK id={} nombre={}", r.getId(), r.getNombreRegistrado()))
+                .doOnError(e -> log.error("[RegistrarRiesgo] ERROR: {}", e.getMessage(), e));
     }
 
     private Timestamp parseFecha(String fechaStr, Timestamp fallback) {
