@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
@@ -21,8 +20,11 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
  *   1. TEXT resolver → notification-templates/whatsapp/*.txt  (referencia/fallback)
  *   2. HTML resolver → notification-templates/email/*.html
  */
+// @EnableScheduling deshabilitado 2026-08-13: se desactivan todos los @Scheduled del
+// backend (cobranza, finanzas, evaluación, contabilidad, notifications, alertascenter).
+// Sin esta anotación, Spring no arranca el ScheduledAnnotationBeanPostProcessor y
+// ningún @Scheduled del proyecto se ejecuta, sin tener que tocar cada scheduler.
 @Configuration
-@EnableScheduling
 public class NotificationConfig {
 
     /** WebClient para Meta WhatsApp Cloud API (graph.facebook.com). */
